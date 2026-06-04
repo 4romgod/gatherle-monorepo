@@ -1,5 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Pressable, Text } from 'react-native';
 import { PreviewSessionProvider, usePreviewSession } from '@/app/providers/PreviewSessionProvider';
 
 const mockApolloClient = {
@@ -11,6 +11,7 @@ const mockReadStoredSession = jest.fn();
 const mockClearStoredSession = jest.fn().mockResolvedValue(undefined);
 const mockWriteStoredSession = jest.fn().mockResolvedValue(undefined);
 const mockValidateStoredSession = jest.fn();
+const mockClearMobileGoogleSignInSession = jest.fn().mockResolvedValue(undefined);
 
 jest.mock('@apollo/client', () => ({
   useApolloClient: () => mockApolloClient,
@@ -26,9 +27,38 @@ jest.mock('@/lib/auth/sessionValidation', () => ({
   validateStoredSession: (...args: unknown[]) => mockValidateStoredSession(...args),
 }));
 
+jest.mock('@/lib/auth/googleSignIn', () => ({
+  clearMobileGoogleSignInSession: (...args: unknown[]) => mockClearMobileGoogleSignInSession(...args),
+}));
+
 function PreviewSessionProbe() {
   const { isAuthenticated, isSessionReady } = usePreviewSession();
   return <Text>{`ready:${String(isSessionReady)} auth:${String(isAuthenticated)}`}</Text>;
+}
+
+function PreviewSessionControls() {
+  const { isAuthenticated, isSessionReady, signIn, signOut } = usePreviewSession();
+
+  return (
+    <>
+      <Text>{`ready:${String(isSessionReady)} auth:${String(isAuthenticated)}`}</Text>
+      <Pressable
+        onPress={() =>
+          signIn({
+            email: 'person@example.com',
+            token: 'token-123',
+            userId: 'user-123',
+            username: 'person',
+          } as any)
+        }
+      >
+        <Text>login</Text>
+      </Pressable>
+      <Pressable onPress={signOut}>
+        <Text>logout</Text>
+      </Pressable>
+    </>
+  );
 }
 
 describe('PreviewSessionProvider', () => {
@@ -39,6 +69,7 @@ describe('PreviewSessionProvider', () => {
     mockReadStoredSession.mockReset();
     mockValidateStoredSession.mockReset();
     mockWriteStoredSession.mockClear();
+    mockClearMobileGoogleSignInSession.mockClear();
   });
 
   it('treats stored-session read failures as an empty session instead of getting stuck', async () => {
@@ -61,5 +92,33 @@ describe('PreviewSessionProvider', () => {
     } finally {
       warnSpy.mockRestore();
     }
+  });
+
+  it('clears the native Google session when the user logs out', async () => {
+    mockReadStoredSession.mockResolvedValueOnce(null);
+
+    render(
+      <PreviewSessionProvider>
+        <PreviewSessionControls />
+      </PreviewSessionProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('ready:true auth:false')).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByText('login'));
+
+    await waitFor(() => {
+      expect(screen.getByText('ready:true auth:true')).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByText('logout'));
+
+    await waitFor(() => {
+      expect(screen.getByText('ready:true auth:false')).toBeTruthy();
+    });
+
+    expect(mockClearMobileGoogleSignInSession).toHaveBeenCalledTimes(1);
   });
 });

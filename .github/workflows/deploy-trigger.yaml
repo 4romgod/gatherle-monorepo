@@ -1,7 +1,7 @@
 name: Deploy Trigger
 
 on:
-  push:
+  pull_request:
     branches: ["main"]
 
 permissions:

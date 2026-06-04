@@ -78,6 +78,7 @@ export function AccountScreen() {
   const isAdmin = profile?.userRole === UserRole.Admin;
   const profileEventsCount = hostedEventsTotalCount;
   const profileBadges = useMemo(() => buildProfileBadges({ userRole: profile?.userRole }), [profile?.userRole]);
+  const interests = useMemo(() => profile?.interests?.filter(Boolean) ?? [], [profile?.interests]);
   const hasInvalidSessionProfileError = Boolean(profileError && isInvalidSessionError(profileError as ApolloError));
   const hasMismatchedSessionIdentity = Boolean(profile?.userId && userId && profile.userId !== userId);
 
@@ -150,46 +151,50 @@ export function AccountScreen() {
           {
             emptyState: {
               ctaLabel: 'Explore Events',
-              description: "RSVP to events and they'll appear here",
+              description: 'Lock in the events you refuse to miss and they will stay one tap away here.',
               icon: 'check-square',
               title: 'No upcoming events',
             },
             icon: 'check-square',
             key: 'going',
-            label: 'Going',
+            label: 'RSVPs',
+            count: upcomingRsvpEvents.length,
           },
           {
             emptyState: {
               ctaLabel: 'Explore Events',
-              description: "Events you've attended will show up here",
+              description: 'Every event you actually attend becomes part of your personal activity history.',
               icon: 'clock',
               title: 'No attended events',
             },
             icon: 'clock',
             key: 'past',
-            label: 'Past',
+            label: 'Attended',
+            count: pastRsvpEvents.length,
           },
           {
             emptyState: {
               ctaLabel: 'Create Your First Event',
-              description: "Start hosting events and they'll appear here",
+              description: 'Publish something worth showing up for and build momentum around your own gathering.',
               icon: 'calendar',
               title: 'No events hosted yet',
             },
             icon: 'calendar',
             key: 'hosting',
-            label: 'Hosting',
+            label: 'Hosted',
+            count: hostedEventsTotalCount,
           },
           {
             emptyState: {
               ctaLabel: 'Explore Events',
-              description: "Bookmark events you're interested in to view them later",
+              description: 'Save the events that spark curiosity so you can come back when the timing feels right.',
               icon: 'bookmark',
               title: 'No saved events yet',
             },
             icon: 'bookmark',
             key: 'saved',
             label: 'Saved',
+            count: savedEvents.length,
           },
         ] as const
       ).map((route) => ({
@@ -369,9 +374,31 @@ export function AccountScreen() {
           <View style={styles.profileTextBlock}>
             <Text style={[styles.profileName, { color: theme.colors.textPrimary }]}>{profileName}</Text>
             <Text style={[styles.profileBio, { color: theme.colors.textPrimary }]}>
-              {profile?.bio || 'No bio added yet.'}
+              {profile?.bio || 'Add a short line so people know what kinds of events and communities pull you in.'}
             </Text>
           </View>
+
+          {interests.length > 0 ? (
+            <View style={styles.interestsBlock}>
+              <Text style={[styles.interestsLabel, { color: theme.colors.textSecondary }]}>Interests</Text>
+              <View style={styles.interestsWrap}>
+                {interests.map((interest) => (
+                  <View
+                    key={interest.eventCategoryId}
+                    style={[
+                      styles.interestPill,
+                      {
+                        backgroundColor: theme.colors.surface,
+                        borderColor: theme.colors.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.interestText, { color: theme.colors.textPrimary }]}>{interest.name}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
         </View>
 
         {eventCollectionsError ? (
@@ -455,6 +482,30 @@ const styles = StyleSheet.create({
   avatarButton: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  interestPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  interestText: {
+    ...typography.bodyMedium,
+    fontSize: 13,
+  },
+  interestsBlock: {
+    gap: 10,
+  },
+  interestsLabel: {
+    ...typography.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+  },
+  interestsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   loadingMoreText: {
     ...typography.bodyMedium,

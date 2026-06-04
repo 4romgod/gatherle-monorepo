@@ -20,8 +20,9 @@ import { getApolloErrorCode } from '@/lib/auth/apolloErrors';
 import { SwipeableNotificationRow } from '@/components/notifications/SwipeableNotificationRow';
 import { useInfiniteScroll } from '@/hooks/core/useInfiniteScroll';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
+import { getNotificationEyebrow, groupNotificationFeedItems } from '@/lib/notifications/feed';
 import { useNotifications } from '@/hooks/notifications/useNotifications';
-import { formatDateGroupLabel, formatRelativeTime, getDisplayName } from '@/lib/events/formatters';
+import { formatRelativeTime, getDisplayName } from '@/lib/events/formatters';
 import { navigateFromNotificationActionUrl } from '@/lib/notifications/actionUrl';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
@@ -72,41 +73,29 @@ export function NotificationsScreen() {
     navigation.navigate('Login', { redirectTab: 'Notifications' });
   }, [error, hasLiveSession, navigation, signOut]);
 
-  const feedItems = useMemo<NotificationFeedItem[]>(() => {
-    const notificationItems = notifications.map(
-      (notification): NotificationFeedItem => ({
-        createdAt: notification.createdAt,
-        id: notification.notificationId,
-        kind: 'notification',
-        notification,
-      }),
-    );
-    const followItems = followRequests.map(
-      (request): NotificationFeedItem => ({
-        createdAt: request.createdAt,
-        id: request.followId,
-        kind: 'follow-request',
-        request,
-      }),
-    );
+  const feedItems = useMemo<NotificationFeedItem[]>(
+    () => [
+      ...notifications.map(
+        (notification): NotificationFeedItem => ({
+          createdAt: notification.createdAt,
+          id: notification.notificationId,
+          kind: 'notification',
+          notification,
+        }),
+      ),
+      ...followRequests.map(
+        (request): NotificationFeedItem => ({
+          createdAt: request.createdAt,
+          id: request.followId,
+          kind: 'follow-request',
+          request,
+        }),
+      ),
+    ],
+    [followRequests, notifications],
+  );
 
-    return [...notificationItems, ...followItems].sort(
-      (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
-    );
-  }, [followRequests, notifications]);
-
-  const groupedFeed = useMemo(() => {
-    const groups = new Map<string, NotificationFeedItem[]>();
-
-    for (const item of feedItems) {
-      const label = formatDateGroupLabel(item.createdAt);
-      const current = groups.get(label) ?? [];
-      current.push(item);
-      groups.set(label, current);
-    }
-
-    return Array.from(groups.entries()).map(([label, items]) => ({ items, label }));
-  }, [feedItems]);
+  const groupedFeed = useMemo(() => groupNotificationFeedItems(feedItems), [feedItems]);
   const infiniteScroll = useInfiniteScroll({
     enabled: hasMore,
     loading: loading || loadingMore,
@@ -214,6 +203,7 @@ export function NotificationsScreen() {
                         actionButtons={buildNotificationActions(item.notification, followBackUser)}
                         actorImageUrl={item.notification.actor?.profile_picture}
                         actorLabel={getDisplayName(item.notification.actor)}
+                        eyebrow={getNotificationEyebrow(item.notification.type)}
                         isRead={item.notification.isRead}
                         key={item.id}
                         message={item.notification.message}
@@ -243,6 +233,7 @@ export function NotificationsScreen() {
                         ]}
                         actorImageUrl={item.request.follower?.profile_picture}
                         actorLabel={getDisplayName(item.request.follower)}
+                        eyebrow="Follow request"
                         isRead={false}
                         key={item.id}
                         message={item.request.follower?.bio || 'Requested to follow you.'}
@@ -270,7 +261,10 @@ export function NotificationsScreen() {
             ) : null}
           </View>
         ) : (
-          <StateNotice message="You’re all caught up." />
+          <StateNotice
+            message="The important stuff will surface here first: event reminders, friend activity, and organizer updates."
+            title="You’re all caught up"
+          />
         )}
       </PageContainer>
     </MainTabScreenLayout>

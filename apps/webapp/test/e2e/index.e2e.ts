@@ -10,11 +10,11 @@ test.describe('Index Page', () => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     const heroSection = page.locator('#hero-section');
 
-    await expect(page.getByRole('heading', { name: 'Where unforgettable experiences find their people.' })).toBeVisible(
-      {
-        timeout: 10_000,
-      },
-    );
+    await expect(
+      page.getByRole('heading', { name: 'Find the gatherings your people will not want to miss.' }),
+    ).toBeVisible({
+      timeout: 10_000,
+    });
     await expect(heroSection.getByRole('link', { name: 'Browse events' })).toBeVisible();
     await expect(heroSection.getByRole('link', { name: 'Sign up' })).toBeVisible();
     await expect(heroSection.getByRole('link', { name: 'Host with Gatherle' })).toBeVisible();

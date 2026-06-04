@@ -11,6 +11,7 @@ import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
 
 export type SwipePagerTabRoute = {
+  count?: number;
   icon?: React.ComponentProps<typeof Feather>['name'];
   key: string;
   label: string;
@@ -128,11 +129,20 @@ export function SwipePagerTabs({
     });
   };
 
+  const formatTabCount = (count: number) => {
+    if (count > 99) {
+      return '99+';
+    }
+
+    return String(count);
+  };
+
   const tabButtons = routes.map((route, index) => {
     const active = activeIndex === index;
 
     return (
       <Pressable
+        accessibilityLabel={`${route.label}${typeof route.count === 'number' ? `, ${formatTabCount(route.count)}` : ''}`}
         accessibilityRole="button"
         key={route.key}
         onLayout={scrollableTabs ? handleTabLayout(route.key) : undefined}
@@ -145,9 +155,37 @@ export function SwipePagerTabs({
         ]}
       >
         {variant === 'icon' && route.icon ? (
-          <View style={styles.iconFrame}>
-            <Feather color={active ? theme.colors.primary : theme.colors.textSecondary} name={route.icon} size={19} />
-          </View>
+          <>
+            <View style={styles.iconFrame}>
+              <Feather color={active ? theme.colors.primary : theme.colors.textSecondary} name={route.icon} size={18} />
+              {typeof route.count === 'number' ? (
+                <View
+                  style={[
+                    styles.iconBadge,
+                    {
+                      backgroundColor: active ? theme.colors.surfaceMuted : theme.colors.surface,
+                      borderColor: active ? theme.colors.primary : theme.colors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.iconBadgeText,
+                      { color: active ? theme.colors.primary : theme.colors.textSecondary },
+                    ]}
+                  >
+                    {formatTabCount(route.count)}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+            <Text
+              numberOfLines={1}
+              style={[styles.iconLabelText, { color: active ? theme.colors.primary : theme.colors.textSecondary }]}
+            >
+              {route.label}
+            </Text>
+          </>
         ) : (
           <Text style={[styles.labelText, { color: active ? theme.colors.primary : theme.colors.textSecondary }]}>
             {route.label}
@@ -173,13 +211,25 @@ export function SwipePagerTabs({
           horizontal
           ref={tabsRef}
           showsHorizontalScrollIndicator={false}
-          style={[styles.tabRow, { borderBottomColor: theme.colors.border }]}
+          style={[
+            styles.tabRow,
+            variant === 'label' ? styles.labelTabRow : null,
+            { borderBottomColor: theme.colors.border },
+          ]}
           contentContainerStyle={styles.tabRowScrollableContent}
         >
           {tabButtons}
         </ScrollView>
       ) : (
-        <View style={[styles.tabRow, { borderBottomColor: theme.colors.border }]}>{tabButtons}</View>
+        <View
+          style={[
+            styles.tabRow,
+            variant === 'label' ? styles.labelTabRow : null,
+            { borderBottomColor: theme.colors.border },
+          ]}
+        >
+          {tabButtons}
+        </View>
       )}
 
       <ScrollView
@@ -203,14 +253,42 @@ export function SwipePagerTabs({
 
 const styles = StyleSheet.create({
   iconButton: {
-    gap: 10,
+    gap: 6,
+    paddingBottom: 8,
+    paddingTop: 8,
+  },
+  iconBadge: {
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    minWidth: 18,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    position: 'absolute',
+    right: -16,
+    top: -9,
+  },
+  iconBadgeText: {
+    ...typography.bodyBold,
+    fontSize: 10,
+    lineHeight: 12,
   },
   iconFrame: {
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 20,
+    position: 'relative',
+  },
+  iconLabelText: {
+    ...typography.bodySemiBold,
+    fontSize: 10,
+    letterSpacing: 0.2,
   },
   labelButton: {
     gap: 8,
+  },
+  labelTabRow: {
+    marginTop: -10,
   },
   labelText: {
     ...typography.bodySemiBold,
@@ -218,6 +296,7 @@ const styles = StyleSheet.create({
   },
   tabButtonBase: {
     alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   tabButtonFlexible: {
     flex: 1,
@@ -238,7 +317,6 @@ const styles = StyleSheet.create({
   tabRow: {
     borderBottomWidth: 1,
     flexDirection: 'row',
-    marginTop: -10,
   },
   tabRowScrollableContent: {
     alignItems: 'stretch',

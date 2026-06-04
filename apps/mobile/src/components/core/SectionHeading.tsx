@@ -5,16 +5,22 @@ import { fontSize, typography } from '@/app/theme/typography';
 
 type SectionHeadingProps = {
   actionLabel?: string;
+  eyebrow?: string;
   onPressAction?: () => void;
+  subtitle?: string;
   title: string;
 };
 
-export function SectionHeading({ actionLabel, onPressAction, title }: SectionHeadingProps) {
+export function SectionHeading({ actionLabel, eyebrow, onPressAction, subtitle, title }: SectionHeadingProps) {
   const { theme } = useAppTheme();
 
   return (
     <View style={styles.sectionHeading}>
-      <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>{title}</Text>
+      <View style={styles.copyBlock}>
+        {eyebrow ? <Text style={[styles.eyebrow, { color: theme.colors.textSecondary }]}>{eyebrow}</Text> : null}
+        <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>{title}</Text>
+        {subtitle ? <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{subtitle}</Text> : null}
+      </View>
       {actionLabel && onPressAction ? (
         <Pressable
           onPress={onPressAction}
@@ -29,6 +35,17 @@ export function SectionHeading({ actionLabel, onPressAction, title }: SectionHea
 }
 
 const styles = StyleSheet.create({
+  copyBlock: {
+    flex: 1,
+    gap: 4,
+    paddingRight: 12,
+  },
+  eyebrow: {
+    ...typography.bodyBold,
+    fontSize: fontSize.xxs,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
   sectionAction: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -45,8 +62,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...typography.displayBold,
-    flex: 1,
     fontSize: fontSize.xl2,
     letterSpacing: -0.7,
+  },
+  subtitle: {
+    ...typography.bodyRegular,
+    fontSize: fontSize.sm,
+    lineHeight: 20,
   },
 });

@@ -91,7 +91,7 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
         <Grid container spacing={4} alignItems="center" sx={{ position: 'relative', zIndex: 2 }}>
           <Grid size={{ xs: 12, md: 7 }}>
             <Chip
-              label="Gather boldly, host with ease"
+              label="What is happening around you?"
               color="secondary"
               variant="outlined"
               sx={{
@@ -113,7 +113,7 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                 color: 'text.primary',
               }}
             >
-              Where unforgettable experiences find their people.
+              Find the gatherings your people will not want to miss.
             </Typography>
             <Typography
               variant="h5"
@@ -125,8 +125,8 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                 opacity: 0.85,
               }}
             >
-              {APP_NAME} is the modern layer for community led events. Discover inspiring gatherings or host your own
-              with gorgeous, human first pages.
+              {APP_NAME} helps you see what is happening around you, which events are already building momentum, and
+              where your communities are showing up next.
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
               <Button
@@ -185,7 +185,7 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                     })}
                   >
                     <Typography variant="overline" sx={{ color: 'text.secondary', letterSpacing: 1 }}>
-                      Featured gathering
+                      Happening now
                     </Typography>
                     <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', mt: 1 }}>
                       {heroTitle}
@@ -233,7 +233,7 @@ export default function HeroSection({ heroEvent, isLoading = false }: HeroSectio
                       }}
                     >
                       <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                        {heroEventRsvps} RSVPs
+                        {heroEventRsvps} people already in
                       </Typography>
                       <Button
                         variant="contained"

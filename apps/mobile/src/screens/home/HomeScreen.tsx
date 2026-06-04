@@ -19,13 +19,9 @@ import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
 import { useMyUpcomingRsvps } from '@/hooks/home/useMyUpcomingRsvps';
 import { useFollowedMoments } from '@/hooks/moments/useFollowedMoments';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
-import { dedupeOccurrencesBySeries } from '@/lib/events/formatters';
+import { buildRecommendedOccurrences } from '@/lib/events/formatters';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import type { MobileSearchResult } from '@/hooks/search/useEventSearch';
-
-function buildRecommendedEvents(trendingEvents: MobileEventOccurrence[], upcomingEvents: MobileEventOccurrence[]) {
-  return dedupeOccurrencesBySeries([...trendingEvents, ...upcomingEvents], 5);
-}
 
 function navigateToEventSeriesResults(navigation: MainTabNavigation, event: MobileSearchResult) {
   navigation.navigate('Events', {
@@ -64,8 +60,8 @@ export function HomeScreen() {
     [isAuthenticated, trendingEvents, upcomingRsvps],
   );
   const recommendedEvents = useMemo(
-    () => buildRecommendedEvents(trendingEvents, upcomingEvents).slice(0, 4),
-    [trendingEvents, upcomingEvents],
+    () => buildRecommendedOccurrences(trendingEvents, upcomingEvents, upcomingRsvps, 4),
+    [trendingEvents, upcomingEvents, upcomingRsvps],
   );
   const browseItems = useMemo<HomeBrowseItem[]>(
     () => [
@@ -112,9 +108,15 @@ export function HomeScreen() {
         {isAuthenticated && followedMoments.length > 0 ? <FollowedMomentsStrip moments={followedMoments} /> : null}
 
         <SectionHeading
+          eyebrow={isAuthenticated ? 'Your plans' : 'Happening now'}
           actionLabel="View all"
           onPressAction={() => navigation.navigate('Events')}
-          title={isAuthenticated ? 'Your Upcoming RSVPs' : 'Featured Events'}
+          subtitle={
+            isAuthenticated
+              ? 'Events you already committed to stay front and center here.'
+              : 'A quick read on the events pulling the most attention right now.'
+          }
+          title={isAuthenticated ? 'Your upcoming RSVPs' : 'Featured events'}
         />
 
         {loading && carouselEvents.length === 0 && !heroEvent ? (
@@ -133,14 +135,21 @@ export function HomeScreen() {
           />
         ) : (
           <StateNotice
-            message={isAuthenticated ? 'You have no upcoming RSVPs yet.' : 'No upcoming events are available yet.'}
+            message={
+              isAuthenticated
+                ? 'Start saving or RSVPing to events that fit your week, and they will land here for quick re-entry.'
+                : 'We will surface the busiest public events here as soon as they are live.'
+            }
+            title={isAuthenticated ? 'Your plans are still empty' : 'Nothing featured yet'}
           />
         )}
 
         <SectionHeading
+          eyebrow="For your taste"
           actionLabel="See all events"
           onPressAction={() => navigation.navigate('Events')}
-          title="Recommended For You"
+          subtitle="These picks lean on public momentum, timing, and the kinds of events people like you keep opening."
+          title="Recommended for you"
         />
 
         {recommendedEvents.length > 0 ? (
@@ -160,7 +169,12 @@ export function HomeScreen() {
             <EventCardSkeleton />
           </View>
         ) : (
-          <StateNotice message="Recommendations will appear here once more public events are available." />
+          <StateNotice
+            message="Browse categories, venues, or hosts to teach Gatherle what kinds of nights and communities you care about."
+            onPressAction={() => navigation.navigate('Events')}
+            actionLabel="Explore events"
+            title="Your recommendation engine needs a little more signal"
+          />
         )}
 
         <HomeBrowseSection items={browseItems} />

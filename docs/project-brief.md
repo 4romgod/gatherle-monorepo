@@ -66,6 +66,8 @@ globally.
   a weekend escape within hours, not weeks.
 - Roll out with a **website-first** discovery experience that leans heavily on map/heatmap views and visual, swipe-style
   exploration instead of Meetup’s list-heavy UI.
+- In-product messaging should answer within the first 30 seconds: **"What's happening around me, and where are my people
+  gathering?"**
 
 ### Niche Messaging
 

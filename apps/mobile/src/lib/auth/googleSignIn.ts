@@ -57,3 +57,23 @@ export function configureMobileGoogleSignIn(): void {
 
   googleSignInConfigured = true;
 }
+
+export async function clearMobileGoogleSignInSession(): Promise<void> {
+  if (Platform.OS === 'web' || !isGoogleSignInConfiguredForPlatform()) {
+    return;
+  }
+
+  configureMobileGoogleSignIn();
+
+  if (!GoogleSignin.hasPreviousSignIn() && !GoogleSignin.getCurrentUser()) {
+    return;
+  }
+
+  try {
+    await GoogleSignin.revokeAccess();
+  } catch {
+    // Best effort only. Still sign out locally so the chooser can reappear.
+  }
+
+  await GoogleSignin.signOut();
+}

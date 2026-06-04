@@ -26,18 +26,22 @@ export default function TrendingEventsSection() {
 
   return (
     <Box sx={{ mt: { xs: 2, md: 4 }, mb: { xs: 1, md: 2 } }}>
-      <Typography
-        variant="h6"
-        fontWeight={700}
-        sx={{ mb: { xs: 1, md: 2 }, fontSize: { xs: '1.1rem', md: '1.25rem' } }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          Trending Events
+      <Box sx={{ mb: { xs: 1, md: 2 } }}>
+        <Typography variant="overline" color="text.secondary" fontWeight={700} sx={{ letterSpacing: '0.08em' }}>
+          Momentum watch
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+          <Typography variant="h6" fontWeight={700} sx={{ fontSize: { xs: '1.1rem', md: '1.25rem' } }}>
+            Trending events
+          </Typography>
           <Button color="secondary" component={Link} href="/events" size="small">
             See all events
           </Button>
         </Box>
-      </Typography>
+        <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
+          These are the public events already building visible social proof.
+        </Typography>
+      </Box>
       {isLoading ? (
         <Stack gap={{ xs: 1.5, md: 2 }}>
           {[1, 2].map((i) => (
@@ -47,7 +51,9 @@ export default function TrendingEventsSection() {
       ) : error ? (
         <Typography color="error">Failed to load trending events.</Typography>
       ) : events.length === 0 ? (
-        <Typography color="text.secondary">No trending events right now. Check back soon!</Typography>
+        <Typography color="text.secondary">
+          Nothing has broken away from the pack yet. Check back soon as more events start picking up traction.
+        </Typography>
       ) : (
         <Stack gap={{ xs: 1.5, md: 2 }}>
           <EventTileGrid events={events} loading={loading} />

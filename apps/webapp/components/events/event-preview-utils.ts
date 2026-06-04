@@ -198,6 +198,15 @@ export function getEventPreviewParticipantCount(event: AnyEventPreview): number 
   }, 0);
 }
 
+export function getEventPreviewSaveCount(event: AnyEventPreview): number {
+  const seriesPreview = getSeriesPreview(event);
+  if (seriesPreview && 'savedByCount' in seriesPreview && typeof seriesPreview.savedByCount === 'number') {
+    return seriesPreview.savedByCount;
+  }
+
+  return 0;
+}
+
 export function getEventPreviewMyRsvpStatus(event: AnyEventPreview): ParticipantStatus | null {
   const occurrenceBackedPreview = getOccurrenceBackedPreview(event);
   return occurrenceBackedPreview?.myRsvp?.status ?? event.myRsvp?.status ?? null;

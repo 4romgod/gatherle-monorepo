@@ -21,6 +21,7 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useFollowRequests, useNotificationActions, useNotifications } from '@/hooks';
 import type { Notification } from '@/hooks/useNotifications';
 import { logger } from '@/lib/utils';
+import { getNotificationEyebrow, groupNotificationFeedItems } from '@/lib/utils/notification-feed';
 import { useToolbarAction } from '@/hooks/useToolbarAction';
 
 type FollowRequest = GetFollowRequestsQuery['readFollowRequests'][number];
@@ -28,36 +29,6 @@ type VisibleFollowRequest = FollowRequest & { follower: NonNullable<FollowReques
 type NotificationFeedItem =
   | { createdAt: string; id: string; kind: 'notification'; notification: Notification }
   | { createdAt: string; id: string; kind: 'follow-request'; request: VisibleFollowRequest };
-
-function formatDateGroupLabel(createdAt?: string | null) {
-  if (!createdAt) {
-    return 'Earlier';
-  }
-
-  const target = new Date(createdAt);
-  if (Number.isNaN(target.getTime())) {
-    return 'Earlier';
-  }
-
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const startOfTarget = new Date(target.getFullYear(), target.getMonth(), target.getDate()).getTime();
-  const dayDiff = Math.round((startOfTarget - startOfToday) / 86400000);
-
-  if (dayDiff === 0) {
-    return 'Today';
-  }
-
-  if (dayDiff === -1) {
-    return 'Yesterday';
-  }
-
-  return new Intl.DateTimeFormat('en-US', {
-    day: 'numeric',
-    month: 'long',
-    weekday: 'long',
-  }).format(target);
-}
 
 function NotificationsSkeleton() {
   return (
@@ -116,36 +87,24 @@ export default function NotificationsPage() {
   );
 
   const feedItems = useMemo<NotificationFeedItem[]>(
-    () =>
-      [
-        ...notifications.map((notification) => ({
-          createdAt: notification.createdAt,
-          id: notification.notificationId,
-          kind: 'notification' as const,
-          notification,
-        })),
-        ...pendingFollowRequests.map((request) => ({
-          createdAt: request.createdAt,
-          id: request.followId,
-          kind: 'follow-request' as const,
-          request,
-        })),
-      ].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()),
+    () => [
+      ...notifications.map((notification) => ({
+        createdAt: notification.createdAt,
+        id: notification.notificationId,
+        kind: 'notification' as const,
+        notification,
+      })),
+      ...pendingFollowRequests.map((request) => ({
+        createdAt: request.createdAt,
+        id: request.followId,
+        kind: 'follow-request' as const,
+        request,
+      })),
+    ],
     [notifications, pendingFollowRequests],
   );
 
-  const groupedFeed = useMemo(() => {
-    const groups = new Map<string, NotificationFeedItem[]>();
-
-    for (const item of feedItems) {
-      const label = formatDateGroupLabel(item.createdAt);
-      const current = groups.get(label) ?? [];
-      current.push(item);
-      groups.set(label, current);
-    }
-
-    return Array.from(groups.entries()).map(([label, items]) => ({ items, label }));
-  }, [feedItems]);
+  const groupedFeed = useMemo(() => groupNotificationFeedItems(feedItems), [feedItems]);
 
   const isLoadingFeed = (loading || followRequestsLoading) && feedItems.length === 0;
   const isMutating = notificationActionsLoading || followActionsLoading;
@@ -290,7 +249,7 @@ export default function NotificationsPage() {
             <Box sx={{ py: 8, textAlign: 'center' }}>
               <Typography fontWeight={700}>You&apos;re all caught up.</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                When new activity happens, it&apos;ll show up here.
+                High-signal reminders, friend activity, and organizer updates will surface here first when they land.
               </Typography>
             </Box>
           ) : (
@@ -315,6 +274,7 @@ export default function NotificationsPage() {
                     <React.Fragment key={item.id}>
                       {item.kind === 'notification' ? (
                         <NotificationItem
+                          eyebrow={getNotificationEyebrow(item.notification.type)}
                           notification={item.notification}
                           onMarkRead={handleMarkAsRead}
                           onMarkUnread={handleMarkAsUnread}

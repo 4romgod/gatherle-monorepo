@@ -34,7 +34,7 @@ import {
   getOccurrenceParticipantPreview,
   getParticipantKey,
 } from '@/lib/events/formatters';
-import { mapNavigableEventOccurrences } from '@/lib/events/adapters';
+import { mapNavigableEventOccurrences, mergeNavigableOccurrences } from '@/lib/events/adapters';
 import {
   addEventToCalendar,
   openEventLocationInMaps,
@@ -197,21 +197,10 @@ export function EventDetailsScreen() {
       eventNavigationData?.readEventBySlug ? mapNavigableEventOccurrences(eventNavigationData.readEventBySlug) : [],
     [eventNavigationData?.readEventBySlug],
   );
-  const sessionOccurrences = useMemo(() => {
-    const seenOccurrenceIds = new Set<string>();
-
-    return [routeOccurrence, ...fetchedOccurrences]
-      .filter((candidate): candidate is typeof routeOccurrence => Boolean(candidate?.occurrenceId))
-      .filter((candidate) => {
-        if (seenOccurrenceIds.has(candidate.occurrenceId)) {
-          return false;
-        }
-
-        seenOccurrenceIds.add(candidate.occurrenceId);
-        return true;
-      })
-      .sort((left, right) => new Date(left.startAt ?? 0).getTime() - new Date(right.startAt ?? 0).getTime());
-  }, [fetchedOccurrences, routeOccurrence]);
+  const sessionOccurrences = useMemo(
+    () => mergeNavigableOccurrences(routeOccurrence, fetchedOccurrences),
+    [fetchedOccurrences, routeOccurrence],
+  );
   const occurrence = useMemo(
     () =>
       sessionOccurrences.find((candidate) => candidate.occurrenceId === routeOccurrence.occurrenceId) ??

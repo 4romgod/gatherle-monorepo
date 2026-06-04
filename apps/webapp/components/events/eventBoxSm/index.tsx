@@ -19,6 +19,7 @@ import {
   getEventPreviewOccurrenceId,
   getEventPreviewParticipantCount,
   getEventPreviewParticipants,
+  getEventPreviewSaveCount,
   getEventPreviewScheduleText,
   getEventPreviewSlug,
   getEventPreviewTitle,
@@ -39,6 +40,8 @@ export default function EventBoxSm({ event, href }: { event: AnyEventPreview; hr
   const nextRsvpStatus = getEventPreviewMyRsvpStatus(event);
   const participantList = getEventPreviewParticipants(event);
   const participantCount = getEventPreviewParticipantCount(event);
+  const saveCount = getEventPreviewSaveCount(event);
+  const isTrending = participantCount >= 20 || saveCount >= 12;
 
   // Local state for optimistic UI updates
   const [isSaved, setIsSaved] = useState(nextSavedState);
@@ -182,6 +185,20 @@ export default function EventBoxSm({ event, href }: { event: AnyEventPreview; hr
                   {participantCount} going
                 </Typography>
               </>
+            )}
+            {saveCount > 0 && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontSize: '0.78rem', ml: participantCount > 0 ? 1 : 0 }}
+              >
+                {saveCount} saves
+              </Typography>
+            )}
+            {isTrending && (
+              <Typography variant="body2" color="secondary.main" sx={{ fontSize: '0.78rem', ml: 1, fontWeight: 700 }}>
+                Trending
+              </Typography>
             )}
             <AvatarGroup
               max={3}

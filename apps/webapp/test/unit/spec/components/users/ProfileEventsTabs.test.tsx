@@ -32,9 +32,31 @@ describe('ProfileEventsTabs', () => {
 
     const tooltipTitles = screen.getAllByTestId('tooltip').map((node) => node.getAttribute('data-title'));
 
-    expect(tooltipTitles).toContain("Going — events they've RSVPed to");
-    expect(tooltipTitles).toContain('Attended — past events they went to');
+    expect(tooltipTitles).toContain("RSVPs — events they've locked in");
+    expect(tooltipTitles).toContain('Attended — past events they showed up for');
     expect(tooltipTitles).toContain("Hosted — events they've created or co-hosted");
+  });
+
+  it('shows labels and embedded counts in the tab controls', () => {
+    render(
+      <ProfileEventsTabs
+        upcomingRsvpdEvents={[{ eventId: 'upcoming-1', title: 'Upcoming One' } as any]}
+        pastRsvpdEvents={[
+          { eventId: 'past-1', title: 'Past One' } as any,
+          { eventId: 'past-2', title: 'Past Two' } as any,
+        ]}
+        organizedEvents={[]}
+        hostedEventsTotalCount={12}
+        savedEvents={[{ eventId: 'saved-1', title: 'Saved One' } as any]}
+        isOwnProfile
+      />,
+    );
+
+    expect(screen.getByText('RSVPs')).toBeTruthy();
+    expect(screen.getByText('Attended')).toBeTruthy();
+    expect(screen.getByText('Hosted')).toBeTruthy();
+    expect(screen.getByText('Saved')).toBeTruthy();
+    expect(screen.getByText('12')).toBeTruthy();
   });
 
   it('renders hosted-event search controls on the hosted tab for your own account', () => {

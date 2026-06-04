@@ -16,7 +16,7 @@ import type { MainTabParamList } from '@/app/navigation/routes';
 const TAB_ICONS: Record<keyof MainTabParamList, React.ComponentProps<typeof Feather>['name']> = {
   Home: 'home',
   Events: 'calendar',
-  Moments: 'play-circle',
+  Moments: 'image',
   Messages: 'message-circle',
   Notifications: 'bell',
   Account: 'user',

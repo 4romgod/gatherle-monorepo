@@ -1,5 +1,6 @@
 import {
   buildDefaultOccurrenceDateRange,
+  buildRecommendedOccurrences,
   buildSelectedEventOccurrenceDateRange,
   dedupeOccurrencesBySeries,
   formatCountLabel,
@@ -27,6 +28,7 @@ import {
 } from '@/lib/events/formatters';
 import {
   mapEventSeriesToOccurrence,
+  mergeNavigableOccurrences,
   mapNavigableEventOccurrences,
   mapNavigableEventToOccurrence,
 } from '@/lib/events/adapters';
@@ -79,6 +81,25 @@ describe('mobile event formatters', () => {
 
     expect(dedupeOccurrencesBySeries(occurrences).map((item) => item.occurrenceId)).toEqual(['a1', 'b1', 'c1']);
     expect(dedupeOccurrencesBySeries(occurrences, 2).map((item) => item.occurrenceId)).toEqual(['a1', 'b1']);
+  });
+
+  it('builds recommendations without repeating series the user already RSVPd to', () => {
+    const trendingOccurrences = [
+      { eventSeriesId: 'series-1', occurrenceId: 'trend-1' },
+      { eventSeriesId: 'series-2', occurrenceId: 'trend-2' },
+      { eventSeriesId: 'series-3', occurrenceId: 'trend-3' },
+    ] as any;
+    const upcomingOccurrences = [
+      { eventSeriesId: 'series-2', occurrenceId: 'upcoming-2' },
+      { eventSeriesId: 'series-4', occurrenceId: 'upcoming-4' },
+    ] as any;
+    const excludedOccurrences = [{ eventSeriesId: 'series-1', occurrenceId: 'rsvp-1' }] as any;
+
+    expect(
+      buildRecommendedOccurrences(trendingOccurrences, upcomingOccurrences, excludedOccurrences, 3).map(
+        (occurrence) => occurrence.occurrenceId,
+      ),
+    ).toEqual(['trend-2', 'trend-3', 'upcoming-4']);
   });
 
   it('sorts categories and organizations without mutating inputs', () => {
@@ -360,6 +381,54 @@ describe('mobile event formatters', () => {
 
     const selected = mapNavigableEventToOccurrence(event, getOccurrencePublicAnchor('2026-06-08T08:00:00.000Z'));
     expect(selected?.occurrenceId).toBe('occ-2');
+  });
+
+  it('merges matching route and fetched occurrences so fetched detail data wins for the active session', () => {
+    const routeOccurrence = {
+      occurrenceId: 'occ-1',
+      occurrenceKey: 'occ-1',
+      eventSeriesId: 'event-nav-1',
+      startAt: '2026-06-01T08:00:00.000Z',
+      endAt: '2026-06-01T09:00:00.000Z',
+      timezone: 'Africa/Johannesburg',
+      originalStartAt: '2026-06-01T08:00:00.000Z',
+      status: 'Scheduled',
+      isException: false,
+      rsvpCount: 2,
+      participants: null,
+      myRsvp: { participantId: 'route-rsvp', occurrenceId: 'occ-1', status: 'Going', quantity: 1 },
+      eventSeries: {
+        eventId: 'event-nav-1',
+        slug: 'navigable-series',
+        title: 'Navigable Event',
+        summary: 'Thin route payload',
+      },
+    } as any;
+
+    const merged = mergeNavigableOccurrences(routeOccurrence, [
+      {
+        ...routeOccurrence,
+        rsvpCount: 5,
+        participants: [{ participantId: 'participant-1', status: 'Going' }],
+        eventSeries: {
+          ...routeOccurrence.eventSeries,
+          description: 'Fetched event detail payload',
+        },
+      } as any,
+    ]);
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0]).toMatchObject({
+      occurrenceId: 'occ-1',
+      rsvpCount: 5,
+      participants: [{ participantId: 'participant-1', status: 'Going' }],
+      myRsvp: { participantId: 'route-rsvp', occurrenceId: 'occ-1', status: 'Going', quantity: 1 },
+      eventSeries: {
+        slug: 'navigable-series',
+        summary: 'Thin route payload',
+        description: 'Fetched event detail payload',
+      },
+    });
   });
 
   it('falls back to the first navigable occurrence and returns null when none exist', () => {
