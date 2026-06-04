@@ -104,7 +104,7 @@ import EventOccurrenceParticipantService from '@/services/eventOccurrencePartici
 import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO, UserDAO } from '@/mongodb/dao';
 import NotificationService from '@/services/notification';
 import { publishEventRsvpUpdated } from '@/websocket/publisher';
-import type { EventOccurrence, EventOccurrenceParticipant, EventSeries } from '@gatherle/commons/types';
+import type { EventOccurrence, EventOccurrenceParticipant, EventSeries } from '@gatherle/commons/server/types';
 import {
   EventOccurrenceStatus,
   EventOrganizerRole,
@@ -113,7 +113,7 @@ import {
   NotificationType,
   ParticipantStatus,
   ParticipantVisibility,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 
 describe('EventOccurrenceParticipantService', () => {
   const occurrence: EventOccurrence = {

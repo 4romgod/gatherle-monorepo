@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ERROR_MESSAGES, REGEX_PHONE_NUMBER } from '../constants';
-import { isDateNotInFuture, validateDate, validateMongodbId } from '../utils';
+import { isDateNotInFuture, validateDate } from '../utils/date';
+import { validateMongodbId } from '../utils/general';
 import { Gender, FollowPolicy, OAuthProvider, SocialVisibility, UserRole } from '../types';
 
 /**

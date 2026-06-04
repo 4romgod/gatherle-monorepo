@@ -1,11 +1,11 @@
-import type { UpdateEventInput, EventsQueryOptionsInput, CreateEventInput } from '@gatherle/commons/types';
+import type { UpdateEventInput, EventsQueryOptionsInput, CreateEventInput } from '@gatherle/commons/server/types';
 import type { PipelineStage } from 'mongoose';
 import { EventSeriesDAO } from '@/mongodb/dao';
 import EventOccurrenceDAO from '@/mongodb/dao/eventOccurrence';
 import { EventSeries as EventSeriesModel } from '@/mongodb/models';
-import { SortOrderInput } from '@gatherle/commons/types';
-import { DATE_FILTER_OPTIONS } from '@gatherle/commons/constants';
-import { EventStatus } from '@gatherle/commons/types/eventSeries';
+import { SortOrderInput } from '@gatherle/commons/server/types';
+import { DATE_FILTER_OPTIONS } from '@gatherle/commons/server/constants';
+import { EventStatus } from '@gatherle/commons/server/types';
 import { CustomError, ErrorTypes, transformEventOptionsToPipeline } from '@/utils';
 import { GraphQLError } from 'graphql';
 import { ERROR_MESSAGES } from '@/validation';

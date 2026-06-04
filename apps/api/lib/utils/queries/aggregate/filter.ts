@@ -1,6 +1,6 @@
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
-import type { FilterInput, LocationFilterInput, TextSearchInput } from '@gatherle/commons/types';
-import { FilterOperatorInput, SelectorOperatorInput } from '@gatherle/commons/types';
+import type { FilterInput, LocationFilterInput, TextSearchInput } from '@gatherle/commons/server/types';
+import { FilterOperatorInput, SelectorOperatorInput } from '@gatherle/commons/server/types';
 import type { PipelineStage } from 'mongoose';
 import { buildTextSearchRegex } from '../text-search';
 

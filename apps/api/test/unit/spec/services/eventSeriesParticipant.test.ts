@@ -71,8 +71,8 @@ import { EventSeriesParticipantService } from '@/services';
 import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';
 import EventOccurrenceService from '@/services/eventOccurrence';
 import EventOccurrenceParticipantService from '@/services/eventOccurrenceParticipant';
-import type { EventOccurrence, EventOccurrenceParticipant, EventSeries } from '@gatherle/commons/types';
-import { ParticipantStatus } from '@gatherle/commons/types';
+import type { EventOccurrence, EventOccurrenceParticipant, EventSeries } from '@gatherle/commons/server/types';
+import { ParticipantStatus } from '@gatherle/commons/server/types';
 
 describe('EventSeriesParticipantService', () => {
   const singleEventSeries: EventSeries = {

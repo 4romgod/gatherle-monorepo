@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 import { resolve } from 'path';
-import { APPLICATION_STAGES } from '@gatherle/commons';
-import type { UserWithToken } from '@gatherle/commons/types';
+import { APPLICATION_STAGES } from '@gatherle/commons/server';
+import type { UserWithToken } from '@gatherle/commons/server/types';
 import { API_E2E_REMOTE_WARMUP_REQUESTS } from './config';
 import { getLoginUserMutation, getReadEventCategoriesQuery } from '@/test/utils';
 import { getSeededTestUsers, type SeededUserCredentials } from './utils/helpers';

@@ -1,5 +1,5 @@
 import { EventScheduleResolver } from '@/graphql/resolvers/eventSchedule';
-import type { EventSchedule } from '@gatherle/commons/types';
+import type { EventSchedule } from '@gatherle/commons/server/types';
 
 describe('EventScheduleResolver', () => {
   const resolver = new EventScheduleResolver();

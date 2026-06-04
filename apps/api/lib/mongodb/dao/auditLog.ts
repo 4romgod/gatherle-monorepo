@@ -1,5 +1,5 @@
 import { AuditLog as AuditLogModel } from '@/mongodb/models';
-import type { AuditLog, AuditLogPage, ReadAuditLogsInput, WriteAuditLogInput } from '@gatherle/commons/types';
+import type { AuditLog, AuditLogPage, ReadAuditLogsInput, WriteAuditLogInput } from '@gatherle/commons/server/types';
 import { logDaoError, KnownCommonError } from '@/utils';
 
 const DEFAULT_PAGE_LIMIT = 25;

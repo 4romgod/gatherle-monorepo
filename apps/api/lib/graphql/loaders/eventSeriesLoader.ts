@@ -1,7 +1,7 @@
 import DataLoader from 'dataloader';
 import { FollowDAO } from '@/mongodb/dao';
 import { EventSeries as EventSeriesModel } from '@/mongodb/models';
-import type { EventSeries } from '@gatherle/commons/types';
+import type { EventSeries } from '@gatherle/commons/server/types';
 import { logger } from '@/utils/logger';
 
 /**

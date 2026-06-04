@@ -1,6 +1,6 @@
-import { ActivityObjectType, ActivityVerb, ActivityVisibility } from '@gatherle/commons/types/activity';
-import type { FollowApprovalStatus } from '@gatherle/commons/types/follow';
-import { FollowTargetType } from '@gatherle/commons/types/follow';
+import { ActivityObjectType, ActivityVerb, ActivityVisibility } from '@gatherle/commons/server/types';
+import type { FollowApprovalStatus } from '@gatherle/commons/server/types';
+import { FollowTargetType } from '@gatherle/commons/server/types';
 
 export type FollowSeed = {
   followerEmail: string;

@@ -1,4 +1,4 @@
-import { APPLICATION_STAGES } from '@gatherle/commons';
+import { APPLICATION_STAGES } from '@gatherle/commons/server';
 
 export const DEFAULT_WEBSOCKET_STAGE_THROTTLE_RATE_LIMITS: Record<string, number> = {
   [APPLICATION_STAGES.DEV]: 25,

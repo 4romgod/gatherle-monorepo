@@ -5,8 +5,8 @@ import type {
   EventOrganizer,
   SplitEventSeriesInput,
   UpdateEventInput,
-} from '@gatherle/commons/types';
-import type { UserRole } from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
+import type { UserRole } from '@gatherle/commons/server/types';
 import {
   ActivityDAO,
   EventOccurrenceDAO,
@@ -18,7 +18,7 @@ import {
 } from '@/mongodb/dao';
 import AuditLogService from './auditLog';
 import { CustomError, ErrorTypes, KnownCommonError, areEventSchedulesEqual, getScheduleAnchorStartAt } from '@/utils';
-import { FollowTargetType, NotificationTargetType } from '@gatherle/commons/types';
+import { FollowTargetType, NotificationTargetType } from '@gatherle/commons/server/types';
 import { logger } from '@/utils/logger';
 import EventOccurrenceService from './eventOccurrence';
 

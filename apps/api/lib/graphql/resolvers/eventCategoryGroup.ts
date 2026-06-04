@@ -7,7 +7,7 @@ import {
   UpdateEventCategoryGroupInput,
   UserRole,
   EventCategory,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { EventCategoryGroupDAO } from '@/mongodb/dao';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
 import { getAuthenticatedUser, getRequestIpFromContext } from '@/utils';

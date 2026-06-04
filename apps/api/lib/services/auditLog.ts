@@ -8,8 +8,8 @@ import type {
   ReadAuditLogsInput,
   User,
   WriteAuditLogInput,
-} from '@gatherle/commons/types';
-import type { UserRole } from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
+import type { UserRole } from '@gatherle/commons/server/types';
 import { logger } from '@/utils/logger';
 
 class AuditLogService {

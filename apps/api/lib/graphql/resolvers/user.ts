@@ -14,7 +14,7 @@ import {
   FollowTargetType,
   SessionState,
   SessionStateInput,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { CreateUserInputSchema, LoginUserInputSchema, UpdateUserInputSchema } from '@/validation/zod';
 import { ERROR_MESSAGES, validateEmail, validateInput, validateMongodbId, validateUsername } from '@/validation';
 import { RESOLVER_DESCRIPTIONS, USER_DESCRIPTIONS } from '@/constants';

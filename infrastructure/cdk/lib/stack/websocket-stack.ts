@@ -14,7 +14,7 @@ import { LambdaInvoke } from 'aws-cdk-lib/aws-scheduler-targets';
 import { ApiGatewayv2DomainProperties } from 'aws-cdk-lib/aws-route53-targets';
 import { ApiMapping, DomainName, WebSocketApi, WebSocketStage } from 'aws-cdk-lib/aws-apigatewayv2';
 import { WebSocketLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
-import { DEFAULT_STAGE_WEBAPP_ORIGINS, APPLICATION_STAGES } from '@gatherle/commons';
+import { DEFAULT_STAGE_WEBAPP_ORIGINS, APPLICATION_STAGES } from '@gatherle/commons/server';
 import {
   DEFAULT_WEBSOCKET_STAGE_THROTTLE_BURST_LIMITS,
   DEFAULT_WEBSOCKET_STAGE_THROTTLE_RATE_LIMITS,

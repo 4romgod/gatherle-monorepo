@@ -5,7 +5,7 @@ import {
   ParticipantStatus,
   type EventOccurrence,
   type SortInput,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { KnownCommonError, logDaoError } from '@/utils';
 
 type OccurrenceReadOptions = {

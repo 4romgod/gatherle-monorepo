@@ -1,7 +1,7 @@
 import { EventCategoryDAO } from '@/mongodb/dao';
 import { eventCategoryCatalogData, eventCategoryGroupCatalogData } from '@/mongodb/data/catalog';
 import { logger } from '@/utils/logger';
-import type { EventCategory } from '@gatherle/commons/types';
+import type { EventCategory } from '@gatherle/commons/server/types';
 import { seedEventCategories, seedEventCategoryGroups } from '../shared/catalog';
 
 export async function runCatalogSeed(): Promise<EventCategory[]> {

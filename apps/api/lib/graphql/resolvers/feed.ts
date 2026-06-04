@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Arg, Authorized, Ctx, FieldResolver, Int, Mutation, Query, Resolver, Root } from 'type-graphql';
-import { EventOccurrence, EventSeries, FeedReason, UserFeedItem, UserRole } from '@gatherle/commons/types';
+import { EventOccurrence, EventSeries, FeedReason, UserFeedItem, UserRole } from '@gatherle/commons/server/types';
 import { UserFeedDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';

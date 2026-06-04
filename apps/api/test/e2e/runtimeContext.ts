@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import type { UserWithToken } from '@gatherle/commons/types';
+import type { UserWithToken } from '@gatherle/commons/server/types';
 
 export type CachedEventCategoryRef = {
   eventCategoryId: string;

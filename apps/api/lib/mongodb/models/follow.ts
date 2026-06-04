@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
-import { Follow as FollowEntity } from '@gatherle/commons/types';
+import { Follow as FollowEntity } from '@gatherle/commons/server/types';
 import type { MongoModelForClass } from './modelTypes';
 
 @pre<FollowModel>('validate', function () {

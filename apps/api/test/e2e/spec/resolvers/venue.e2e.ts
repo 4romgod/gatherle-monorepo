@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { Types } from 'mongoose';
-import type { UserWithToken } from '@gatherle/commons/types';
-import { VenueType } from '@gatherle/commons/types';
+import type { UserWithToken } from '@gatherle/commons/server/types';
+import { VenueType } from '@gatherle/commons/server/types';
 import { getDeleteOrganizationByIdMutation } from '@/test/utils';
 import {
   getCreateVenueMutation,

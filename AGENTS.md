@@ -218,7 +218,8 @@ Avoid these mistakes:
 
 ## Coding Style & Naming Conventions
 
-- TypeScript everywhere; `tsconfig.base.json` enforces strict mode and path aliases (`@gatherle/commons/*`).
+- TypeScript everywhere; `tsconfig.base.json` enforces strict mode and the shared `@gatherle/commons/client/*` and
+  `@gatherle/commons/server/*` path aliases.
 - Prettier 3 is the formatter (`apps/api/.prettierrc.json`, `packages/commons/.prettierrc.json`); Next app uses
   `prettier` with the Tailwind plugin via `lint:fix`.
 - Prefer camelCase for variables/functions, PascalCase for types/components, kebab-case for files and workspace

@@ -1,8 +1,8 @@
 import { GraphQLError } from 'graphql';
 import { NotificationDAO } from '@/mongodb/dao';
 import { Notification as NotificationModel } from '@/mongodb/models';
-import type { Notification, CreateNotificationInput } from '@gatherle/commons/types';
-import { NotificationType, NotificationTargetType } from '@gatherle/commons/types';
+import type { Notification, CreateNotificationInput } from '@gatherle/commons/server/types';
+import { NotificationType, NotificationTargetType } from '@gatherle/commons/server/types';
 import { MockMongoError } from '@/test/utils';
 
 jest.mock('@/mongodb/models', () => ({

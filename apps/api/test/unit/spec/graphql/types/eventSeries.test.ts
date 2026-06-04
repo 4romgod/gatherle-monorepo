@@ -6,8 +6,8 @@ import {
   UpdateEventInput,
   RsvpInput,
   CancelRsvpInput,
-} from '@gatherle/commons/types';
-import { EventPrivacySetting, EventStatus } from '@gatherle/commons/types/eventSeries';
+} from '@gatherle/commons/server/types';
+import { EventPrivacySetting, EventStatus } from '@gatherle/commons/server/types';
 
 describe('Enums', () => {
   it('should ensure that EventPrivacySetting enum have the correct values', () => {

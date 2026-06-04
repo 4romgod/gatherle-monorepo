@@ -6,7 +6,7 @@ import {
   EventSeries,
   EventsQueryOptionsInput,
   QueryOptionsInput,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { EVENT_DESCRIPTIONS, RESOLVER_DESCRIPTIONS } from '@/constants';
 import type { ServerContext } from '@/graphql';
 import EventOccurrenceService from '@/services/eventOccurrence';

@@ -1,6 +1,6 @@
 import DataLoader from 'dataloader';
 import { Organization as OrganizationModel } from '@/mongodb/models';
-import type { Organization } from '@gatherle/commons/types';
+import type { Organization } from '@gatherle/commons/server/types';
 import { logger } from '@/utils/logger';
 
 /**

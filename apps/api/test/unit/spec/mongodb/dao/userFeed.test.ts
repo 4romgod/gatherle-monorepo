@@ -1,7 +1,7 @@
 import { UserFeedDAO } from '@/mongodb/dao';
 import { UserFeed as UserFeedModel } from '@/mongodb/models';
-import type { UserFeedItem } from '@gatherle/commons/types';
-import { FeedReason } from '@gatherle/commons/types';
+import type { UserFeedItem } from '@gatherle/commons/server/types';
+import { FeedReason } from '@gatherle/commons/server/types';
 import { MockMongoError } from '@/test/utils';
 import { GraphQLError } from 'graphql';
 

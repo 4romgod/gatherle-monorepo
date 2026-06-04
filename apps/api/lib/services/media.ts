@@ -13,8 +13,8 @@ import {
 } from '@/constants';
 import { CustomError, ErrorTypes } from '@/utils';
 import { buildMediaCdnUrl } from '@/utils/mediaUrl';
-import type { EventOccurrence, EventSeries, MediaUploadUrl } from '@gatherle/commons/types';
-import { EventMomentType, MediaEntityType, MediaType, ParticipantStatus } from '@gatherle/commons/types';
+import type { EventOccurrence, EventSeries, MediaUploadUrl } from '@gatherle/commons/server/types';
+import { EventMomentType, MediaEntityType, MediaType, ParticipantStatus } from '@gatherle/commons/server/types';
 import { EventMomentDAO, EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';
 import { POSTING_WINDOW_HOURS_AFTER_EVENT, MAX_STATUSES_PER_WINDOW } from '@/mongodb/dao/eventMoment';
 import EventOccurrenceService from './eventOccurrence';

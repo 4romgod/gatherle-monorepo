@@ -7,8 +7,8 @@ import type {
   OrganizationMembership,
   QueryOptionsInput,
   UpdateOrganizationInput,
-} from '@gatherle/commons/types';
-import { FollowTargetType, OrganizationRole, UserRole } from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
+import { FollowTargetType, OrganizationRole, UserRole } from '@gatherle/commons/server/types';
 import * as validation from '@/validation';
 import type { ServerContext } from '@/graphql';
 import { OrganizationMembershipService, OrganizationService } from '@/services';

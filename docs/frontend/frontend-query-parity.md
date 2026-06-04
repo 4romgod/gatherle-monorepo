@@ -14,7 +14,7 @@ The target is:
 1. Prefer dedicated server-filtered queries over fetching broad collections and filtering client-side.
 2. When mobile and web render the same logical collection, create matching hooks on both surfaces.
 3. Keep non-UI query builders and event-time partition helpers mirrored in both frontends, but do not import runtime
-   helpers from `@gatherle/commons` into either frontend surface.
+   helpers from `@gatherle/commons/server` into either frontend surface.
 4. Use the mobile app and the mobile-sized webapp as the default parity pair.
 
 ## Phase 1: Account/Profile/Event Collections
@@ -104,5 +104,5 @@ Before adding a new frontend query flow:
 1. Does the other surface already fetch the same logical data?
 2. Can this be expressed as a matching hook name on both platforms?
 3. Can option-building or time-partition logic be mirrored cleanly in both frontends without importing runtime helpers
-   from `@gatherle/commons`?
+   from `@gatherle/commons/server`?
 4. Are we overfetching and filtering in the client when the API can filter directly?

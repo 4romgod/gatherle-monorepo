@@ -11,8 +11,8 @@ const config: Config = {
   moduleNameMapper: {
     // Handle module aliases (matching tsconfig paths)
     '^@/(.*)$': '<rootDir>/$1',
-    '^@gatherle/commons$': '<rootDir>/../../packages/commons/lib/index.ts',
-    '^@gatherle/commons/(.*)$': '<rootDir>/../../packages/commons/lib/$1',
+    '^@gatherle/commons/client$': '<rootDir>/../../packages/commons/lib/client/index.ts',
+    '^@gatherle/commons/client/(.*)$': '<rootDir>/../../packages/commons/lib/client/$1',
     'next/font/google$': '<rootDir>/test/unit/mocks/nextFontMock.ts',
     'next/font/local$': '<rootDir>/test/unit/mocks/nextFontLocalMock.ts',
   },

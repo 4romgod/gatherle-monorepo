@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
 import { kebabCase } from 'lodash';
-import { Organization as OrganizationEntity } from '@gatherle/commons/types';
+import { Organization as OrganizationEntity } from '@gatherle/commons/server/types';
 import type { MongoModelForClass } from './modelTypes';
 
 @pre<OrganizationModel>('validate', function () {

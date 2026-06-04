@@ -2,42 +2,51 @@
   "name": "@gatherle/commons",
   "version": "1.0.0",
   "description": "This repository contains common source code for gatherle",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/server/index.js",
+  "types": "dist/server/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "default": "./dist/server/index.js"
     },
-    "./constants": {
-      "types": "./dist/constants/index.d.ts",
-      "default": "./dist/constants/index.js"
+    "./server/constants": {
+      "types": "./dist/server/constants/index.d.ts",
+      "default": "./dist/server/constants/index.js"
     },
-    "./types": {
-      "types": "./dist/types/index.d.ts",
-      "default": "./dist/types/index.js"
+    "./server/types": {
+      "types": "./dist/server/types/index.d.ts",
+      "default": "./dist/server/types/index.js"
     },
-    "./utils": {
-      "types": "./dist/utils/index.d.ts",
-      "default": "./dist/utils/index.js"
+    "./server/utils": {
+      "types": "./dist/server/utils/index.d.ts",
+      "default": "./dist/server/utils/index.js"
     },
-    "./utils/*": {
-      "types": "./dist/utils/*.d.ts",
-      "default": "./dist/utils/*.js"
+    "./server/validation": {
+      "types": "./dist/server/validation/index.d.ts",
+      "default": "./dist/server/validation/index.js"
     },
-    "./validation": {
-      "types": "./dist/validation/index.d.ts",
-      "default": "./dist/validation/index.js"
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "default": "./dist/client/index.js"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "default": "./dist/*.js"
+    "./client/constants": {
+      "types": "./dist/client/constants/index.d.ts",
+      "default": "./dist/client/constants/index.js"
+    },
+    "./client/utils": {
+      "types": "./dist/client/utils/index.d.ts",
+      "default": "./dist/client/utils/index.js"
+    },
+    "./client/validation": {
+      "types": "./dist/client/validation/index.d.ts",
+      "default": "./dist/client/validation/index.js"
     }
   },
   "scripts": {
     "build": "npm-run-all lint:check build:ts",
     "build:ts": "npm run clean && tsc --build tsconfig.json --pretty",
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
+    "dev": "tsc --build tsconfig.json --watch --preserveWatchOutput --pretty",
     "lint:check": "eslint \"lib/**/*.{ts,tsx}\"",
     "lint:fix": "eslint \"lib/**/*.{ts,tsx}\" --fix",
     "typecheck": "tsc --project tsconfig.json --noEmit --pretty"

@@ -104,8 +104,8 @@ import { OrganizationMembershipService } from '@/services';
 import { OrganizationMembershipDAO, OrganizationDAO, UserDAO } from '@/mongodb/dao';
 import AuditLogService from '@/services/auditLog';
 import NotificationService from '@/services/notification';
-import type { OrganizationMembership, Organization } from '@gatherle/commons/types';
-import { OrganizationRole, NotificationType, NotificationTargetType, UserRole } from '@gatherle/commons/types';
+import type { OrganizationMembership, Organization } from '@gatherle/commons/server/types';
+import { OrganizationRole, NotificationType, NotificationTargetType, UserRole } from '@gatherle/commons/server/types';
 
 describe('OrganizationMembershipService', () => {
   const mockMembership: OrganizationMembership = {

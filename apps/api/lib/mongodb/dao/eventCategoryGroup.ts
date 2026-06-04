@@ -5,7 +5,7 @@ import type {
   EventCategoryGroup,
   QueryOptionsInput,
   UpdateEventCategoryGroupInput,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 
 /**
  * Data Access Object for Event Category Group operations.

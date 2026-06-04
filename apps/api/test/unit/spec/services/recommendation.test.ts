@@ -1,5 +1,5 @@
 import RecommendationService from '@/services/recommendation';
-import { FeedReason, FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@gatherle/commons/types';
+import { FeedReason, FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@gatherle/commons/server/types';
 import { CustomError, ErrorTypes } from '@/utils';
 
 jest.mock('@/services/eventOccurrence', () => ({

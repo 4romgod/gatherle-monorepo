@@ -1,8 +1,8 @@
 import { UserDAO } from '@/mongodb/dao';
 import { User } from '@/mongodb/models';
-import type { CreateUserInput, UpdateUserInput, QueryOptionsInput } from '@gatherle/commons/types';
-import { SortOrderInput } from '@gatherle/commons/types';
-import { Gender, OAuthProvider, UserRole } from '@gatherle/commons/types/user';
+import type { CreateUserInput, UpdateUserInput, QueryOptionsInput } from '@gatherle/commons/server/types';
+import { SortOrderInput } from '@gatherle/commons/server/types';
+import { Gender, OAuthProvider, UserRole } from '@gatherle/commons/server/types';
 import { ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery } from '@/utils';
 import { ERROR_MESSAGES } from '@/validation';
 import { generateToken } from '@/utils/auth';

@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { EventCategoryGroupResolver } from '@/graphql/resolvers/eventCategoryGroup';
-import type { CreateEventCategoryGroupInput, EventCategoryGroup } from '@gatherle/commons/types';
-import { UserRole } from '@gatherle/commons/types';
+import type { CreateEventCategoryGroupInput, EventCategoryGroup } from '@gatherle/commons/server/types';
+import { UserRole } from '@gatherle/commons/server/types';
 import type { ServerContext } from '@/graphql';
 import EventCategoryGroupService from '@/services/eventCategoryGroup';
 

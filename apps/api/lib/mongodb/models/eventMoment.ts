@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
-import { EventMoment as EventMomentEntity } from '@gatherle/commons/types';
+import { EventMoment as EventMomentEntity } from '@gatherle/commons/server/types';
 import type { MongoModelForClass } from './modelTypes';
 
 @pre<EventMomentModel>('validate', function () {

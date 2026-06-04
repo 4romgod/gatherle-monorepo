@@ -1,7 +1,7 @@
 import DataLoader from 'dataloader';
 import EventOccurrenceService from '@/services/eventOccurrence';
 import { EventOccurrenceDAO } from '@/mongodb/dao';
-import type { EventOccurrence } from '@gatherle/commons/types';
+import type { EventOccurrence } from '@gatherle/commons/server/types';
 
 export const createEventOccurrenceLoader = () =>
   new DataLoader<string, EventOccurrence | null>(async (occurrenceIds) => {

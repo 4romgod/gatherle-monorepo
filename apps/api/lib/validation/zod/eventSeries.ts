@@ -5,7 +5,7 @@ import {
   EventPrivacySetting,
   EventStatus,
   EventVisibility,
-} from '@gatherle/commons/types/eventSeries';
+} from '@gatherle/commons/server/types';
 import { ERROR_MESSAGES } from '@/validation';
 import mongoose from 'mongoose';
 import { OccurrenceIdSchema } from './shared';

@@ -1,8 +1,8 @@
 import { GraphQLError } from 'graphql';
 import { ActivityDAO } from '@/mongodb/dao';
 import { Activity as ActivityModel } from '@/mongodb/models';
-import type { Activity as ActivityEntity, CreateActivityInput } from '@gatherle/commons/types';
-import { ActivityObjectType, ActivityVerb, ActivityVisibility } from '@gatherle/commons/types';
+import type { Activity as ActivityEntity, CreateActivityInput } from '@gatherle/commons/server/types';
+import { ActivityObjectType, ActivityVerb, ActivityVisibility } from '@gatherle/commons/server/types';
 import { CustomError, ErrorTypes } from '@/utils';
 import { MockMongoError } from '@/test/utils';
 import { ERROR_MESSAGES } from '@/validation';

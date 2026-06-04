@@ -3,4 +3,21 @@ export * from './environmentVariables';
 export * from './mediaConstants';
 export * from './observability';
 export * from './operations';
-export * from '@gatherle/commons/constants/descriptions';
+export {
+  AUDIT_LOG_DESCRIPTIONS,
+  COMMON_DESCRIPTIONS,
+  EVENT_CATEGORY_DESCRIPTIONS,
+  EVENT_DESCRIPTIONS,
+  EVENT_MOMENT_DESCRIPTIONS,
+  LOCATION_DESCRIPTIONS,
+  NOTIFICATION_DESCRIPTIONS,
+  ORGANIZATION_DESCRIPTIONS,
+  ORGANIZATION_LINK_DESCRIPTIONS,
+  ORGANIZATION_MEMBERSHIP_DESCRIPTIONS,
+  QUERY_DESCRIPTIONS,
+  RESOLVER_DESCRIPTIONS,
+  SOCIAL_DESCRIPTIONS,
+  USER_DESCRIPTIONS,
+  USER_FEED_DESCRIPTIONS,
+  VENUE_DESCRIPTIONS,
+} from '@gatherle/commons/server/constants';

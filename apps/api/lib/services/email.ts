@@ -1,6 +1,6 @@
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { AWS_REGION, EMAIL_FROM, WEBAPP_URL, STAGE } from '@/constants';
-import { APPLICATION_STAGES } from '@gatherle/commons';
+import { APPLICATION_STAGES } from '@gatherle/commons/server';
 import { logger } from '@/utils/logger';
 
 const isLocalDev = STAGE === APPLICATION_STAGES.DEV;

@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Arg, Mutation, Resolver, Query, Authorized, FieldResolver, Root, Ctx, Int } from 'type-graphql';
-import type { User } from '@gatherle/commons/types';
+import type { User } from '@gatherle/commons/server/types';
 import {
   CancelEventOccurrenceInput,
   CreateEventInput,
@@ -18,7 +18,7 @@ import {
   OrganizationRole,
   EventLifecycleStatus,
   EventStatus,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { ERROR_MESSAGES, validateInput, validateMongodbId } from '@/validation';
 import {
   CancelEventOccurrenceInputSchema,

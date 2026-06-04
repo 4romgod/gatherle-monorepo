@@ -5,15 +5,15 @@ import type {
   EventSeries,
   UpsertEventOccurrenceParticipantInput,
   User,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import {
   EventOccurrenceStatus,
   EventStatus,
   NotificationTargetType,
   NotificationType,
   ParticipantStatus,
-} from '@gatherle/commons/types';
-import { PUBLIC_OCCURRENCE_QUERY_PARAM, getOccurrencePublicAnchor } from '@gatherle/commons/utils';
+} from '@gatherle/commons/server/types';
+import { PUBLIC_OCCURRENCE_QUERY_PARAM, getOccurrencePublicAnchor } from '@gatherle/commons/server/utils';
 import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO, UserDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import { publishEventRsvpUpdated, type EventRsvpRealtimeSnapshot } from '@/websocket/publisher';

@@ -38,7 +38,7 @@ jest.mock('@/utils/logger', () => ({
 
 import AuditLogDAO from '@/mongodb/dao/auditLog';
 import AuditLogService from '@/services/auditLog';
-import { AuditAction, AuditTargetType, UserRole } from '@gatherle/commons/types';
+import { AuditAction, AuditTargetType, UserRole } from '@gatherle/commons/server/types';
 import { logger } from '@/utils/logger';
 
 describe('AuditLogService', () => {

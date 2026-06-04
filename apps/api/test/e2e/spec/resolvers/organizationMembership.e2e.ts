@@ -1,8 +1,8 @@
 import request from 'supertest';
 import { usersMockData } from '@/mongodb/data/mock';
 import { Types } from 'mongoose';
-import type { CreateUserInput, UserWithToken } from '@gatherle/commons/types';
-import { OrganizationRole } from '@gatherle/commons/types';
+import type { CreateUserInput, UserWithToken } from '@gatherle/commons/server/types';
+import { OrganizationRole } from '@gatherle/commons/server/types';
 import {
   getCreateOrganizationMembershipMutation,
   getDeleteOrganizationMembershipMutation,

@@ -1,4 +1,4 @@
-import { APPLICATION_STAGES, AWS_REGIONS } from '@gatherle/commons';
+import { APPLICATION_STAGES, AWS_REGIONS } from '@gatherle/commons/server';
 import { config } from 'dotenv';
 import { z } from 'zod';
 import { initLogger, LOG_LEVEL_MAP, LogLevel } from '@/utils/logger';

@@ -1,11 +1,11 @@
-import type { Follow, CreateFollowInput, User } from '@gatherle/commons/types';
+import type { Follow, CreateFollowInput, User } from '@gatherle/commons/server/types';
 import {
   FollowTargetType,
   FollowApprovalStatus,
   FollowPolicy,
   NotificationType,
   NotificationTargetType,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { FollowDAO, UserDAO, OrganizationDAO, EventSeriesDAO } from '@/mongodb/dao';
 import { CustomError, ErrorTypes } from '@/utils';
 import { logger } from '@/utils/logger';

@@ -1,4 +1,4 @@
-import { OrganizationRole } from '@gatherle/commons/types';
+import { OrganizationRole } from '@gatherle/commons/server/types';
 
 export type OrganizationMembershipSeed = {
   orgSlug: string;

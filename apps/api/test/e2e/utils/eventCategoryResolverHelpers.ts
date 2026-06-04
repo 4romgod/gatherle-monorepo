@@ -1,5 +1,5 @@
 import { kebabCase } from 'lodash';
-import type { CreateEventCategoryInput } from '@gatherle/commons/types';
+import type { CreateEventCategoryInput } from '@gatherle/commons/server/types';
 import { getCreateEventCategoryMutation, getReadEventCategoryBySlugQuery } from '@/test/utils';
 import { trackCreatedId } from './eventSeriesResolverHelpers';
 

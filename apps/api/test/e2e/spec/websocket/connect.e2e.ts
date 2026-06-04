@@ -2,7 +2,7 @@ import WebSocket from 'ws';
 import { usersMockData } from '@/mongodb/data/mock';
 import { WebSocketCloseCode } from '@/constants';
 import { WEBSOCKET_AUTH_PROTOCOL_PREFIX } from '@/websocket/constants';
-import type { CreateUserInput, UserWithToken } from '@gatherle/commons/types';
+import type { CreateUserInput, UserWithToken } from '@gatherle/commons/server/types';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
 import { assertNoCleanupFailures } from '@/test/e2e/utils/eventSeriesResolverHelpers';
 import {

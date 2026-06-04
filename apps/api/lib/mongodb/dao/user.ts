@@ -1,6 +1,6 @@
 import { User as UserModel, Organization as OrganizationModel } from '@/mongodb/models';
 import { randomUUID } from 'crypto';
-import { FilterOperatorInput, OAuthProvider, UserRole } from '@gatherle/commons/types';
+import { FilterOperatorInput, OAuthProvider, UserRole } from '@gatherle/commons/server/types';
 import type {
   User,
   UpdateUserInput,
@@ -11,7 +11,7 @@ import type {
   UserWithToken,
   SessionStateInput,
   SessionState,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { ErrorTypes, CustomError, KnownCommonError, transformOptionsToQuery, logDaoError } from '@/utils';
 import { ERROR_MESSAGES } from '@/validation';
 import { generateToken } from '@/utils/auth';

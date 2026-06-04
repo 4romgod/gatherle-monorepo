@@ -2,8 +2,8 @@ import type {
   OrganizationMembership,
   CreateOrganizationMembershipInput,
   UpdateOrganizationMembershipInput,
-} from '@gatherle/commons/types';
-import { NotificationType, NotificationTargetType, OrganizationRole, UserRole } from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
+import { NotificationType, NotificationTargetType, OrganizationRole, UserRole } from '@gatherle/commons/server/types';
 import { OrganizationMembershipDAO, OrganizationDAO, UserDAO } from '@/mongodb/dao';
 import AuditLogService from './auditLog';
 import NotificationService from './notification';

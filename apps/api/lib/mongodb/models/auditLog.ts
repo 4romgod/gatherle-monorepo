@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
-import { AuditLog as AuditLogEntity } from '@gatherle/commons/types';
+import { AuditLog as AuditLogEntity } from '@gatherle/commons/server/types';
 import type { MongoModelForClass } from './modelTypes';
 
 @pre<AuditLogModel>('validate', function () {

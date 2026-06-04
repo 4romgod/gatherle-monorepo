@@ -4,7 +4,7 @@ import {
   createMyEventOccurrenceParticipantLoader,
 } from '@/graphql/loaders/eventOccurrenceParticipantLoader';
 import { EventOccurrenceParticipantDAO } from '@/mongodb/dao';
-import { ParticipantStatus, type EventOccurrenceParticipant } from '@gatherle/commons/types';
+import { ParticipantStatus, type EventOccurrenceParticipant } from '@gatherle/commons/server/types';
 
 jest.mock('@/mongodb/dao', () => ({
   EventOccurrenceParticipantDAO: {

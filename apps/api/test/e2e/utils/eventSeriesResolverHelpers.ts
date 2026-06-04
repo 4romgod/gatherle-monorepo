@@ -1,6 +1,6 @@
 import request from 'supertest';
-import type { OrganizationRole } from '@gatherle/commons/types';
-import type { CreateEventInput } from '@gatherle/commons/types';
+import type { OrganizationRole } from '@gatherle/commons/server/types';
+import type { CreateEventInput } from '@gatherle/commons/server/types';
 import {
   getCreateEventMutation,
   getCreateOrganizationMutation,

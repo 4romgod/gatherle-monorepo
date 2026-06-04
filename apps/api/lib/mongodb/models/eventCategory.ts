@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
 import { kebabCase } from 'lodash';
-import { EventCategory as EventCategoryEntity } from '@gatherle/commons/types';
+import { EventCategory as EventCategoryEntity } from '@gatherle/commons/server/types';
 import type { MongoModelForClass } from './modelTypes';
 
 @pre<EventCategoryModel>('validate', function () {

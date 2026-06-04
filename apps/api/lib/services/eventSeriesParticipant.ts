@@ -5,8 +5,8 @@ import type {
   EventSeries,
   EventSeriesParticipant,
   UpsertEventParticipantInput,
-} from '@gatherle/commons/types';
-import { ParticipantStatus } from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
+import { ParticipantStatus } from '@gatherle/commons/server/types';
 import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';
 import {
   CustomError,

@@ -35,11 +35,20 @@ const clearMatchingStorageKeys = (storage: Storage | null, storageType: 'localSt
   }
 };
 
+const getSafeStorage = (storageType: 'localStorage' | 'sessionStorage') => {
+  try {
+    return window[storageType];
+  } catch (error) {
+    logger.warn(`Failed to access ${storageType} during logout`, error);
+    return null;
+  }
+};
+
 export const clearLogoutBrowserState = () => {
   if (typeof window === 'undefined') {
     return;
   }
 
-  clearMatchingStorageKeys(window.localStorage, 'localStorage');
-  clearMatchingStorageKeys(window.sessionStorage, 'sessionStorage');
+  clearMatchingStorageKeys(getSafeStorage('localStorage'), 'localStorage');
+  clearMatchingStorageKeys(getSafeStorage('sessionStorage'), 'sessionStorage');
 };

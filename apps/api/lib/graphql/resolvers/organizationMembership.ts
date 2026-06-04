@@ -6,7 +6,7 @@ import {
   OrganizationMembership,
   UpdateOrganizationMembershipInput,
   UserRole,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { OrganizationMembershipDAO } from '@/mongodb/dao';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
 import { validateInput, validateMongodbId } from '@/validation';

@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Arg, Mutation, Resolver } from 'type-graphql';
 import { UserDAO, EmailVerificationTokenDAO, PasswordResetTokenDAO } from '@/mongodb/dao';
-import { ExchangeOAuthInput, User, UserWithToken } from '@gatherle/commons/types';
+import { ExchangeOAuthInput, User, UserWithToken } from '@gatherle/commons/server/types';
 import { validateEmail, validateInput } from '@/validation';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
 import { CustomError, ErrorTypes } from '@/utils/exceptions';

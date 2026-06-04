@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { eventSeriesMockData } from '@/mongodb/data/mock';
-import type { CreateEventInput, UserWithToken } from '@gatherle/commons/types';
-import { ParticipantStatus, SortOrderInput } from '@gatherle/commons/types';
+import type { CreateEventInput, UserWithToken } from '@gatherle/commons/server/types';
+import { ParticipantStatus, SortOrderInput } from '@gatherle/commons/server/types';
 import {
   getCancelEventOccurrenceMutation,
   getDeleteEventByIdMutation,

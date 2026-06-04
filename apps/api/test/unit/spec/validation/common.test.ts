@@ -8,7 +8,7 @@ import {
   validateEmail,
   validateUsername,
 } from '@/validation';
-import { EventStatus } from '@gatherle/commons/types/eventSeries';
+import { EventStatus } from '@gatherle/commons/server/types';
 import mongoose from 'mongoose';
 
 jest.mock('@/utils/exceptions', () => ({

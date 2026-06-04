@@ -1,4 +1,4 @@
-import type { CreateUserInput } from '@gatherle/commons/types';
+import type { CreateUserInput } from '@gatherle/commons/server/types';
 
 export type SystemUserSeedData = Omit<CreateUserInput, 'password' | 'interests'> & {
   passwordEnvVar: string;

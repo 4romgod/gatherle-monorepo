@@ -1,6 +1,6 @@
 // This file runs BEFORE test files are imported
 // It sets environment variables that are needed during module loading
-import { APPLICATION_STAGES, AWS_REGIONS } from '@gatherle/commons';
+import { APPLICATION_STAGES, AWS_REGIONS } from '@gatherle/commons/server';
 
 process.env.AWS_REGION = AWS_REGIONS.DUB;
 process.env.STAGE = APPLICATION_STAGES.DEV;

@@ -1,7 +1,7 @@
 import { OrganizationMembershipDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
-import { OrganizationRole } from '@gatherle/commons/types';
-import type { Organization } from '@gatherle/commons/types';
+import { OrganizationRole } from '@gatherle/commons/server/types';
+import type { Organization } from '@gatherle/commons/server/types';
 
 export async function ensureOwnerMembershipForOrganization(organization: Organization) {
   try {

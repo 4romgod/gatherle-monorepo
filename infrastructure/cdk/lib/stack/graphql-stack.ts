@@ -24,7 +24,7 @@ import { Schedule, ScheduleExpression } from 'aws-cdk-lib/aws-scheduler';
 import { LambdaInvoke } from 'aws-cdk-lib/aws-scheduler-targets';
 import { CfnWebACL, CfnWebACLAssociation } from 'aws-cdk-lib/aws-wafv2';
 import { join } from 'path';
-import { DEFAULT_STAGE_WEBAPP_ORIGINS, APPLICATION_STAGES } from '@gatherle/commons';
+import { DEFAULT_STAGE_WEBAPP_ORIGINS, APPLICATION_STAGES } from '@gatherle/commons/server';
 import {
   DEFAULT_GRAPHQL_API_THROTTLE_BURST_LIMITS,
   DEFAULT_GRAPHQL_API_THROTTLE_RATE_LIMITS,

@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import { ActivityResolver } from '@/graphql/resolvers/activity';
 import { ActivityDAO, FollowDAO } from '@/mongodb/dao';
-import type { Activity, CreateActivityInput, User } from '@gatherle/commons/types';
-import { ActivityObjectType, ActivityVerb, ActivityVisibility, UserRole } from '@gatherle/commons/types';
+import type { Activity, CreateActivityInput, User } from '@gatherle/commons/server/types';
+import { ActivityObjectType, ActivityVerb, ActivityVisibility, UserRole } from '@gatherle/commons/server/types';
 import { Types } from 'mongoose';
 import type { ServerContext } from '@/graphql';
 

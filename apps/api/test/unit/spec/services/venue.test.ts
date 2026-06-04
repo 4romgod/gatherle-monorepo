@@ -23,8 +23,8 @@ jest.mock('@/services/auditLog', () => ({
 import VenueService from '@/services/venue';
 import { VenueDAO } from '@/mongodb/dao';
 import AuditLogService from '@/services/auditLog';
-import type { Venue } from '@gatherle/commons/types';
-import { UserRole, VenueType } from '@gatherle/commons/types';
+import type { Venue } from '@gatherle/commons/server/types';
+import { UserRole, VenueType } from '@gatherle/commons/server/types';
 
 describe('VenueService', () => {
   const mockVenue: Venue = {

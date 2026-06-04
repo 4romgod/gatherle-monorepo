@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import EventMoment from '@/mongodb/models/eventMoment';
-import { EVENT_MOMENT_EXPIRY_MS } from '@gatherle/commons/constants';
-import { EventMomentState, EventMomentType } from '@gatherle/commons/types';
+import { EVENT_MOMENT_EXPIRY_MS } from '@gatherle/commons/server/constants';
+import { EventMomentState, EventMomentType } from '@gatherle/commons/server/types';
 
 describe('EventMoment Model', () => {
   describe('pre-validate hook', () => {

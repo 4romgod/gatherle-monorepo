@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { getModelForClass, pre } from '@typegoose/typegoose';
-import { ChatMessage as ChatMessageEntity } from '@gatherle/commons/types';
+import { ChatMessage as ChatMessageEntity } from '@gatherle/commons/server/types';
 import type { MongoModelForClass } from './modelTypes';
 
 @pre<ChatMessageModel>('validate', function () {

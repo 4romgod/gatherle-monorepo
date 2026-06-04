@@ -2,7 +2,7 @@ import { UserDAO } from '@/mongodb/dao';
 import { readSystemUserPasswordFromEnv } from '@/mongodb/data/system';
 import type { SystemUserSeedData } from '@/mongodb/data/system';
 import { logger } from '@/utils/logger';
-import type { CreateUserInput, User } from '@gatherle/commons/types';
+import type { CreateUserInput, User } from '@gatherle/commons/server/types';
 import { promptForHiddenValue } from './prompt';
 import { getRandomUniqueItems } from './random';
 

@@ -2,7 +2,7 @@ import type {
   ChatConversation,
   ChatMessage as ChatMessageEntity,
   ChatMessageConnection,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { ChatMessage as ChatMessageModel } from '@/mongodb/models';
 import ChatConversationUnreadStateDAO from '@/mongodb/dao/chatConversationUnreadState';
 import { KnownCommonError, logDaoError } from '@/utils';

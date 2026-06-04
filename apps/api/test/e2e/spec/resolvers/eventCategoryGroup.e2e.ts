@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { eventCategoryCatalogData } from '@/mongodb/data/catalog';
-import type { QueryOptionsInput, UserWithToken } from '@gatherle/commons/types';
+import type { QueryOptionsInput, UserWithToken } from '@gatherle/commons/server/types';
 import {
   getCreateEventCategoryGroupMutation,
   getDeleteEventCategoryGroupBySlugMutation,

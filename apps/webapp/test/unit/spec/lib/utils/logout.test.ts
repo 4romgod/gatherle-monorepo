@@ -137,4 +137,31 @@ describe('clearLogoutBrowserState', () => {
       value: originalSessionStorage,
     });
   });
+
+  it('logs a warning and continues when accessing a storage property throws', () => {
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new Error('localStorage blocked');
+      },
+    });
+    Object.defineProperty(window, 'sessionStorage', {
+      configurable: true,
+      value: createStorageMock([`${STORAGE_NAMESPACES.EVENT_MUTATION}:draft`]),
+    });
+
+    expect(() => clearLogoutBrowserState()).not.toThrow();
+
+    expect(loggerMock.warn).toHaveBeenCalledWith('Failed to access localStorage during logout', expect.any(Error));
+    expect(window.sessionStorage.removeItem).toHaveBeenCalledWith(`${STORAGE_NAMESPACES.EVENT_MUTATION}:draft`);
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: originalLocalStorage,
+    });
+    Object.defineProperty(window, 'sessionStorage', {
+      configurable: true,
+      value: originalSessionStorage,
+    });
+  });
 });

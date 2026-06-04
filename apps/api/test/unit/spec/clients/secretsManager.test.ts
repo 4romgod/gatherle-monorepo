@@ -1,4 +1,4 @@
-import { APPLICATION_STAGES } from '@gatherle/commons';
+import { APPLICATION_STAGES } from '@gatherle/commons/server';
 
 const sendMock = jest.fn();
 

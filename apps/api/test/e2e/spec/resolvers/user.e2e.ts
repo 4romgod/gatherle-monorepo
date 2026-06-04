@@ -13,8 +13,8 @@ import {
   getReadUsersWithoutOptionsQuery,
   getUpdateUserMutation,
 } from '@/test/utils';
-import type { CreateUserInput, QueryOptionsInput, UserWithToken } from '@gatherle/commons/types';
-import { Gender } from '@gatherle/commons/types';
+import type { CreateUserInput, QueryOptionsInput, UserWithToken } from '@gatherle/commons/server/types';
+import { Gender } from '@gatherle/commons/server/types';
 import { ERROR_MESSAGES } from '@/validation';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
 import { assertNoCleanupFailures } from '@/test/e2e/utils/eventSeriesResolverHelpers';

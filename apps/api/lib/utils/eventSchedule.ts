@@ -1,4 +1,4 @@
-import type { EventSchedule } from '@gatherle/commons/types';
+import type { EventSchedule } from '@gatherle/commons/server/types';
 
 type LegacyEventSchedule = Partial<EventSchedule> & {
   startAt?: Date;

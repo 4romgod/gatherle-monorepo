@@ -90,7 +90,7 @@ jest.mock('@/mongodb/dao/eventMoment', () => ({
 import * as s3Client from '@/clients/AWS/s3Client';
 import * as DaoModule from '@/mongodb/dao';
 import { MediaService } from '@/services';
-import { MediaEntityType, MediaType, ParticipantStatus } from '@gatherle/commons/types';
+import { MediaEntityType, MediaType, ParticipantStatus } from '@gatherle/commons/server/types';
 
 const mockEvent = {
   _id: 'event-id-123',

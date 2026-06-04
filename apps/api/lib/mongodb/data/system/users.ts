@@ -1,5 +1,5 @@
-import { IMPORTED_EVENT_SYSTEM_USERNAME } from '@gatherle/commons/constants';
-import { FollowPolicy, Gender, SocialVisibility, UserRole } from '@gatherle/commons/types/user';
+import { IMPORTED_EVENT_SYSTEM_USERNAME } from '@gatherle/commons/server/constants';
+import { FollowPolicy, Gender, SocialVisibility, UserRole } from '@gatherle/commons/server/types';
 import type { SystemUserSeedData } from './types';
 
 export const importedEventsSystemUser: SystemUserSeedData = {

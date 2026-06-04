@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import type { CreateUserInput, QueryOptionsInput, UserWithToken } from '@gatherle/commons/types';
-import { UserRole } from '@gatherle/commons/types';
+import type { CreateUserInput, QueryOptionsInput, UserWithToken } from '@gatherle/commons/server/types';
+import { UserRole } from '@gatherle/commons/server/types';
 import {
   getCreateUserMutation,
   getDeleteUserByIdMutation,

@@ -1,6 +1,6 @@
-import { PUBLIC_OCCURRENCE_QUERY_PARAM, getOccurrencePublicAnchor } from '@gatherle/commons/utils';
-import type { Notification, NotificationTargetType, CreateNotificationInput } from '@gatherle/commons/types';
-import { NotificationType, ParticipantStatus } from '@gatherle/commons/types';
+import { PUBLIC_OCCURRENCE_QUERY_PARAM, getOccurrencePublicAnchor } from '@gatherle/commons/server/utils';
+import type { Notification, NotificationTargetType, CreateNotificationInput } from '@gatherle/commons/server/types';
+import { NotificationType, ParticipantStatus } from '@gatherle/commons/server/types';
 import { NotificationDAO, UserDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import { publishNotificationCreated, publishNotificationsCreated } from '@/websocket/publisher';

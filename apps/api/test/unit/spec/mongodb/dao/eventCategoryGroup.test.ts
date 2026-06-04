@@ -5,8 +5,8 @@ import type {
   CreateEventCategoryGroupInput,
   UpdateEventCategoryGroupInput,
   QueryOptionsInput,
-} from '@gatherle/commons/types';
-import { SortOrderInput } from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
+import { SortOrderInput } from '@gatherle/commons/server/types';
 import { CustomError, ErrorTypes, transformOptionsToQuery } from '@/utils';
 import { ERROR_MESSAGES } from '@/validation';
 import { MockMongoError } from '@/test/utils';

@@ -8,7 +8,7 @@ import {
   getUpdateUserMutation,
   getVerifyEmailMutation,
 } from '@/test/utils';
-import type { CreateUserInput, UserWithToken } from '@gatherle/commons/types';
+import type { CreateUserInput, UserWithToken } from '@gatherle/commons/server/types';
 import { getSeededTestUsers, loginSeededUser } from '@/test/e2e/utils/helpers';
 import { assertNoCleanupFailures } from '@/test/e2e/utils/eventSeriesResolverHelpers';
 import { ERROR_MESSAGES } from '@/validation';

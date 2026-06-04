@@ -1,5 +1,5 @@
-import type { EventOccurrence, EventSchedule } from '@gatherle/commons/types';
-import { EventOccurrenceStatus, EventStatus } from '@gatherle/commons/types';
+import type { EventOccurrence, EventSchedule } from '@gatherle/commons/server/types';
+import { EventOccurrenceStatus, EventStatus } from '@gatherle/commons/server/types';
 import { getScheduleAnchorStartAt, getScheduleDurationMinutes } from './eventSchedule';
 import { getNextOccurrence } from './rrule';
 

@@ -8,8 +8,8 @@ const config = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@data/(.*)$': '<rootDir>/data/$1',
-    '^@gatherle/commons$': '<rootDir>/../../packages/commons/lib/index.ts',
-    '^@gatherle/commons/(.*)$': '<rootDir>/../../packages/commons/lib/$1',
+    '^@gatherle/commons/client$': '<rootDir>/../../packages/commons/lib/client/index.ts',
+    '^@gatherle/commons/client/(.*)$': '<rootDir>/../../packages/commons/lib/client/$1',
     '^react$': '<rootDir>/node_modules/react',
     '^react/jsx-runtime$': '<rootDir>/node_modules/react/jsx-runtime',
     '^react/jsx-dev-runtime$': '<rootDir>/node_modules/react/jsx-dev-runtime',

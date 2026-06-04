@@ -26,8 +26,8 @@ jest.mock('@/services/auditLog', () => ({
 import EventCategoryService from '@/services/eventCategory';
 import { EventCategoryDAO } from '@/mongodb/dao';
 import AuditLogService from '@/services/auditLog';
-import type { CreateEventCategoryInput, EventCategory } from '@gatherle/commons/types';
-import { UserRole } from '@gatherle/commons/types';
+import type { CreateEventCategoryInput, EventCategory } from '@gatherle/commons/server/types';
+import { UserRole } from '@gatherle/commons/server/types';
 
 describe('EventCategoryService', () => {
   const mockCategory: EventCategory = {

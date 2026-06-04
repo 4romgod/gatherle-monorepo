@@ -5,7 +5,7 @@ import type {
   CreateEventCategoryInput,
   UpdateEventCategoryInput,
   QueryOptionsInput,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { CustomError, ErrorTypes, transformOptionsToQuery } from '@/utils';
 import { ERROR_MESSAGES } from '@/validation';
 import { MockMongoError } from '@/test/utils';

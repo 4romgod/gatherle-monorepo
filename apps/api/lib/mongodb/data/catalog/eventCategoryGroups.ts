@@ -1,4 +1,4 @@
-import type { CreateEventCategoryGroupInput } from '@gatherle/commons/types';
+import type { CreateEventCategoryGroupInput } from '@gatherle/commons/server/types';
 
 import eventCategories from './eventCategories';
 

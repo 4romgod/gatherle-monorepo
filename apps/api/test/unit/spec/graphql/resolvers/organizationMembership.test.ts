@@ -7,8 +7,8 @@ import type {
   DeleteOrganizationMembershipInput,
   OrganizationMembership,
   UpdateOrganizationMembershipInput,
-} from '@gatherle/commons/types';
-import { OrganizationRole, UserRole } from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
+import { OrganizationRole, UserRole } from '@gatherle/commons/server/types';
 import * as validation from '@/validation';
 import type { ServerContext } from '@/graphql';
 

@@ -1,6 +1,6 @@
 import { AWS_REGION, JWT_SECRET, MONGO_DB_URL, STAGE, SECRET_ARN, SECRET_KEYS } from '@/constants';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
-import { APPLICATION_STAGES } from '@gatherle/commons';
+import { APPLICATION_STAGES } from '@gatherle/commons/server';
 import { logger } from '@/utils/logger';
 
 let secretsManagerClient: SecretsManagerClient;

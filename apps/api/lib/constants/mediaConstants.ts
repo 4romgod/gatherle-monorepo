@@ -1,4 +1,4 @@
-import { MediaEntityType } from '@gatherle/commons/types';
+import { MediaEntityType } from '@gatherle/commons/server/types';
 
 export const CONTENT_TYPE_MAP: Record<string, string> = {
   jpg: 'image/jpeg',

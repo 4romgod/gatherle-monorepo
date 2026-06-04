@@ -7,8 +7,8 @@ import {
   sanitizeQueryLimit,
   transformOptionsToQuery,
 } from '@/utils';
-import type { FilterInput, SortInput } from '@gatherle/commons/types';
-import { FilterOperatorInput, SelectorOperatorInput, SortOrderInput } from '@gatherle/commons/types';
+import type { FilterInput, SortInput } from '@gatherle/commons/server/types';
+import { FilterOperatorInput, SelectorOperatorInput, SortOrderInput } from '@gatherle/commons/server/types';
 
 describe('Query', () => {
   describe('sanitizeQueryLimit', () => {

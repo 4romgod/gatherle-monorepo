@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Arg, Mutation, Query, Authorized, Ctx, Resolver } from 'type-graphql';
-import { MediaUploadUrl, MediaEntityType, MediaType, UserRole } from '@gatherle/commons/types';
+import { MediaUploadUrl, MediaEntityType, MediaType, UserRole } from '@gatherle/commons/server/types';
 import { getAuthenticatedUser } from '@/utils';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
 import type { ServerContext } from '@/graphql';

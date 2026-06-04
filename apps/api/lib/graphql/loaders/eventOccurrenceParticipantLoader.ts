@@ -1,7 +1,7 @@
 import DataLoader from 'dataloader';
 import { EventOccurrenceParticipantDAO } from '@/mongodb/dao';
 import { EventOccurrenceParticipant as EventOccurrenceParticipantModel } from '@/mongodb/models';
-import type { EventOccurrenceParticipant } from '@gatherle/commons/types';
+import type { EventOccurrenceParticipant } from '@gatherle/commons/server/types';
 import { buildMyEventOccurrenceParticipantLoadKey as buildOccurrenceParticipantLoadKey } from '@/utils';
 
 export { buildMyEventOccurrenceParticipantLoadKey } from '@/utils';

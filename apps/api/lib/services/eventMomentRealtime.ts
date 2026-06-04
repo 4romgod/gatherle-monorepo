@@ -1,4 +1,4 @@
-import type { EventMoment, EventSeries } from '@gatherle/commons/types';
+import type { EventMoment, EventSeries } from '@gatherle/commons/server/types';
 import { EventSeriesDAO, UserDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import {

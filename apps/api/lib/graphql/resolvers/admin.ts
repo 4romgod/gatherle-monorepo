@@ -7,7 +7,7 @@ import {
   EventStatus,
   ReadAuditLogsInput,
   UserRole,
-} from '@gatherle/commons/types';
+} from '@gatherle/commons/server/types';
 import { EventCategoryDAO, EventCategoryGroupDAO, EventSeriesDAO, UserDAO } from '@/mongodb/dao';
 import { AuditLogService } from '@/services';
 import { RESOLVER_DESCRIPTIONS } from '@/constants';
