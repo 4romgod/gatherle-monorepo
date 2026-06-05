@@ -1,4 +1,5 @@
 import {
+  buildEventCardSocialProof,
   buildDefaultOccurrenceDateRange,
   buildRecommendedOccurrences,
   buildSelectedEventOccurrenceDateRange,
@@ -7,7 +8,11 @@ import {
   formatDateGroupLabel,
   formatEventScheduleRange,
   formatEventScheduleTwoLine,
+  formatGoingCountLabel,
+  formatInterestedCountLabel,
   formatLocationLabel,
+  formatOccurrenceSessionDate,
+  formatOccurrenceSessionTime,
   formatRelativeTime,
   formatShortDate,
   formatShortDateTime,
@@ -22,6 +27,7 @@ import {
   getOrganizerLabel,
   getOccurrenceParticipantCount,
   getOccurrenceParticipantPreview,
+  getOccurrenceParticipantStatusCounts,
   getParticipantKey,
   sortCategoriesByInterest,
   sortOrganizationsByFollowers,
@@ -65,6 +71,16 @@ describe('mobile event formatters', () => {
     expect(range.endDate).toBe(new Date(2027, 0, 15, 23, 59, 59, 999).toISOString());
   });
 
+  it('uses the current date when no range base date is provided', () => {
+    const defaultRange = buildDefaultOccurrenceDateRange();
+    const selectedRange = buildSelectedEventOccurrenceDateRange();
+
+    expect(defaultRange.startDate).toBe(new Date(2026, 4, 23, 0, 0, 0, 0).toISOString());
+    expect(defaultRange.endDate).toBe(new Date(2027, 4, 23, 23, 59, 59, 999).toISOString());
+    expect(selectedRange.startDate).toBe(new Date(2016, 4, 23, 0, 0, 0, 0).toISOString());
+    expect(selectedRange.endDate).toBe(new Date(2036, 4, 23, 23, 59, 59, 999).toISOString());
+  });
+
   it('builds a wide selected-event occurrence range so exact series matches include past occurrences', () => {
     const range = buildSelectedEventOccurrenceDateRange(new Date('2026-01-15T13:45:00.000Z'));
     expect(range.startDate).toBe(new Date(2016, 0, 15, 0, 0, 0, 0).toISOString());
@@ -100,6 +116,18 @@ describe('mobile event formatters', () => {
         (occurrence) => occurrence.occurrenceId,
       ),
     ).toEqual(['trend-2', 'trend-3', 'upcoming-4']);
+  });
+
+  it('builds recommendations when the excluded series list is omitted', () => {
+    expect(
+      buildRecommendedOccurrences(
+        [
+          { eventSeriesId: 'series-1', occurrenceId: 'trend-1' },
+          { eventSeriesId: 'series-1', occurrenceId: 'trend-2' },
+        ] as any,
+        [{ eventSeriesId: 'series-2', occurrenceId: 'upcoming-1' }] as any,
+      ).map((occurrence) => occurrence.occurrenceId),
+    ).toEqual(['trend-1', 'upcoming-1']);
   });
 
   it('sorts categories and organizations without mutating inputs', () => {
@@ -156,6 +184,12 @@ describe('mobile event formatters', () => {
     expect(formatEventScheduleTwoLine(null)).toBe('Date to be announced');
     expect(formatShortDate('2026-05-23T10:05:00.000Z')).toContain('May');
     expect(formatShortDate(null)).toBe('Date to be announced');
+    expect(formatOccurrenceSessionDate('2026-05-23T10:05:00.000Z')).toContain('May');
+    expect(formatOccurrenceSessionDate('2026-05-23T10:05:00.000Z', 'Africa/Johannesburg')).toContain('May');
+    expect(formatOccurrenceSessionDate(null)).toBe('Date TBD');
+    expect(formatOccurrenceSessionTime('2026-05-23T10:05:00.000Z')).toContain(':');
+    expect(formatOccurrenceSessionTime('2026-05-23T10:05:00.000Z', 'Africa/Johannesburg')).toContain(':');
+    expect(formatOccurrenceSessionTime(undefined)).toBe('Time TBD');
 
     expect(formatRelativeTime('2026-05-23T12:01:00.000Z')).toBe('in 1 min');
     expect(formatRelativeTime('2026-05-23T11:59:00.000Z')).toBe('1 min ago');
@@ -186,11 +220,167 @@ describe('mobile event formatters', () => {
     expect(getOccurrenceParticipantPreview(baseOccurrence, 2)).toHaveLength(2);
     expect(getOccurrenceParticipantPreview(null)).toEqual([]);
     expect(getOccurrenceParticipantCount(baseOccurrence)).toBe(3);
+    expect(getOccurrenceParticipantStatusCounts(baseOccurrence)).toEqual({ going: 2, interested: 1, total: 3 });
     expect(getOccurrenceParticipantCount(null)).toBe(0);
 
     expect(formatCountLabel(1, 'guest')).toBe('1 guest');
     expect(formatCountLabel(2, 'guest')).toBe('2 guests');
     expect(formatCountLabel(null, 'person', 'people')).toBe('0 people');
+    expect(formatGoingCountLabel(undefined)).toBe('No one going yet');
+    expect(formatGoingCountLabel(0, { zeroLabel: 'Nobody has committed yet' })).toBe('Nobody has committed yet');
+    expect(formatGoingCountLabel(1, { includePeopleWord: true })).toBe('1 person going');
+    expect(formatGoingCountLabel(2, { includePeopleWord: true })).toBe('2 people going');
+    expect(formatGoingCountLabel(5)).toBe('5 going');
+    expect(formatInterestedCountLabel(undefined)).toBe('No one interested yet');
+    expect(formatInterestedCountLabel(1, { includePeopleWord: true })).toBe('1 person interested');
+    expect(formatInterestedCountLabel(2, { includePeopleWord: true })).toBe('2 people interested');
+    expect(formatInterestedCountLabel(3)).toBe('3 interested');
+    expect(formatInterestedCountLabel(0)).toBe('No one interested yet');
+
+    const quantityOccurrence = {
+      participants: [
+        { participantId: 'q1', status: 'Going', quantity: 3 },
+        { participantId: 'q2', status: 'Interested', quantity: 2 },
+        { participantId: 'q3', status: 'Cancelled', quantity: 5 },
+      ],
+    } as any;
+
+    expect(getOccurrenceParticipantCount(quantityOccurrence)).toBe(5);
+    expect(getOccurrenceParticipantStatusCounts(quantityOccurrence)).toEqual({
+      going: 3,
+      interested: 2,
+      total: 5,
+    });
+  });
+
+  it('builds people-first event card social proof with followed users before generic counts', () => {
+    const socialOccurrence = {
+      participants: [
+        {
+          participantId: 'p1',
+          status: 'Going',
+          userId: 'user-1',
+          user: { given_name: 'Ada', family_name: 'Lovelace', username: 'ada' },
+        },
+        {
+          participantId: 'p2',
+          status: 'Going',
+          userId: 'user-2',
+          quantity: 2,
+          user: { given_name: 'Grace', family_name: 'Hopper', username: 'grace' },
+        },
+        {
+          participantId: 'p3',
+          status: 'Interested',
+          userId: 'user-3',
+          quantity: 2,
+          user: { given_name: 'Katherine', family_name: 'Johnson', username: 'kj' },
+        },
+      ],
+    } as any;
+
+    expect(buildEventCardSocialProof(socialOccurrence)).toMatchObject({
+      text: 'Ada and 2 others are going',
+    });
+
+    expect(buildEventCardSocialProof(socialOccurrence, { followingUserIds: new Set(['user-3']) })).toMatchObject({
+      text: '2 people you follow are interested',
+    });
+
+    expect(buildEventCardSocialProof(null)).toMatchObject({
+      text: 'Be the first to go',
+    });
+  });
+
+  it('falls back through generic and count-only social proof states', () => {
+    const genericGoingOccurrence = {
+      participants: [
+        {
+          participantId: 'p1',
+          status: 'Going',
+          user: { given_name: 'Ada', family_name: 'Lovelace', username: 'ada' },
+        },
+        {
+          participantId: 'p2',
+          status: 'Going',
+          user: { given_name: 'Grace', family_name: 'Hopper', username: 'grace' },
+        },
+        {
+          participantId: 'p3',
+          status: 'Going',
+          user: { given_name: 'Katherine', family_name: 'Johnson', username: 'kj' },
+        },
+      ],
+    } as any;
+    const genericInterestedOccurrence = {
+      participants: [
+        {
+          participantId: 'p4',
+          status: 'Interested',
+          user: { given_name: 'Ada', family_name: 'Lovelace', username: 'ada' },
+        },
+        {
+          participantId: 'p5',
+          status: 'Interested',
+          user: { given_name: 'Grace', family_name: 'Hopper', username: 'grace' },
+        },
+      ],
+    } as any;
+    const followedInterestedOccurrence = {
+      participants: [
+        {
+          participantId: 'p6',
+          status: 'Interested',
+          userId: 'user-1',
+          user: { given_name: 'Ada', family_name: 'Lovelace', username: 'ada' },
+        },
+        {
+          participantId: 'p7',
+          status: 'Interested',
+          userId: 'user-2',
+          user: { given_name: 'Grace', family_name: 'Hopper', username: 'grace' },
+        },
+      ],
+    } as any;
+
+    expect(buildEventCardSocialProof(genericGoingOccurrence)).toMatchObject({
+      text: 'Ada and 2 others are going',
+    });
+    expect(buildEventCardSocialProof(genericInterestedOccurrence)).toMatchObject({
+      text: 'Ada and 1 other are interested',
+    });
+    expect(
+      buildEventCardSocialProof(followedInterestedOccurrence, {
+        followingUserIds: new Set(['user-1', 'user-2']),
+      }),
+    ).toMatchObject({
+      text: '2 people you follow are interested',
+    });
+    expect(
+      buildEventCardSocialProof({
+        participants: [{ participantId: 'p8', status: 'Going', user: { family_name: 'Madonna' } }],
+      } as any),
+    ).toMatchObject({
+      text: 'Madonna is going',
+    });
+    expect(
+      buildEventCardSocialProof({
+        participants: [
+          { participantId: 'p9', status: 'Going', user: { given_name: '', family_name: '', username: '' } },
+        ],
+      } as any),
+    ).toMatchObject({
+      text: 'Someone is going',
+    });
+    expect(buildEventCardSocialProof({ participants: [] } as any, { counts: { goingCount: 2 } })).toMatchObject({
+      text: '2 people going',
+    });
+    expect(buildEventCardSocialProof({ participants: [] } as any, { counts: { interestedCount: 1 } })).toMatchObject({
+      text: '1 person interested',
+    });
+    expect(buildEventCardSocialProof({ participants: [] } as any, { counts: { totalCount: 4 } })).toMatchObject({
+      text: '4 people going',
+    });
   });
 
   it('formats event card data with fallback labels', () => {

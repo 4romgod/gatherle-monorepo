@@ -6,6 +6,7 @@ import EventBox from '@/components/events/eventBox';
 import Link from 'next/link';
 import EventTileSkeletonGrid from './EventTileSkeleton';
 import { AnyEventPreview, getEventPreviewHref, getEventPreviewKey } from '@/components/events/event-preview-utils';
+import { useFollowingUserIds } from '@/hooks/useFollow';
 
 export type EventTileGridProps = {
   events: AnyEventPreview[];
@@ -14,6 +15,8 @@ export type EventTileGridProps = {
 };
 
 export default function EventTileGrid({ events, loading = false, skeletonCount = 3 }: EventTileGridProps) {
+  const followingUserIds = useFollowingUserIds();
+
   if (loading) {
     return <EventTileSkeletonGrid count={skeletonCount} />;
   }
@@ -33,7 +36,7 @@ export default function EventTileGrid({ events, loading = false, skeletonCount =
       {events.map((event) => (
         <Box component="div" key={`EventTileGrid.${getEventPreviewKey(event)}`}>
           <Link href={getEventPreviewHref(event)} onClick={handleLinkClick}>
-            <EventBox event={event} />
+            <EventBox event={event} followingUserIds={followingUserIds} />
           </Link>
         </Box>
       ))}

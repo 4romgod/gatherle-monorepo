@@ -90,6 +90,59 @@ type UserNameLike = {
   username?: string | null;
 };
 
+type EventCardSocialProof = {
+  avatars: MobileParticipant[];
+  text: string;
+};
+
+type EventCardSocialProofOptions = {
+  counts?: {
+    goingCount?: number;
+    interestedCount?: number;
+    totalCount?: number;
+  };
+  followingUserIds?: ReadonlySet<string>;
+};
+
+function getActiveParticipants(occurrence?: MobileEventOccurrence | null) {
+  return (occurrence?.participants ?? []).filter((participant) => participant.status !== 'Cancelled');
+}
+
+function getParticipantQuantity(participant: MobileParticipant) {
+  return participant.quantity ?? 1;
+}
+
+function isGoingParticipant(participant: MobileParticipant) {
+  return participant.status === 'Going' || participant.status === 'CheckedIn';
+}
+
+function isInterestedParticipant(participant: MobileParticipant) {
+  return participant.status === 'Interested';
+}
+
+function getShortDisplayFallback(user?: UserNameLike | null) {
+  const givenName = user?.given_name?.trim();
+  if (givenName) {
+    return givenName;
+  }
+
+  const displayName = getDisplayName(user);
+  if (displayName) {
+    return displayName.split(/\s+/)[0] ?? displayName;
+  }
+
+  return user?.username?.trim() || 'Someone';
+}
+
+function buildNamedParticipationLabel(firstLabel: string, totalCount: number, action: 'going' | 'interested') {
+  if (totalCount <= 1) {
+    return `${firstLabel} is ${action}`;
+  }
+
+  const othersCount = totalCount - 1;
+  return `${firstLabel} and ${othersCount} other${othersCount === 1 ? '' : 's'} are ${action}`;
+}
+
 export function getDisplayName(user?: UserNameLike | null) {
   const fullName = [user?.given_name, user?.family_name].filter(Boolean).join(' ').trim();
   return fullName || user?.username || '';
@@ -299,11 +352,167 @@ export function formatCountLabel(count: number | null | undefined, singular: str
 }
 
 export function getOccurrenceParticipantPreview(occurrence?: MobileEventOccurrence | null, limit = 3) {
-  return (occurrence?.participants ?? []).filter((participant) => participant.status !== 'Cancelled').slice(0, limit);
+  return getActiveParticipants(occurrence).slice(0, limit);
 }
 
 export function getOccurrenceParticipantCount(occurrence?: MobileEventOccurrence | null) {
-  return (occurrence?.participants ?? []).filter((participant) => participant.status !== 'Cancelled').length;
+  return getActiveParticipants(occurrence).reduce(
+    (count, participant) => count + getParticipantQuantity(participant),
+    0,
+  );
+}
+
+export function getOccurrenceParticipantStatusCounts(occurrence?: MobileEventOccurrence | null) {
+  const activeParticipants = getActiveParticipants(occurrence);
+
+  return activeParticipants.reduce(
+    (summary, participant) => {
+      const quantity = getParticipantQuantity(participant);
+
+      if (isGoingParticipant(participant)) {
+        summary.going += quantity;
+      }
+
+      if (isInterestedParticipant(participant)) {
+        summary.interested += quantity;
+      }
+
+      summary.total += quantity;
+      return summary;
+    },
+    { going: 0, interested: 0, total: 0 },
+  );
+}
+
+export function formatGoingCountLabel(
+  count: number | null | undefined,
+  options: {
+    includePeopleWord?: boolean;
+    zeroLabel?: string;
+  } = {},
+) {
+  const safeCount = count ?? 0;
+
+  if (safeCount <= 0) {
+    return options.zeroLabel ?? 'No one going yet';
+  }
+
+  if (!options.includePeopleWord) {
+    return `${safeCount} going`;
+  }
+
+  return safeCount === 1 ? '1 person going' : `${safeCount} people going`;
+}
+
+export function formatInterestedCountLabel(
+  count: number | null | undefined,
+  options: {
+    includePeopleWord?: boolean;
+    zeroLabel?: string;
+  } = {},
+) {
+  const safeCount = count ?? 0;
+
+  if (safeCount <= 0) {
+    return options.zeroLabel ?? 'No one interested yet';
+  }
+
+  if (!options.includePeopleWord) {
+    return `${safeCount} interested`;
+  }
+
+  return safeCount === 1 ? '1 person interested' : `${safeCount} people interested`;
+}
+
+export function buildEventCardSocialProof(
+  occurrence?: MobileEventOccurrence | null,
+  options: EventCardSocialProofOptions = {},
+): EventCardSocialProof {
+  const followingUserIds = options.followingUserIds;
+  const activeParticipants = getActiveParticipants(occurrence);
+  const goingParticipants = activeParticipants.filter(isGoingParticipant);
+  const interestedParticipants = activeParticipants.filter(isInterestedParticipant);
+  const getQuantityTotal = (participants: MobileParticipant[]) =>
+    participants.reduce((sum, participant) => sum + getParticipantQuantity(participant), 0);
+  const followedGoingParticipants = followingUserIds
+    ? goingParticipants.filter((participant) => participant.userId && followingUserIds.has(participant.userId))
+    : [];
+  const followedInterestedParticipants = followingUserIds
+    ? interestedParticipants.filter((participant) => participant.userId && followingUserIds.has(participant.userId))
+    : [];
+  const goingCount = options.counts?.goingCount ?? getQuantityTotal(goingParticipants);
+  const interestedCount = options.counts?.interestedCount ?? getQuantityTotal(interestedParticipants);
+  const totalCount = options.counts?.totalCount ?? getQuantityTotal(activeParticipants);
+
+  if (followedGoingParticipants.length > 0) {
+    return {
+      avatars: followedGoingParticipants.slice(0, 3),
+      text: buildNamedParticipationLabel(
+        getShortDisplayFallback(followedGoingParticipants[0]?.user),
+        getQuantityTotal(followedGoingParticipants),
+        'going',
+      ),
+    };
+  }
+
+  if (followedInterestedParticipants.length > 0) {
+    const followedInterestedCount = getQuantityTotal(followedInterestedParticipants);
+    return {
+      avatars: followedInterestedParticipants.slice(0, 3),
+      text:
+        followedInterestedCount === 1
+          ? `${getShortDisplayFallback(followedInterestedParticipants[0]?.user)} is interested`
+          : `${followedInterestedCount} people you follow are interested`,
+    };
+  }
+
+  if (goingParticipants.length > 0) {
+    return {
+      avatars: goingParticipants.slice(0, 3),
+      text: buildNamedParticipationLabel(
+        getShortDisplayFallback(goingParticipants[0]?.user),
+        Math.max(goingCount, 1),
+        'going',
+      ),
+    };
+  }
+
+  if (interestedParticipants.length > 0) {
+    return {
+      avatars: interestedParticipants.slice(0, 3),
+      text: buildNamedParticipationLabel(
+        getShortDisplayFallback(interestedParticipants[0]?.user),
+        Math.max(interestedCount, 1),
+        'interested',
+      ),
+    };
+  }
+
+  if (goingCount > 0) {
+    return {
+      avatars: [],
+      text: formatGoingCountLabel(goingCount, { includePeopleWord: true }),
+    };
+  }
+
+  if (interestedCount > 0) {
+    return {
+      avatars: [],
+      text: formatInterestedCountLabel(interestedCount, { includePeopleWord: true }),
+    };
+  }
+
+  if (totalCount > 0) {
+    return {
+      avatars: [],
+      text: formatGoingCountLabel(totalCount, { includePeopleWord: true }),
+    };
+  }
+
+  return {
+    avatars: [],
+    text: 'Be the first to go',
+  };
 }
 
 export function getEventCategoryLabel(occurrence?: MobileEventOccurrence | null) {

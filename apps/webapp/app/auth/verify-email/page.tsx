@@ -1,5 +1,4 @@
-import Logo from '@/components/logo';
-import { Box, Container, Paper } from '@mui/material';
+import AuthPageShell from '@/components/forms/auth/AuthPageShell';
 import { buildPageMetadata } from '@/lib/metadata';
 import VerifyEmailClient from '@/components/forms/auth/VerifyEmail';
 
@@ -17,22 +16,8 @@ export default async function VerifyEmailPage({ searchParams }: Props) {
   const { token } = await searchParams;
 
   return (
-    <Box sx={{ py: 6, minHeight: '100vh', backgroundColor: 'background.default' }}>
-      <Container maxWidth="sm">
-        <Paper
-          elevation={0}
-          sx={{
-            padding: 4,
-            borderRadius: 2,
-          }}
-        >
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-            <Logo />
-          </Box>
-
-          <VerifyEmailClient token={token} />
-        </Paper>
-      </Container>
-    </Box>
+    <AuthPageShell>
+      <VerifyEmailClient token={token} />
+    </AuthPageShell>
   );
 }

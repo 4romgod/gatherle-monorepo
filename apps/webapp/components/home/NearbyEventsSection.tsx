@@ -22,6 +22,7 @@ import { ROUTES } from '@/lib/constants';
 import { useSavedLocation } from '@/hooks/useSavedLocation';
 import { GetEventOccurrencesDocument } from '@/data/graphql/query';
 import { dedupeOccurrencesBySeries } from '@/lib/utils/occurrence-query';
+import { useFollowingUserIds } from '@/hooks/useFollow';
 
 const LOCATION_RADIUS_KM = 50;
 
@@ -29,6 +30,7 @@ type LocationPermissionState = 'idle' | 'requesting' | 'granted' | 'denied' | 'u
 
 export default function NearbyEventsSection() {
   const { data: session } = useSession();
+  const followingUserIds = useFollowingUserIds();
   const token = session?.user?.token;
   const userId = session?.user?.userId;
 
@@ -283,7 +285,7 @@ export default function NearbyEventsSection() {
           items={events}
           itemKey={(event) => getEventPreviewKey(event)}
           viewAllButton={{ href: ROUTES.EVENTS.ROOT }}
-          renderItem={(event) => <EventBoxSm event={event} />}
+          renderItem={(event) => <EventBoxSm event={event} followingUserIds={followingUserIds} />}
         />
       </Stack>
     );

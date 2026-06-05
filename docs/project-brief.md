@@ -1,5 +1,8 @@
 # Gatherle — Project Brief
 
+For the operational product rules that should guide implementation and reviews, see
+[docs/product/GATHERLE_PRODUCT_MANUAL.md](product/GATHERLE_PRODUCT_MANUAL.md).
+
 ## Product Overview
 
 **Gatherle** is a social-first event discovery and management platform that helps people find exciting events and see
@@ -8,8 +11,8 @@ where their friends are going—creating natural FOMO and driving real-world par
 Unlike traditional event platforms that focus purely on listings, Gatherle emphasizes **social context, discovery, and
 momentum**, helping users decide _what to do next_ based on what’s happening around them and who’s attending.
 
-The platform launches as a **website**, starting in **Gauteng**, with the ambition to expand nationally and eventually
-globally.
+The platform launches from **Gauteng** with both **web and mobile product surfaces**, with the ambition to expand
+nationally and eventually globally.
 
 ---
 

@@ -9,9 +9,11 @@ import EventBoxSmSkeleton from '@/components/events/eventBoxSm/EventBoxSmSkeleto
 import { getEventPreviewKey } from '@/components/events/event-preview-utils';
 import { ROUTES } from '@/lib/constants';
 import { useMyEventOccurrenceRsvps } from '@/hooks/useMyEventOccurrenceRsvps';
+import { useFollowingUserIds } from '@/hooks/useFollow';
 
 export default function UpcomingRsvpsSection() {
   const { data: session } = useSession();
+  const followingUserIds = useFollowingUserIds();
   const token = session?.user?.token;
   const { error, loading, upcomingEvents } = useMyEventOccurrenceRsvps(token, false);
 
@@ -42,7 +44,7 @@ export default function UpcomingRsvpsSection() {
             items={upcomingEvents}
             itemKey={(event) => getEventPreviewKey(event)}
             viewAllButton={{ href: ROUTES.EVENTS.ROOT }}
-            renderItem={(event) => <EventBoxSm event={event} />}
+            renderItem={(event) => <EventBoxSm event={event} followingUserIds={followingUserIds} />}
           />
         </Stack>
       )}

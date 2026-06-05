@@ -5,6 +5,33 @@ making changes in this repository.
 
 ## General Principles
 
+### Product Context
+
+- **Read the product manual first for product-facing work**:
+  - [docs/product/GATHERLE_PRODUCT_MANUAL.md](../docs/product/GATHERLE_PRODUCT_MANUAL.md)
+- **Use the project brief for market and positioning context**:
+  - [docs/project-brief.md](../docs/project-brief.md)
+- **Gatherle is a social-first event discovery product**:
+  - do not treat it like a generic event listings app
+  - do not drift it into a generic social media app
+- **People-first social proof beats raw counts**:
+  - prefer participant, follower, community, venue, or moment context over anonymous counters when possible
+- **Respect surface roles**:
+  - Home is personal
+  - Explore/Events is broad discovery
+  - Moments are proof of life for events, venues, communities, and participation
+  - Profile is identity through participation
+- **Respect action hierarchy**:
+  - RSVP is usually the primary event action
+  - Save and Share are usually secondary
+- **Ask what the change improves in the product loop**:
+  - discovery
+  - participation
+  - trust
+  - social proof
+- **Avoid decorative complexity with weak product value**:
+  - do not add generic social mechanics, clutter, or back-office-feeling consumer UI without a strong product reason
+
 ### Code Consistency
 
 - **Follow existing patterns**: Always analyze and match the coding patterns, conventions, and architectural decisions
@@ -88,6 +115,10 @@ making changes in this repository.
   necessary.
 - **Styling**: Use MUI's `sx` prop and the theme system. Tailwind is available for utility classes.
 - **Constants**: Use centralized constants from `@/lib/constants` (routes, styles, spacing).
+- **Product framing**:
+  - prefer interfaces that help users decide whether something is worth attending
+  - avoid repeating event metadata when it adds no new meaning
+  - empty states should explain the gap and drive the next useful action
 
 ## Code Quality Standards
 
@@ -143,6 +174,7 @@ making changes in this repository.
 For more detailed information, see:
 
 - [AGENTS.md](../AGENTS.md) - Complete repository guidelines
+- [docs/product/GATHERLE_PRODUCT_MANUAL.md](../docs/product/GATHERLE_PRODUCT_MANUAL.md) - Canonical product context
 - [docs/environment-variables.md](../docs/environment-variables.md) - Environment setup
 - [apps/api/README.md](../apps/api/README.md) - API-specific guidelines
 - [apps/webapp/README.md](../apps/webapp/README.md) - Frontend-specific guidelines

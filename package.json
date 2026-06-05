@@ -11,6 +11,7 @@
   "scripts": {
     "build": "npm run build:commons && npm run build:api && npm run build:web && npm run build:mobile && npm run build:cdk",
     "build:api": "npm run build -w @gatherle/api",
+    "build:vercel:webapp": "npm run build:ts -w @gatherle/commons && npm run build -w @gatherle/webapp",
     "build:web": "npm run build -w @gatherle/webapp",
     "build:mobile": "npm run build -w @gatherle/mobile",
     "build:cdk": "npm run build -w @gatherle/cdk",

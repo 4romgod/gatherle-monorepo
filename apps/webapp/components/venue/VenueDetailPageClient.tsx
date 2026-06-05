@@ -25,6 +25,7 @@ import { SortOrderInput, type GetVenueBySlugQuery, type Location } from '@/data/
 import type { EventOccurrencePreview } from '@/data/graphql/query/Event/types';
 import EventLocationMap from '@/components/events/EventLocationMap';
 import EventBoxSm from '@/components/events/eventBoxSm';
+import { useFollowingUserIds } from '@/hooks/useFollow';
 import ErrorPage from '@/components/errors/ErrorPage';
 import VenueDetailSkeleton from '@/components/venue/VenueDetailSkeleton';
 import { ROUTES } from '@/lib/constants';
@@ -69,6 +70,7 @@ interface VenueDetailPageClientProps {
 }
 
 export default function VenueDetailPageClient({ slug }: VenueDetailPageClientProps) {
+  const followingUserIds = useFollowingUserIds();
   const { data: session } = useSession();
   const authContext = { headers: getAuthHeader(session?.user?.token) };
   const { canManageVenue } = useVenueManagementAccess();
@@ -452,7 +454,7 @@ export default function VenueDetailPageClient({ slug }: VenueDetailPageClientPro
               itemKey={(event) => event.occurrenceId}
               renderItem={(event) => (
                 <Box>
-                  <EventBoxSm event={event} />
+                  <EventBoxSm event={event} followingUserIds={followingUserIds} />
                 </Box>
               )}
             />

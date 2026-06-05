@@ -19,9 +19,11 @@ import { ROUTES } from '@/lib/constants';
 import { buildDefaultOccurrenceDateRange, dedupeOccurrencesBySeries } from '@/lib/utils/occurrence-query';
 import { GetEventOccurrencesDocument } from '@/data/graphql/query';
 import { useToolbarAction } from '@/hooks/useToolbarAction';
+import { useFollowingUserIds } from '@/hooks/useFollow';
 
 export default function HomeClient() {
   const { data: session } = useSession();
+  const followingUserIds = useFollowingUserIds();
   const toolbarAction = useMemo(
     () => <ToolbarEventSearchAction placeholder="Search events, categories, or locations..." />,
     [],
@@ -120,7 +122,7 @@ export default function HomeClient() {
                   autoplayInterval={6000}
                   showIndicators
                   viewAllButton={{ href: ROUTES.EVENTS.ROOT, label: 'Browse all events' }}
-                  renderItem={(event) => <EventBoxSm event={event} />}
+                  renderItem={(event) => <EventBoxSm event={event} followingUserIds={followingUserIds} />}
                 />
               ) : (
                 <Typography align="center" color="text.secondary">
@@ -146,7 +148,7 @@ export default function HomeClient() {
                   itemWidth={260}
                   showIndicators
                   viewAllButton={{ href: ROUTES.EVENTS.ROOT }}
-                  renderItem={(event) => <EventBoxSm event={event} />}
+                  renderItem={(event) => <EventBoxSm event={event} followingUserIds={followingUserIds} />}
                 />
               )}
             </Box>

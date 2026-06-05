@@ -249,7 +249,7 @@ export function MessagesScreen() {
             ))}
           </View>
         ) : (
-          <StateNotice message="No conversations match your search yet." />
+          <StateNotice message="No conversations yet." />
         )}
       </PageContainer>
     </MainTabScreenLayout>

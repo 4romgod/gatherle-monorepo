@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { DimensionValue } from 'react-native';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MobileEventOccurrence, MobileParticipant } from '@data/graphql/query/Discovery/types';
 import { ParticipantStatus } from '@data/graphql/types/graphql';
 import { useAppShell } from '@/app/providers/AppShellProvider';
@@ -10,9 +10,10 @@ import { navigationRef } from '@/app/navigation/navigationRef';
 import { RemoteImage } from '@/components/core/RemoteImage';
 import { EventCardActionButton } from '@/components/events/card/EventCardActionButton';
 import { EventRsvpSheet } from '@/components/events/detail/EventRsvpSheet';
+import { useFollowingUserIds } from '@/hooks/follow/useFollowingUserIds';
 import { useEventCardActions } from '@/hooks/events/useEventCardActions';
 import {
-  formatCountLabel,
+  buildEventCardSocialProof,
   formatEventScheduleRange,
   formatLocationLabel,
   getDisplayName,
@@ -21,7 +22,6 @@ import {
   getEventStatusLabel,
   getEventTitle,
   getInitials,
-  getOccurrenceParticipantPreview,
   getParticipantKey,
 } from '@/lib/events/formatters';
 import { shareEvent } from '@/lib/events/deviceActions';
@@ -61,13 +61,86 @@ function ParticipantBubble({ participant, index }: { participant: MobileParticip
   );
 }
 
+function EventCardPrimaryAction({
+  disabled,
+  icon,
+  label,
+  loading,
+  onPress,
+  status,
+}: {
+  disabled: boolean;
+  icon: keyof typeof Feather.glyphMap;
+  label: string;
+  loading: boolean;
+  onPress: (event: { stopPropagation?: () => void }) => void;
+  status: ParticipantStatus | null;
+}) {
+  const { theme } = useAppTheme();
+  const palette = disabled
+    ? {
+        backgroundColor: theme.colors.surfaceMuted,
+        borderColor: theme.colors.border,
+        textColor: theme.colors.textSecondary,
+      }
+    : status === ParticipantStatus.Going
+      ? {
+          backgroundColor: theme.colors.successSoft,
+          borderColor: theme.colors.success,
+          textColor: theme.colors.success,
+        }
+      : status === ParticipantStatus.Interested
+        ? {
+            backgroundColor: theme.colors.primarySoft,
+            borderColor: theme.colors.primary,
+            textColor: theme.colors.primary,
+          }
+        : {
+            backgroundColor: theme.colors.primary,
+            borderColor: theme.colors.primary,
+            textColor: theme.colors.heroText,
+          };
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ busy: loading, disabled: disabled || loading }}
+      disabled={disabled || loading}
+      hitSlop={8}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.primaryActionButton,
+        {
+          backgroundColor: palette.backgroundColor,
+          borderColor: palette.borderColor,
+          opacity: disabled || loading ? 0.72 : pressed ? 0.88 : 1,
+        },
+      ]}
+    >
+      {loading ? (
+        <ActivityIndicator color={palette.textColor} size="small" />
+      ) : (
+        <>
+          <Feather color={palette.textColor} name={icon} size={16} />
+          <Text numberOfLines={1} style={[styles.primaryActionText, { color: palette.textColor }]}>
+            {label}
+          </Text>
+        </>
+      )}
+    </Pressable>
+  );
+}
+
 export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = 'feed' }: EventCardProps) {
   const { theme } = useAppTheme();
   const { authToken, isAuthenticated } = useAppShell();
+  const followingUserIds = useFollowingUserIds(authToken);
   const imageUrl = getEventImageUrl(occurrence);
   const {
     cancelRsvp,
+    goingCount,
     goingToEvent,
+    interestedCount,
     interestedInEvent,
     isSaved,
     participantCount,
@@ -77,17 +150,25 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
     toggleSave,
   } = useEventCardActions(occurrence, authToken);
   const [rsvpSheetVisible, setRsvpSheetVisible] = useState(false);
-  const participants = getOccurrenceParticipantPreview(occurrence);
   const isFeatured = variant === 'featured';
   const rsvpClosed = !isUpcomingEventTime(occurrence.startAt, occurrence.endAt);
   const overlayLabel = isFeatured ? getEventCityLabel(occurrence).toUpperCase() : getEventStatusLabel(occurrence);
-  const saveCount = occurrence.eventSeries?.savedByCount ?? 0;
-  const isTrending = participantCount >= 20 || saveCount >= 12;
-  const socialSignals = [
-    participantCount > 0 ? formatCountLabel(participantCount, 'going') : null,
-    saveCount > 0 ? formatCountLabel(saveCount, 'save') : null,
-    isTrending ? `Trending in ${getEventCityLabel(occurrence)}` : null,
-  ].filter((value): value is string => Boolean(value));
+  const socialProof = buildEventCardSocialProof(occurrence, {
+    counts: {
+      goingCount,
+      interestedCount,
+      totalCount: participantCount,
+    },
+    followingUserIds,
+  });
+  const rsvpActionLabel = rsvpClosed
+    ? 'Event ended'
+    : rsvpStatus === ParticipantStatus.Going
+      ? 'Going'
+      : rsvpStatus === ParticipantStatus.Interested
+        ? 'Interested'
+        : 'RSVP';
+  const rsvpActionIcon = rsvpStatus === ParticipantStatus.Interested ? 'star' : 'check-square';
   const imageFallback = (
     <LinearGradient colors={theme.colors.heroGradient} style={styles.imagePlaceholder}>
       <Text style={[styles.imagePlaceholderText, { color: theme.colors.heroText }]}>
@@ -199,39 +280,22 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
         </View>
 
         <View style={styles.body}>
-          {!isFeatured ? (
-            <View style={[styles.attendancePill, { borderColor: theme.colors.border }]}>
-              <Feather color={theme.colors.textSecondary} name="users" size={14} />
-              <Text style={[styles.attendancePillText, { color: theme.colors.textPrimary }]}>
-                {formatCountLabel(participantCount, 'going')}
-              </Text>
-            </View>
-          ) : null}
-
           <Text numberOfLines={2} style={[styles.title, { color: theme.colors.textPrimary }]}>
             {getEventTitle(occurrence)}
           </Text>
 
-          {socialSignals.length > 0 ? (
-            <View style={styles.socialProofRow}>
-              {socialSignals.slice(0, 2).map((signal) => (
-                <View
-                  key={signal}
-                  style={[
-                    styles.socialProofPill,
-                    {
-                      backgroundColor: theme.colors.surfaceMuted,
-                      borderColor: theme.colors.border,
-                    },
-                  ]}
-                >
-                  <Text numberOfLines={1} style={[styles.socialProofText, { color: theme.colors.textSecondary }]}>
-                    {signal}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
+          <View style={styles.socialProofRow}>
+            {socialProof.avatars.length > 0 ? (
+              <View style={styles.participantsStack}>
+                {socialProof.avatars.map((participant, index) => (
+                  <ParticipantBubble index={index} key={getParticipantKey(participant)} participant={participant} />
+                ))}
+              </View>
+            ) : null}
+            <Text numberOfLines={1} style={[styles.socialProofText, { color: theme.colors.textSecondary }]}>
+              {socialProof.text}
+            </Text>
+          </View>
 
           <View style={styles.metaList}>
             <View style={styles.metaRow}>
@@ -246,45 +310,25 @@ export function EventCard({ cardWidth = '100%', occurrence, onPress, variant = '
                 {formatLocationLabel(occurrence)}
               </Text>
             </View>
-            {isFeatured ? (
-              <View style={styles.metaRow}>
-                <Feather color={theme.colors.textSecondary} name="check-square" size={17} />
-                <Text numberOfLines={1} style={[styles.metaText, { color: theme.colors.textSecondary }]}>
-                  {formatCountLabel(participantCount, 'going')}
-                </Text>
-              </View>
-            ) : null}
           </View>
 
-          <View style={isFeatured ? styles.featuredFooter : styles.feedFooter}>
-            {participants.length > 0 ? (
-              <View style={styles.participantsRow}>
-                <View style={styles.participantsStack}>
-                  {participants.map((participant, index) => (
-                    <ParticipantBubble index={index} key={getParticipantKey(participant)} participant={participant} />
-                  ))}
-                </View>
-              </View>
-            ) : null}
-
-            <View style={styles.actionsRow}>
-              <EventCardActionButton
-                active={!!rsvpStatus}
-                disabled={rsvpClosed}
-                icon={rsvpStatus === ParticipantStatus.Interested ? 'star' : 'check-square'}
-                loading={rsvpLoading}
-                onPress={handleRsvpPress}
-                tone="success"
-              />
-              <EventCardActionButton
-                active={isSaved}
-                loading={saveLoading}
-                icon="bookmark"
-                onPress={handleToggleSave}
-                tone="primary"
-              />
-              <EventCardActionButton icon="share-2" onPress={handleShare} tone="neutral" />
-            </View>
+          <View style={styles.actionsRow}>
+            <EventCardPrimaryAction
+              disabled={rsvpClosed}
+              icon={rsvpActionIcon}
+              label={rsvpActionLabel}
+              loading={rsvpLoading}
+              onPress={handleRsvpPress}
+              status={rsvpStatus}
+            />
+            <EventCardActionButton
+              active={isSaved}
+              loading={saveLoading}
+              icon="bookmark"
+              onPress={handleToggleSave}
+              tone="primary"
+            />
+            <EventCardActionButton icon="share-2" onPress={handleShare} tone="neutral" />
           </View>
         </View>
       </Pressable>
@@ -323,20 +367,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 10,
-  },
-  attendancePill: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  attendancePillText: {
-    ...typography.bodyMedium,
-    fontSize: fontSize.xs,
+    paddingTop: 2,
   },
   body: {
     gap: 10,
@@ -348,18 +379,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     overflow: 'hidden',
-  },
-  featuredFooter: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: 2,
-  },
-  feedFooter: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: 2,
   },
   image: {
     height: '100%',
@@ -431,27 +450,6 @@ const styles = StyleSheet.create({
     height: 30,
     width: 30,
   },
-  socialProofPill: {
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  socialProofRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  socialProofText: {
-    ...typography.bodyMedium,
-    fontSize: fontSize.xxs,
-    lineHeight: 14,
-  },
-  participantsRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
   participantsStack: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -460,6 +458,33 @@ const styles = StyleSheet.create({
   participantWrap: {
     borderRadius: 999,
     padding: 2,
+  },
+  primaryActionButton: {
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+    height: 38,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  primaryActionText: {
+    ...typography.bodySemiBold,
+    fontSize: fontSize.sm,
+  },
+  socialProofRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    minHeight: 30,
+  },
+  socialProofText: {
+    ...typography.bodyMedium,
+    flex: 1,
+    fontSize: fontSize.xs,
+    lineHeight: 18,
   },
   title: {
     ...typography.displayBold,

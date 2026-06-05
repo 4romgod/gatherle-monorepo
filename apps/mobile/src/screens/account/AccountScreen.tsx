@@ -19,6 +19,7 @@ import { PageHeading } from '@/components/core/PageHeading';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { StateNotice } from '@/components/core/StateNotice';
 import { SwipePagerTabs } from '@/components/core/SwipePagerTabs';
+import { ThemeModeButton } from '@/components/core/ThemeModeButton';
 import { EventTileGrid } from '@/components/events/EventTileGrid';
 import { MomentAvatarTrigger } from '@/components/moments/MomentAvatarTrigger';
 import { MomentViewer } from '@/components/moments/MomentViewer';
@@ -39,7 +40,7 @@ type AccountTab = 'going' | 'past' | 'hosting' | 'saved';
 export function AccountScreen() {
   const navigation = useNavigation<MainTabNavigation>();
   const { authToken, hasLiveSession, isAuthenticated, signOut, userId, username } = useAppShell();
-  const { theme } = useAppTheme();
+  const { mode, theme } = useAppTheme();
   const [activeTab, setActiveTab] = useState<AccountTab>('going');
   const [accountSheetVisible, setAccountSheetVisible] = useState(false);
   const [momentsOpen, setMomentsOpen] = useState(false);
@@ -239,6 +240,25 @@ export function AccountScreen() {
       <MainTabScreenLayout>
         <PageContainer>
           <PageHeading title="Join Gatherle" />
+          <View
+            style={[
+              styles.guestThemeCard,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+              },
+            ]}
+          >
+            <View style={styles.guestThemeCopy}>
+              <Text style={[styles.guestThemeTitle, { color: theme.colors.textPrimary }]}>Appearance</Text>
+              <Text style={[styles.guestThemeDescription, { color: theme.colors.textSecondary }]}>
+                {mode === 'dark'
+                  ? 'Dark mode is active. Switch it before you sign in.'
+                  : 'Light mode is active. Switch it before you sign in.'}
+              </Text>
+            </View>
+            <ThemeModeButton />
+          </View>
           <AuthPromptCard
             description="Create an account to save events, manage your profile, host organizations, and unlock messaging and notifications."
             onPressPrimary={() => navigation.navigate('Register')}
@@ -483,6 +503,29 @@ const styles = StyleSheet.create({
   avatarButton: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  guestThemeCard: {
+    alignItems: 'center',
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 16,
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+  },
+  guestThemeCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  guestThemeDescription: {
+    ...typography.bodyRegular,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  guestThemeTitle: {
+    ...typography.bodyBold,
+    fontSize: 16,
   },
   interestPill: {
     borderRadius: 999,

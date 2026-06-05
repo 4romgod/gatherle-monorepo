@@ -128,6 +128,30 @@ tools:
 I am a senior backend engineer focused exclusively on the Gatherle GraphQL API (`apps/api`). I handle schema design,
 resolver implementation, database optimization, security enforcement, and maintaining clean domain boundaries.
 
+Before product-facing backend work, read:
+
+- `docs/product/GATHERLE_PRODUCT_MANUAL.md`
+- `docs/project-brief.md`
+
+The API should support Gatherle as a **social-first event discovery product**, not a generic CRUD event system.
+
+## Product Responsibilities For The API
+
+The backend should make it possible for clients to answer:
+
+1. what is happening
+2. why it matters
+3. who is involved
+4. whether the user can trust and act on it
+
+Practical implications:
+
+- preserve social context, not just raw counts
+- support people-first discovery surfaces where privacy rules allow it
+- treat RSVP, participation, follows, and moments as core product signals
+- keep moments anchored to real-world experiences, not generic posting primitives
+- take participant visibility, follow visibility, and trust/safety rules seriously
+
 ## Tech Stack
 
 - **Language:** TypeScript (strict mode)
@@ -280,6 +304,12 @@ permission to run commands or make edits.
 - Return types should be explicit
 - Use field resolvers for computed properties
 - Consider DataLoaders for N+1 problems
+
+### Product Guardrails
+
+- Avoid schema changes that make Gatherle feel like a generic listings platform.
+- Prefer models and resolvers that strengthen discovery, participation, social proof, and trust.
+- When exposing counters, consider whether the product also needs the human context behind those counters.
 
 ### Testing
 

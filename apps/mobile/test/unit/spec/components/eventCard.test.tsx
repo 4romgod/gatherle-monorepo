@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react-native';
 import { EventCard } from '@/components/events/EventCard';
 
 const mockUseEventCardActions = jest.fn();
+const mockUseFollowingUserIds = jest.fn();
 
 jest.mock('@/app/providers/AppShellProvider', () => ({
   useAppShell: () => ({
@@ -44,6 +45,10 @@ jest.mock('@/hooks/events/useEventCardActions', () => ({
   useEventCardActions: () => mockUseEventCardActions(),
 }));
 
+jest.mock('@/hooks/follow/useFollowingUserIds', () => ({
+  useFollowingUserIds: () => mockUseFollowingUserIds(),
+}));
+
 jest.mock('@/components/events/card/EventCardActionButton', () => ({
   EventCardActionButton: ({ icon }: { icon: string }) => icon,
 }));
@@ -58,9 +63,12 @@ jest.mock('@/lib/events/deviceActions', () => ({
 
 describe('EventCard', () => {
   beforeEach(() => {
+    mockUseFollowingUserIds.mockReturnValue(new Set<string>());
     mockUseEventCardActions.mockReturnValue({
       cancelRsvp: jest.fn(),
+      goingCount: 1,
       goingToEvent: jest.fn(),
+      interestedCount: 1,
       interestedInEvent: jest.fn(),
       isSaved: false,
       loading: false,
@@ -72,7 +80,7 @@ describe('EventCard', () => {
     });
   });
 
-  it('renders participant avatar fallbacks on featured cards when RSVP previews exist', () => {
+  it('renders people-first social proof on featured cards when RSVP previews exist', () => {
     render(
       <EventCard
         occurrence={
@@ -138,13 +146,16 @@ describe('EventCard', () => {
     );
 
     expect(screen.getByText('AL')).toBeTruthy();
-    expect(screen.getByText('GH')).toBeTruthy();
+    expect(screen.getByText('Ada is going')).toBeTruthy();
+    expect(screen.getByText('RSVP')).toBeTruthy();
   });
 
-  it('renders only the standard attendance label when there is no social proof yet', () => {
+  it('renders a clear empty social proof state when nobody has RSVPd yet', () => {
     mockUseEventCardActions.mockReturnValue({
       cancelRsvp: jest.fn(),
+      goingCount: 0,
       goingToEvent: jest.fn(),
+      interestedCount: 0,
       interestedInEvent: jest.fn(),
       isSaved: false,
       loading: false,
@@ -190,6 +201,7 @@ describe('EventCard', () => {
       />,
     );
 
-    expect(screen.getAllByText('0 goings')).toHaveLength(1);
+    expect(screen.getByText('Be the first to go')).toBeTruthy();
+    expect(screen.queryByText(/goings/i)).toBeNull();
   });
 });

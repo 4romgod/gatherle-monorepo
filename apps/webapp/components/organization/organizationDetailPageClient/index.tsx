@@ -8,6 +8,7 @@ import { ROUTES } from '@/lib/constants';
 import Carousel from '@/components/carousel';
 import EventBoxSm from '@/components/events/eventBoxSm';
 import FollowStatsCard from '@/components/organization/FollowStatsCard';
+import { useFollowingUserIds } from '@/hooks/useFollow';
 import OrganizationPageSkeleton from '@/components/organization/organizationDetailPageClient/OrganizationDetailPageSkeleton';
 import ErrorPage from '@/components/errors/ErrorPage';
 import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
@@ -27,6 +28,7 @@ const EVENT_LIMIT = 12;
 
 export default function OrganizationPageClient({ slug }: OrganizationPageClientProps) {
   const { data: session } = useSession();
+  const followingUserIds = useFollowingUserIds();
   const authContext = { headers: getAuthHeader(session?.user?.token) };
 
   const {
@@ -262,7 +264,11 @@ export default function OrganizationPageClient({ slug }: OrganizationPageClientP
 
             <Card elevation={0} sx={{ mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
               <CardContent sx={{ p: 4 }}>
-                <Carousel items={events} title="Upcoming Events" renderItem={(event) => <EventBoxSm event={event} />} />
+                <Carousel
+                  items={events}
+                  title="Upcoming Events"
+                  renderItem={(event) => <EventBoxSm event={event} followingUserIds={followingUserIds} />}
+                />
               </CardContent>
             </Card>
           </Grid>

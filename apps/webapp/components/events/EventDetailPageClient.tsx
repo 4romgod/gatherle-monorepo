@@ -9,6 +9,7 @@ import {
   Alert,
   alpha,
   Avatar,
+  AvatarGroup,
   Box,
   Button,
   Chip,
@@ -38,7 +39,6 @@ import {
 } from '@mui/icons-material';
 import {
   FollowApprovalStatus,
-  FollowTargetType,
   GetEventBySlugDocument,
   GetEventOccurrencesDocument,
   ParticipantStatus,
@@ -56,9 +56,14 @@ import {
   EventParticipantRecord,
   EventSeriesParticipantRecord,
   EventOccurrenceParticipantRecord,
+  buildAttendanceBadgeLabel,
+  buildAttendeeSummaryLabel,
+  buildParticipantSocialProof,
   canViewerSeeParticipant,
+  getActiveParticipants,
   getParticipantChipColor,
   getParticipantDisplayName,
+  getParticipantStatusCounts,
   getParticipantStatusLabel,
   getVisibilityLabel,
 } from '@/components/events/participant-utils';
@@ -75,7 +80,7 @@ import {
   getRequestedOccurrenceAnchor,
 } from '@/components/events/occurrence-url';
 import UserPreviewItem from '@/components/users/UserPreviewItem';
-import { useFollowing } from '@/hooks/useFollow';
+import { useFollowingUserIds } from '@/hooks/useFollow';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import ErrorPage from '@/components/errors/ErrorPage';
 import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
@@ -201,29 +206,6 @@ function formatMobileLocationValue(location: NonNullable<GetEventBySlugQuery['re
   return parts.length ? parts.join(', ') : 'Location to be announced';
 }
 
-function formatMobileCountLabel(count: number, singular: string, plural?: string) {
-  const pluralLabel = plural ?? `${singular}s`;
-  return `${count} ${count === 1 ? singular : pluralLabel}`;
-}
-
-function buildAttendanceBadgeLabel(goingCount: number, interestedCount: number) {
-  if (goingCount <= 0 && interestedCount <= 0) {
-    return null;
-  }
-
-  const parts: string[] = [];
-
-  if (goingCount > 0) {
-    parts.push(`${goingCount} going`);
-  }
-
-  if (interestedCount > 0) {
-    parts.push(`${interestedCount} interested`);
-  }
-
-  return parts.join(' · ');
-}
-
 export default function EventDetailPageClient({ slug }: EventDetailPageClientProps) {
   const { data: session } = useSession();
   const { setToolbarAction } = useAppContext();
@@ -297,13 +279,13 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     ROUTES.EVENTS.ATTENDEES(slug),
     useOccurrenceParticipantList ? selectedOccurrence : null,
   );
-
-  const goingCount = participantList.filter(
-    (p) => p.status === ParticipantStatus.Going || p.status === ParticipantStatus.CheckedIn,
-  ).length;
-  const interestedCount = participantList.filter((p) => p.status === ParticipantStatus.Interested).length;
+  const activeParticipants = getActiveParticipants(participantList);
+  const {
+    going: goingCount,
+    interested: interestedCount,
+    total: activeParticipantCount,
+  } = getParticipantStatusCounts(participantList);
   const waitlistedCount = participantList.filter((p) => p.status === ParticipantStatus.Waitlisted).length;
-  const activeParticipantCount = participantList.filter((p) => p.status !== ParticipantStatus.Cancelled).length;
   const attendanceBadgeLabel = buildAttendanceBadgeLabel(goingCount, interestedCount);
 
   const eventUrl = useMemo(() => {
@@ -314,7 +296,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     return buildEventOccurrenceHref(baseUrl, selectedOccurrence);
   }, [selectedOccurrence, slug]);
 
-  const attendeePreview = participantList.slice(0, 3);
+  const attendeePreview = activeParticipants.slice(0, 3);
   const previewPaperSx = (theme: Theme) => ({
     p: 2.5,
     border: '1px solid',
@@ -333,7 +315,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     elevation: 0,
     sx: previewPaperSx,
   };
-  const { following } = useFollowing();
+  const followingUserIds = useFollowingUserIds();
   const viewerUserId = session?.user?.userId;
   const isAdmin = useIsAdmin();
   const isOrganizer = useMemo(
@@ -341,19 +323,6 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     [event?.organizers, viewerUserId],
   );
   const canEditEvent = isOrganizer || isAdmin;
-  const followingUserIds = useMemo(() => {
-    const set = new Set<string>();
-    following.forEach((follow) => {
-      if (
-        follow.targetType === FollowTargetType.User &&
-        follow.approvalStatus === FollowApprovalStatus.Accepted &&
-        follow.targetId
-      ) {
-        set.add(follow.targetId);
-      }
-    });
-    return set;
-  }, [following]);
   const followedParticipantPreview = useMemo(() => {
     const seenUserIds = new Set<string>();
 
@@ -374,6 +343,18 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
       )
       .slice(0, 3);
   }, [followingUserIds, participantList]);
+  const mobileSocialProof = useMemo(
+    () =>
+      buildParticipantSocialProof(participantList, {
+        counts: {
+          goingCount,
+          interestedCount,
+          totalCount: activeParticipantCount,
+        },
+        followingUserIds,
+      }),
+    [activeParticipantCount, followingUserIds, goingCount, interestedCount, participantList],
+  );
   const canViewAttendee = (user?: EventParticipantRecord['user']) =>
     canViewerSeeParticipant(user, viewerUserId, followingUserIds);
 
@@ -558,7 +539,20 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     selectedOccurrence?.timezone ?? event.primarySchedule.timezone,
   );
   const xsLocationValue = formatMobileLocationValue(location);
-  const xsAttendanceValue = formatMobileCountLabel(activeParticipantCount, 'guest');
+  const xsAttendanceValue = attendanceBadgeLabel ?? 'No one going yet';
+  const mobileAttendeeSummaryLabel = buildAttendeeSummaryLabel(attendanceBadgeLabel, activeParticipantCount);
+  const mobileRsvpContextTitle =
+    mobileRsvpStatus === ParticipantStatus.Going
+      ? "You're going"
+      : mobileRsvpStatus === ParticipantStatus.Interested
+        ? 'Interested for now'
+        : null;
+  const mobileRsvpContextBody =
+    mobileRsvpStatus === ParticipantStatus.Going
+      ? 'Lock the plan in now, then bring your people in before the moment passes.'
+      : mobileRsvpStatus === ParticipantStatus.Interested
+        ? "We'll keep this on your radar as the event picks up."
+        : null;
   const xsDetailCardSx = {
     bgcolor: 'action.hover',
     borderRadius: WEB_RADIUS.card,
@@ -721,6 +715,46 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 </Button>
               )}
             </Stack>
+
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ display: { xs: 'flex', md: 'none' }, minHeight: 28 }}
+            >
+              {mobileSocialProof.participants.length > 0 ? (
+                <AvatarGroup
+                  max={3}
+                  sx={{
+                    '& .MuiAvatar-root': {
+                      width: 28,
+                      height: 28,
+                      fontSize: '0.72rem',
+                      border: '2px solid',
+                      borderColor: 'background.paper',
+                    },
+                  }}
+                >
+                  {mobileSocialProof.participants.map((participant) => (
+                    <Avatar key={participant.participantId} src={participant.user?.profile_picture || undefined}>
+                      {getParticipantDisplayName(participant).charAt(0).toUpperCase()}
+                    </Avatar>
+                  ))}
+                </AvatarGroup>
+              ) : null}
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  fontWeight: 600,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {mobileSocialProof.text}
+              </Typography>
+            </Stack>
           </Stack>
         </Stack>
       </Container>
@@ -750,37 +784,19 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
             <Box sx={{ mb: { xs: 2, md: 4 }, px: { xs: 1, md: 0 } }}>
               <Stack spacing={1.25}>
                 <Stack spacing={1.25} sx={{ display: { xs: 'flex', md: 'none' }, width: '100%' }}>
-                  <Stack direction="row" spacing={1.25}>
-                    {directionsUrl ? (
-                      <Button
-                        component="a"
-                        href={directionsUrl}
-                        rel="noreferrer"
-                        target="_blank"
-                        startIcon={<MapOutlined />}
-                        variant="outlined"
-                        sx={{
-                          ...utilityActionButtonSx,
-                          flex: 1,
-                        }}
-                      >
-                        Directions
-                      </Button>
-                    ) : null}
-                    {calendarUrl ? (
-                      <Button
-                        component="a"
-                        href={calendarUrl}
-                        rel="noreferrer"
-                        target="_blank"
-                        startIcon={<CalendarTodayOutlined />}
-                        variant="outlined"
-                        sx={{ ...utilityActionButtonSx, flex: 1 }}
-                      >
-                        Add to calendar
-                      </Button>
-                    ) : null}
-                  </Stack>
+                  {directionsUrl ? (
+                    <Button
+                      component="a"
+                      href={directionsUrl}
+                      rel="noreferrer"
+                      target="_blank"
+                      startIcon={<MapOutlined />}
+                      variant="outlined"
+                      sx={utilityActionButtonSx}
+                    >
+                      Directions
+                    </Button>
+                  ) : null}
 
                   {eventSourceUrl ? (
                     <Button
@@ -882,6 +898,66 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                       })}
                     </Box>
                   </Box>
+                ) : null}
+
+                {mobileRsvpContextTitle && mobileRsvpContextBody ? (
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      display: { xs: 'block', md: 'none' },
+                      borderRadius: WEB_RADIUS.card,
+                      border: '1.5px solid',
+                      borderColor: mobileRsvpStatus === ParticipantStatus.Going ? 'success.main' : 'primary.main',
+                      bgcolor: mobileRsvpStatus === ParticipantStatus.Going ? 'success.lighter' : 'primary.lighter',
+                      p: 2,
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontSize: '1rem',
+                        fontWeight: 700,
+                        letterSpacing: '-0.03em',
+                        color: mobileRsvpStatus === ParticipantStatus.Going ? 'success.main' : 'primary.main',
+                      }}
+                    >
+                      {mobileRsvpContextTitle}
+                    </Typography>
+                    <Typography sx={{ mt: 0.75, fontSize: '0.92rem', lineHeight: 1.55, color: 'text.secondary' }}>
+                      {mobileRsvpContextBody}
+                    </Typography>
+
+                    {mobileRsvpStatus === ParticipantStatus.Going ? (
+                      <Stack direction="row" spacing={1.25} sx={{ mt: 1.5 }}>
+                        {calendarUrl ? (
+                          <Button
+                            component="a"
+                            href={calendarUrl}
+                            fullWidth
+                            rel="noreferrer"
+                            target="_blank"
+                            startIcon={<CalendarTodayOutlined />}
+                            variant="outlined"
+                            sx={utilityActionButtonSx}
+                          >
+                            Add to calendar
+                          </Button>
+                        ) : null}
+                        <EventShareButton
+                          eventTitle={title}
+                          eventUrl={eventUrl}
+                          fullWidth
+                          label="Invite friends"
+                          size="medium"
+                          stopPropagation
+                          sx={{
+                            minHeight: 48,
+                            borderRadius: WEB_RADIUS.control,
+                            borderWidth: 2,
+                          }}
+                        />
+                      </Stack>
+                    ) : null}
+                  </Paper>
                 ) : null}
 
                 <Stack
@@ -1165,7 +1241,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
               sx={{
                 mb: 4,
                 px: { xs: 1, md: 0 },
-                display: participantList.length === 0 ? { xs: 'none', md: 'block' } : 'block',
+                display: activeParticipantCount === 0 ? { xs: 'none', md: 'block' } : 'block',
               }}
             >
               {followedParticipantPreview.length > 0 ? (
@@ -1212,9 +1288,9 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
                   Who&apos;s Attending
                 </Box>
-                {participantList.length > 0 && (
+                {activeParticipantCount > 0 && (
                   <Chip
-                    label={participantList.length}
+                    label={activeParticipantCount}
                     size="small"
                     color="primary"
                     sx={{
@@ -1228,13 +1304,13 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 )}
               </Typography>
 
-              {participantList.length === 0 ? (
+              {activeParticipantCount === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 4, bgcolor: 'action.hover', borderRadius: 2 }}>
                   <Groups
                     sx={{ display: { xs: 'none', md: 'inline-flex' }, fontSize: 48, color: 'text.secondary', mb: 1 }}
                   />
                   <Typography sx={{ display: { xs: 'none', md: 'block' }, color: 'text.secondary' }}>
-                    Be the first to RSVP!
+                    Be the first to go!
                   </Typography>
                 </Box>
               ) : (
@@ -1269,7 +1345,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                         </Avatar>
                       ))}
                     <Typography variant="body2" color="text.secondary" sx={{ ml: 1.5 }}>
-                      {participantList.length} people
+                      {mobileAttendeeSummaryLabel}
                     </Typography>
                   </Stack>
                   <Stack spacing={2} sx={{ display: { xs: 'none', md: 'flex' }, mb: 3 }}>
@@ -1301,14 +1377,14 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                         );
                       })}
                   </Stack>
-                  {participantList.length > attendeePreview.length && (
+                  {activeParticipantCount > attendeePreview.length && (
                     <Button
                       component={Link}
                       href={attendeeRoute}
                       variant="text"
                       sx={{ display: { xs: 'none', md: 'inline-flex' }, fontWeight: 600 }}
                     >
-                      View all {participantList.length} attendees
+                      View all {activeParticipantCount} attendees
                     </Button>
                   )}
                 </>
@@ -1471,7 +1547,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                                   </Typography>
                                 </Stack>
                               )}
-                              {participantList.length === 0 && (
+                              {activeParticipantCount === 0 && (
                                 <Typography variant="body2" color="text.secondary" fontStyle="italic">
                                   No RSVPs yet
                                 </Typography>
@@ -1564,8 +1640,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                     showTooltip={false}
                     size="medium"
                     sx={{
-                      ...(mobileRsvpStatus === ParticipantStatus.Going ||
-                      mobileRsvpStatus === ParticipantStatus.Interested
+                      ...(mobileRsvpStatus === ParticipantStatus.Going
                         ? {
                             bgcolor: (theme) =>
                               alpha(theme.palette.success.main, theme.palette.mode === 'dark' ? 0.28 : 0.18),
@@ -1577,15 +1652,27 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                               borderColor: 'success.main',
                             },
                           }
-                        : {
-                            bgcolor: 'secondary.main',
-                            borderColor: 'secondary.main',
-                            color: 'secondary.contrastText',
-                            '&:hover': {
-                              bgcolor: 'secondary.dark',
-                              borderColor: 'secondary.dark',
-                            },
-                          }),
+                        : mobileRsvpStatus === ParticipantStatus.Interested
+                          ? {
+                              bgcolor: (theme) =>
+                                alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.24 : 0.14),
+                              borderColor: 'primary.main',
+                              color: 'primary.main',
+                              '&:hover': {
+                                bgcolor: (theme) =>
+                                  alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.34 : 0.22),
+                                borderColor: 'primary.main',
+                              },
+                            }
+                          : {
+                              bgcolor: 'secondary.main',
+                              borderColor: 'secondary.main',
+                              color: 'secondary.contrastText',
+                              '&:hover': {
+                                bgcolor: 'secondary.dark',
+                                borderColor: 'secondary.dark',
+                              },
+                            }),
                       minHeight: 42,
                       borderRadius: 1,
                       px: 1.25,

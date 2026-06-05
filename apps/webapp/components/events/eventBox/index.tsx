@@ -22,15 +22,24 @@ import {
   getEventPreviewParticipantCount,
   getEventPreviewParticipants,
   isEventPreviewRsvpClosed,
-  getEventPreviewSaveCount,
   getEventPreviewScheduleText,
   getEventPreviewSlug,
   getEventPreviewStatusLabel,
   getEventPreviewTitle,
 } from '@/components/events/event-preview-utils';
-import type { EventParticipantRecord } from '@/components/events/participant-utils';
+import {
+  buildParticipantSocialProof,
+  getParticipantDisplayName,
+  getParticipantInitial,
+} from '@/components/events/participant-utils';
 
-export default function EventBox({ event }: { event: AnyEventPreview }) {
+export default function EventBox({
+  event,
+  followingUserIds,
+}: {
+  event: AnyEventPreview;
+  followingUserIds?: ReadonlySet<string>;
+}) {
   const theme = useTheme();
   const title = getEventPreviewTitle(event);
   const eventId = getEventPreviewEventId(event);
@@ -46,8 +55,6 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
   const participantList = getEventPreviewParticipants(event);
   const participantCount = getEventPreviewParticipantCount(event);
   const rsvpClosed = isEventPreviewRsvpClosed(event);
-  const saveCount = getEventPreviewSaveCount(event);
-  const isTrending = participantCount >= 20 || saveCount >= 12;
 
   const [isSaved, setIsSaved] = useState(nextSavedState);
   const [rsvpStatus, setRsvpStatus] = useState<ParticipantStatus | null>(nextRsvpStatus);
@@ -60,23 +67,66 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
     setRsvpStatus(nextRsvpStatus);
   }, [nextRsvpStatus]);
 
-  const activeParticipants = participantList.filter(
-    (participant) => participant.status !== ParticipantStatus.Cancelled,
-  );
-  const visibleParticipants = activeParticipants.slice(0, 3);
-
-  const getParticipantLabel = (participant: EventParticipantRecord) => {
-    const nameParts = [participant.user?.given_name, participant.user?.family_name].filter(Boolean);
-
-    const displayName = participant.user?.username || `Guest • ${participant.userId?.slice(-4) ?? 'anon'}`;
-    return nameParts.length ? nameParts.join(' ') : displayName;
-  };
-
-  const getParticipantAvatarLetter = (participant: EventParticipantRecord) =>
-    participant.user?.given_name?.charAt(0) ??
-    participant.user?.username?.charAt(0) ??
-    participant.userId?.charAt(0) ??
-    '?';
+  const socialProof = buildParticipantSocialProof(participantList, {
+    counts: { totalCount: participantCount },
+    followingUserIds,
+  });
+  const rsvpLabel = rsvpClosed
+    ? 'Event ended'
+    : rsvpStatus === ParticipantStatus.Going
+      ? 'Going'
+      : rsvpStatus === ParticipantStatus.Interested
+        ? 'Interested'
+        : 'RSVP';
+  const rsvpButtonSx = {
+    minHeight: 38,
+    borderRadius: 2,
+    px: 1.5,
+    fontSize: '0.78rem',
+    boxShadow: 'none',
+    ...(rsvpClosed
+      ? {
+          bgcolor: 'action.hover',
+          borderColor: 'divider',
+          color: 'text.secondary',
+          '&:hover': {
+            bgcolor: 'action.hover',
+            borderColor: 'divider',
+            color: 'text.secondary',
+          },
+        }
+      : rsvpStatus === ParticipantStatus.Going
+        ? {
+            bgcolor: 'success.lighter',
+            borderColor: 'success.main',
+            color: 'success.main',
+            '&:hover': {
+              bgcolor: 'success.light',
+              borderColor: 'success.main',
+              color: 'success.dark',
+            },
+          }
+        : rsvpStatus === ParticipantStatus.Interested
+          ? {
+              bgcolor: 'primary.lighter',
+              borderColor: 'primary.main',
+              color: 'primary.main',
+              '&:hover': {
+                bgcolor: 'primary.light',
+                borderColor: 'primary.main',
+                color: 'primary.dark',
+              },
+            }
+          : {
+              bgcolor: 'secondary.main',
+              borderColor: 'secondary.main',
+              color: 'secondary.contrastText',
+              '&:hover': {
+                bgcolor: 'secondary.dark',
+                borderColor: 'secondary.dark',
+              },
+            }),
+  } as const;
 
   return (
     <Surface
@@ -166,34 +216,6 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
         }}
       >
         <Box sx={{ flex: '1 1 auto', overflow: 'hidden' }}>
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mb: 0.75 }}>
-            {participantCount > 0 && (
-              <Chip
-                icon={<PeopleOutline sx={{ fontSize: 14 }} />}
-                label={`${participantCount} going`}
-                size="small"
-                variant="outlined"
-                sx={{ height: 18, fontSize: '0.65rem' }}
-              />
-            )}
-            {saveCount > 0 && (
-              <Chip
-                label={`${saveCount} saves`}
-                size="small"
-                variant="outlined"
-                sx={{ height: 18, fontSize: '0.65rem' }}
-              />
-            )}
-            {isTrending && (
-              <Chip
-                label="Trending"
-                size="small"
-                color="secondary"
-                sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700 }}
-              />
-            )}
-          </Stack>
-
           <Typography
             variant="body2"
             color="text.primary"
@@ -211,6 +233,47 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
           >
             {title}
           </Typography>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.9, minHeight: 26 }}>
+            {socialProof.participants.length > 0 ? (
+              <AvatarGroup
+                max={3}
+                sx={{
+                  '& .MuiAvatar-root': {
+                    width: 24,
+                    height: 24,
+                    fontSize: '0.68rem',
+                    border: '2px solid',
+                    borderColor: 'background.paper',
+                  },
+                }}
+              >
+                {socialProof.participants.map((participant) => (
+                  <Tooltip
+                    key={participant.participantId}
+                    title={`${getParticipantDisplayName(participant)} • ${participant.status}`}
+                    arrow
+                  >
+                    <Avatar src={participant.user?.profile_picture || undefined}>
+                      {getParticipantInitial(participant).toUpperCase()}
+                    </Avatar>
+                  </Tooltip>
+                ))}
+              </AvatarGroup>
+            ) : null}
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{
+                fontWeight: 600,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {socialProof.text}
+            </Typography>
+          </Box>
 
           <Stack spacing={0.5}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
@@ -238,43 +301,20 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
         </Box>
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-          {participantCount > 0 && (
-            <AvatarGroup
-              max={3}
-              sx={{
-                display: { xs: 'flex', sm: 'none', lg: 'flex' },
-                '& .MuiAvatar-root': {
-                  width: 24,
-                  height: 24,
-                  fontSize: '0.7rem',
-                  border: '2px solid',
-                  borderColor: 'background.paper',
-                },
-              }}
-            >
-              {visibleParticipants.map((participant) => (
-                <Tooltip
-                  key={participant.participantId}
-                  title={`${getParticipantLabel(participant)} • ${participant.status}`}
-                  arrow
-                >
-                  <Avatar src={participant.user?.profile_picture || undefined}>
-                    {getParticipantAvatarLetter(participant).toUpperCase()}
-                  </Avatar>
-                </Tooltip>
-              ))}
-            </AvatarGroup>
-          )}
-
-          <Stack direction="row" spacing={0.5} sx={{ ml: 'auto' }}>
-            <RsvpButton
-              eventId={eventId}
-              occurrenceId={occurrenceId}
-              currentStatus={rsvpStatus}
-              rsvpClosed={rsvpClosed}
-              size="small"
-              onRsvpChange={setRsvpStatus}
-            />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 'auto', width: '100%' }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <RsvpButton
+                eventId={eventId}
+                occurrenceId={occurrenceId}
+                currentStatus={rsvpStatus}
+                fullWidth
+                label={rsvpLabel}
+                rsvpClosed={rsvpClosed}
+                size="small"
+                onRsvpChange={setRsvpStatus}
+                sx={rsvpButtonSx}
+              />
+            </Box>
             <SaveEventButton eventId={eventId} isSaved={isSaved} size="small" showTooltip onSaveChange={setIsSaved} />
             <EventShareButton
               eventTitle={title}
@@ -287,7 +327,7 @@ export default function EventBox({ event }: { event: AnyEventPreview }) {
                 height: 28,
               }}
             />
-          </Stack>
+          </Box>
         </Box>
       </Box>
     </Surface>

@@ -3,12 +3,15 @@
 import Carousel from './Carousel';
 import EventBoxSm from '@/components/events/eventBoxSm';
 import { EventPreview } from '@/data/graphql/query/Event/types';
+import { useFollowingUserIds } from '@/hooks/useFollow';
 
 interface EventPreviewCarouselProps {
   events: EventPreview[];
 }
 
 export default function EventPreviewCarousel({ events }: EventPreviewCarouselProps) {
+  const followingUserIds = useFollowingUserIds();
+
   if (events.length === 0) {
     return null;
   }
@@ -24,7 +27,7 @@ export default function EventPreviewCarousel({ events }: EventPreviewCarouselPro
       itemWidth={350}
       showIndicators={true}
       itemKey={getKey}
-      renderItem={(event) => <EventBoxSm event={event} />}
+      renderItem={(event) => <EventBoxSm event={event} followingUserIds={followingUserIds} />}
     />
   );
 }

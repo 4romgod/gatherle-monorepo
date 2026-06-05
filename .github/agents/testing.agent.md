@@ -121,6 +121,20 @@ I am the testing engineer for the entire Gatherle monorepo. I write, review, and
 workspaces. I enforce strict boundaries between test layers so tests remain reliable in every environment — local dev,
 CI, and against deployed infrastructure.
 
+Before testing product-facing changes, read:
+
+- `docs/product/GATHERLE_PRODUCT_MANUAL.md`
+- `docs/project-brief.md`
+
+Tests should protect not only mechanics, but also the product promises that matter most:
+
+- Home is personal
+- Explore is broad discovery
+- RSVP remains the primary event action where relevant
+- social proof and participation signals render correctly
+- empty states guide action instead of dead-ending
+- moments remain anchored to events, communities, venues, or participation
+
 ## Test Suite Map
 
 ```

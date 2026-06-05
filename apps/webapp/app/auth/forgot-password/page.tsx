@@ -1,5 +1,4 @@
-import { Box, Container, Paper, Typography } from '@mui/material';
-import Logo from '@/components/logo';
+import AuthPageShell from '@/components/forms/auth/AuthPageShell';
 import ForgotPasswordForm from '@/components/forms/auth/ForgotPassword';
 import { buildPageMetadata } from '@/lib/metadata';
 import { APP_NAME } from '@/lib/constants';
@@ -12,29 +11,11 @@ export const metadata = buildPageMetadata({
 
 export default function ForgotPasswordPage() {
   return (
-    <Box sx={{ py: 6, minHeight: '100vh', backgroundColor: 'background.default' }}>
-      <Container maxWidth="sm">
-        <Paper
-          elevation={0}
-          sx={{
-            padding: 4,
-            borderRadius: 2,
-          }}
-        >
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-            <Logo />
-          </Box>
-
-          <Typography textAlign="center" component="h1" variant="h4" fontWeight={700} marginBottom={1}>
-            Reset your password
-          </Typography>
-          <Typography textAlign="center" variant="body2" color="text.secondary" marginBottom={4}>
-            Enter your email address and we'll send you a link to reset your password
-          </Typography>
-
-          <ForgotPasswordForm />
-        </Paper>
-      </Container>
-    </Box>
+    <AuthPageShell
+      subtitle="Enter your email address and we'll send you a link to reset your password"
+      title="Reset your password"
+    >
+      <ForgotPasswordForm />
+    </AuthPageShell>
   );
 }

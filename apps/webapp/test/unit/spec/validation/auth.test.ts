@@ -129,14 +129,14 @@ describe('CreateUserInputSchema', () => {
     }
   });
 
-  it('should reject invalid birthdate format', () => {
+  it('should reject invalid birthdate input', () => {
     const result = CreateUserInputSchema.safeParse({
       ...validInput,
       birthdate: '15-01-1990', // Invalid format
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe('Birthdate should be in YYYY-MM-DD format');
+      expect(result.error.issues[0].message).toBe('Birthdate must be a real date in YYYY-MM-DD format');
     }
   });
 
