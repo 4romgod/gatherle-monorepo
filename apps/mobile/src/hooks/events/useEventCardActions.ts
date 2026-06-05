@@ -9,7 +9,7 @@ import {
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import { FollowTargetType, ParticipantStatus } from '@data/graphql/types/graphql';
 import { isUpcomingEventTime } from '@/lib/events/eventCollections';
-import { getOccurrenceParticipantCount } from '@/lib/events/formatters';
+import { getOccurrenceParticipantCount, getOccurrenceParticipantStatusCounts } from '@/lib/events/formatters';
 import { getApolloAuthContext } from '@/lib/auth';
 
 export function useEventCardActions(occurrence: MobileEventOccurrence, authToken: string | null) {
@@ -19,9 +19,12 @@ export function useEventCardActions(occurrence: MobileEventOccurrence, authToken
   const initialSaved = occurrence.eventSeries?.isSavedByMe ?? false;
   const initialRsvpStatus = occurrence.myRsvp?.status ?? null;
   const initialParticipantCount = getOccurrenceParticipantCount(occurrence) || occurrence.rsvpCount || 0;
+  const initialParticipantBreakdown = getOccurrenceParticipantStatusCounts(occurrence);
   const rsvpClosed = !isUpcomingEventTime(occurrence.startAt, occurrence.endAt);
 
   const [isSaved, setIsSaved] = useState(initialSaved);
+  const [goingCount, setGoingCount] = useState(initialParticipantBreakdown.going);
+  const [interestedCount, setInterestedCount] = useState(initialParticipantBreakdown.interested);
   const [participantCount, setParticipantCount] = useState(initialParticipantCount);
   const [rsvpStatus, setRsvpStatus] = useState<ParticipantStatus | null>(initialRsvpStatus);
 
@@ -36,6 +39,11 @@ export function useEventCardActions(occurrence: MobileEventOccurrence, authToken
   useEffect(() => {
     setParticipantCount(initialParticipantCount);
   }, [initialParticipantCount]);
+
+  useEffect(() => {
+    setGoingCount(initialParticipantBreakdown.going);
+    setInterestedCount(initialParticipantBreakdown.interested);
+  }, [initialParticipantBreakdown.going, initialParticipantBreakdown.interested]);
 
   const [followMutation, { loading: followLoading }] = useMutation(FollowDocument, queryOptions);
   const [unfollowMutation, { loading: unfollowLoading }] = useMutation(UnfollowDocument, queryOptions);
@@ -59,6 +67,38 @@ export function useEventCardActions(occurrence: MobileEventOccurrence, authToken
       }
 
       return currentCount;
+    });
+  };
+
+  const applyParticipantBreakdownDelta = (nextStatus: ParticipantStatus | null) => {
+    const previousStatus = rsvpStatus;
+
+    setGoingCount((currentCount) => {
+      let nextCount = currentCount;
+
+      if (previousStatus === ParticipantStatus.Going || previousStatus === ParticipantStatus.CheckedIn) {
+        nextCount -= 1;
+      }
+
+      if (nextStatus === ParticipantStatus.Going || nextStatus === ParticipantStatus.CheckedIn) {
+        nextCount += 1;
+      }
+
+      return Math.max(0, nextCount);
+    });
+
+    setInterestedCount((currentCount) => {
+      let nextCount = currentCount;
+
+      if (previousStatus === ParticipantStatus.Interested) {
+        nextCount -= 1;
+      }
+
+      if (nextStatus === ParticipantStatus.Interested) {
+        nextCount += 1;
+      }
+
+      return Math.max(0, nextCount);
     });
   };
 
@@ -108,6 +148,7 @@ export function useEventCardActions(occurrence: MobileEventOccurrence, authToken
         },
       });
       applyParticipantCountDelta(null);
+      applyParticipantBreakdownDelta(null);
       setRsvpStatus(null);
       return null;
     }
@@ -122,6 +163,7 @@ export function useEventCardActions(occurrence: MobileEventOccurrence, authToken
       },
     });
     applyParticipantCountDelta(status);
+    applyParticipantBreakdownDelta(status);
     setRsvpStatus(status);
     return status;
   };
@@ -136,6 +178,8 @@ export function useEventCardActions(occurrence: MobileEventOccurrence, authToken
     interestedInEvent: async () => updateRsvp(ParticipantStatus.Interested),
     isSaved,
     loading,
+    goingCount,
+    interestedCount,
     participantCount,
     rsvpLoading,
     rsvpStatus,

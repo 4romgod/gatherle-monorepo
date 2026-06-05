@@ -1,9 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
-import { FollowTargetType } from '@/data/graphql/types/graphql';
+import { FollowApprovalStatus, FollowTargetType } from '@/data/graphql/types/graphql';
 import {
   useFollow,
   useFollowRequests,
   useFollowing,
+  useFollowingUserIds,
   useFollowers,
   useMuteUser,
   useMuteOrganization,
@@ -86,6 +87,54 @@ describe('useFollow and related hooks', () => {
 
     expect(result.current.following).toEqual([{ userId: 'user-1' }]);
     expect(result.current.refetch).toBe(refetch);
+  });
+
+  it('returns a stable empty following-user-id set when there are no accepted user follows', () => {
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      loading: false,
+      error: undefined,
+      refetch: jest.fn(),
+    });
+
+    const { result, rerender } = renderHook(() => useFollowingUserIds());
+    const firstResult = result.current;
+
+    rerender();
+
+    expect(result.current.size).toBe(0);
+    expect(result.current).toBe(firstResult);
+  });
+
+  it('includes only accepted user follow ids in the derived set', () => {
+    useQueryMock.mockReturnValue({
+      data: {
+        readFollowing: [
+          {
+            targetId: 'user-1',
+            targetType: FollowTargetType.User,
+            approvalStatus: FollowApprovalStatus.Accepted,
+          },
+          {
+            targetId: 'user-2',
+            targetType: FollowTargetType.User,
+            approvalStatus: FollowApprovalStatus.Pending,
+          },
+          {
+            targetId: 'event-1',
+            targetType: FollowTargetType.EventSeries,
+            approvalStatus: FollowApprovalStatus.Accepted,
+          },
+        ],
+      },
+      loading: false,
+      error: undefined,
+      refetch: jest.fn(),
+    });
+
+    const { result } = renderHook(() => useFollowingUserIds());
+
+    expect(Array.from(result.current)).toEqual(['user-1']);
   });
 
   it('returns followers when targetId is provided', () => {

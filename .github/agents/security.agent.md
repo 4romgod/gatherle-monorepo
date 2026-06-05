@@ -128,6 +128,17 @@ This agent is responsible for security posture across the entire Gatherle platfo
 
 The goal is to reduce exploitability and blast radius while preserving delivery speed.
 
+Before product-sensitive reviews, read:
+
+- `docs/product/GATHERLE_PRODUCT_MANUAL.md`
+- `docs/project-brief.md`
+
+Security work should preserve Gatherle’s product trust model:
+
+- users need confidence in real-world experiences
+- privacy and visibility controls around follows, attendance, and participation are part of the product itself
+- trust failures damage not just compliance posture, but the core discovery and attendance loop
+
 ## Core Operating Principles
 
 1. Default deny: access and permissions are explicit, narrow, and revocable.

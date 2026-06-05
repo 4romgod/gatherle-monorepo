@@ -487,15 +487,14 @@ jobs:
         run: npm install --global vercel@latest
 
       - name: Pull Vercel Environment Information
-        working-directory: ./apps/webapp
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+        run: |
+          vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy Preview to Vercel
         id: deploy_webapp
-        working-directory: ./apps/webapp
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -508,7 +507,8 @@ jobs:
           APPLE_OAUTH_CLIENT_SECRET_WEB: ${{ secrets.APPLE_OAUTH_CLIENT_SECRET_WEB }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
         run: |
-          vercel deploy --yes --token=${{ secrets.VERCEL_TOKEN }} \
+          vercel deploy --yes \
+            --token=${{ secrets.VERCEL_TOKEN }} \
             --build-env NEXT_PUBLIC_GRAPHQL_URL="$NEXT_PUBLIC_GRAPHQL_URL" \
             --build-env NEXT_PUBLIC_WEBSOCKET_URL="$NEXT_PUBLIC_WEBSOCKET_URL" \
             --build-env NEXT_PUBLIC_S3_MEDIA_URL="$NEXT_PUBLIC_S3_MEDIA_URL" \
@@ -532,7 +532,6 @@ jobs:
 
       - name: Alias Webapp Custom Domain in Vercel
         if: ${{ inputs.web_domain_alias != '' }}
-        working-directory: ./apps/webapp
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -542,7 +541,10 @@ jobs:
             echo "Missing deployment URL for Vercel alias."
             exit 1
           fi
-          vercel alias set "$DEPLOYMENT_URL" "${{ inputs.web_domain_alias }}" --token=${{ secrets.VERCEL_TOKEN }}
+          vercel alias set \
+            "$DEPLOYMENT_URL" \
+            "${{ inputs.web_domain_alias }}" \
+            --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Verify Webapp Custom Domain
         if: ${{ inputs.web_domain_alias != '' }}

@@ -124,6 +124,40 @@ consistency, responsiveness, and product polish across:
 
 Its most important job is to keep the **mobile app** and the **mobile-sized webapp** in parity.
 
+Before product-facing work, this agent should read:
+
+- `docs/product/GATHERLE_PRODUCT_MANUAL.md`
+- `docs/project-brief.md`
+
+This agent should treat the product manual as the canonical guide for product reasoning.
+
+## Product North Star
+
+Gatherle is a **social-first event discovery product**.
+
+The frontend should help users answer:
+
+1. What is happening around me?
+2. Why should I care?
+3. Who from my world is involved?
+4. Is this worth showing up for?
+
+This agent must actively avoid pushing Gatherle toward:
+
+- a generic event listings UI
+- a generic social media experience
+- a back-office-feeling consumer product
+
+## Product Laws For Frontend Work
+
+1. People-first social proof beats raw counters when the product supports it.
+2. RSVP is usually the primary event action; Save and Share should not visually outrank it.
+3. Home is personal re-entry; Explore is broad discovery.
+4. Moments should make events, venues, organizers, and communities feel alive; they should not feel detached from real
+   experiences.
+5. Profiles should express identity through participation, interests, and social adjacency.
+6. Empty states should always drive the next useful action.
+
 ## Interaction Defaults
 
 This agent should treat modern touch-friendly interaction patterns as part of the default Gatherle frontend toolbox, not
@@ -510,6 +544,17 @@ Avoid:
 - hidden creator actions
 - inconsistent success/error feedback across surfaces
 - pagination that feels mechanical when a gesture-first pattern would be more natural
+
+### 2.1 Product Review Rule
+
+When a review says the app feels polished but not compelling, assume the missing ingredient is usually one of:
+
+- weak social proof
+- unclear surface role
+- low re-entry value
+- event cards that explain what but not why
+
+Do not respond to those reviews by adding decorative features first.
 
 ### 3. Mobile-specific Rule
 

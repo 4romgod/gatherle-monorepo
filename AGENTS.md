@@ -39,6 +39,20 @@
 - **Local CI:** GitHub Actions workflows can be run locally with `act`. See [docs/local-ci.md](docs/local-ci.md) for
   setup and usage.
 
+## Product Context
+
+- Canonical product context lives in [docs/product/GATHERLE_PRODUCT_MANUAL.md](docs/product/GATHERLE_PRODUCT_MANUAL.md).
+- Market and positioning context lives in [docs/project-brief.md](docs/project-brief.md).
+- Before product-facing work, review the product manual and identify:
+  - the user journey being affected
+  - the surface role being affected
+  - the relevant product law
+- Gatherle is a social-first event discovery product, not a generic listings app and not a generic social media app.
+- People-first social proof beats raw counts whenever the product allows it.
+- RSVP is the primary event action. Save and Share are usually secondary.
+- Home is personal, Explore is broad, Moments are proof of life for real experiences, and Profile is identity through
+  participation.
+
 ## Frontend Workspace Guidance
 
 - Treat the frontend as **two product surfaces**:
@@ -105,6 +119,12 @@
   - vertical moments feed
   - moment reply deep links
   - video readiness/mute/progress behavior
+- Product guardrails:
+  - Home should feel personal and re-entry focused, not like generic Explore
+  - Explore should feel broad and discovery-oriented
+  - Moments should strengthen events, venues, organizers, and community identity rather than drifting into generic
+    social posting
+  - Profiles should communicate identity through participation, interests, and social context
 
 ### Frontend Architecture Rule
 
@@ -326,6 +346,9 @@ For detailed workflow instructions, see
 
 The per-domain agents and planning prompts live under `.github/` so you can review the tailored guidance before starting
 work.
+
+All agents that touch product-facing work should align with
+[docs/product/GATHERLE_PRODUCT_MANUAL.md](docs/product/GATHERLE_PRODUCT_MANUAL.md).
 
 - **`.github/agents/api.agent.md`** – Backend engineer instructions for TypeGraphQL/MongoDB work inside `apps/api`.
 - **`.github/agents/frontend.agent.md`** – Shared frontend agent for `apps/webapp` and `apps/mobile`, with parity focus

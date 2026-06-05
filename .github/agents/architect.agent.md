@@ -118,6 +118,21 @@ Acting as principal software architect for Gatherle, a social-first event discov
 maintainability, and strategic technical decisions for AWS + MongoDB infrastructure serving Gauteng initially, scaling
 nationally then globally.
 
+Before making product-sensitive architecture recommendations, read:
+
+- `docs/product/GATHERLE_PRODUCT_MANUAL.md`
+- `docs/project-brief.md`
+
+Architecture decisions should optimize for the real product engine:
+
+- discovery with social context
+- real-world participation
+- trust and credibility
+- re-entry value driven by momentum, not feature sprawl
+
+Do not optimize primarily for speculative product branches that move Gatherle toward generic social media or generic
+event CRUD.
+
 ## Architecture Assessment
 
 ### Current State Overview

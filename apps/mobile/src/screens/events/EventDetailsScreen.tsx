@@ -24,14 +24,14 @@ import { EventMomentsRing } from '@/components/moments/EventMomentsRing';
 import { MomentComposerModal } from '@/components/moments/MomentComposerModal';
 import { GetEventBySlugForNavigationDocument } from '@data/graphql/query/Event/query';
 import {
-  formatCountLabel,
   formatEventScheduleTwoLine,
+  formatGoingCountLabel,
+  formatInterestedCountLabel,
   formatLocationLabel,
   getDisplayName,
   getEventImageUrl,
   getEventTitle,
   getOccurrenceParticipantCount,
-  getOccurrenceParticipantPreview,
   getParticipantKey,
 } from '@/lib/events/formatters';
 import { mapNavigableEventOccurrences, mergeNavigableOccurrences } from '@/lib/events/adapters';
@@ -68,21 +68,19 @@ type EventOptionsModalProps = {
 
 function buildAttendanceBadgeLabel(goingCount: number, interestedCount: number, fallbackCount?: number) {
   if (goingCount <= 0 && interestedCount <= 0) {
-    if (!fallbackCount || fallbackCount <= 0) {
-      return null;
-    }
-
-    return formatCountLabel(fallbackCount, 'attendee');
+    return fallbackCount && fallbackCount > 0
+      ? formatGoingCountLabel(fallbackCount, { includePeopleWord: false })
+      : null;
   }
 
   const parts: string[] = [];
 
   if (goingCount > 0) {
-    parts.push(`${goingCount} going`);
+    parts.push(formatGoingCountLabel(goingCount, { includePeopleWord: false, zeroLabel: '' }));
   }
 
   if (interestedCount > 0) {
-    parts.push(`${interestedCount} interested`);
+    parts.push(formatInterestedCountLabel(interestedCount, { includePeopleWord: false, zeroLabel: '' }));
   }
 
   return parts.join(' · ');
@@ -211,7 +209,16 @@ export function EventDetailsScreen() {
   const imageUrl = getEventImageUrl(occurrence);
   const title = getEventTitle(occurrence);
   const participantCount = getOccurrenceParticipantCount(occurrence) || occurrence.rsvpCount || 0;
-  const participants = getOccurrenceParticipantPreview(occurrence, 6);
+  const participants = useMemo(
+    () =>
+      (occurrence.participants ?? [])
+        .filter(
+          (participant) =>
+            participant.status === ParticipantStatus.Going || participant.status === ParticipantStatus.CheckedIn,
+        )
+        .slice(0, 6),
+    [occurrence.participants],
+  );
   const importedOrganizerUser =
     occurrence.eventSeries?.organizers?.find((organizer) => organizer.user?.username === IMPORTED_EVENT_SYSTEM_USERNAME)
       ?.user ?? null;
@@ -293,11 +300,27 @@ export function EventDetailsScreen() {
   const rsvpTone = rsvpClosed ? 'secondary' : !isAuthenticated || !rsvpStatus ? 'primary' : 'successSoft';
   const saveTone = isSaved ? 'primarySoft' : 'secondary';
   const rsvpIcon = rsvpStatus === 'Interested' ? 'star' : 'check-square';
-  const attendeeLabel = useMemo(() => formatCountLabel(localParticipantCount, 'guest'), [localParticipantCount]);
   const heroPillLabel = useMemo(
     () => buildAttendanceBadgeLabel(heroGoingCount, heroInterestedCount, localParticipantCount),
     [heroGoingCount, heroInterestedCount, localParticipantCount],
   );
+  const attendeeLabel = useMemo(() => heroPillLabel ?? 'No one going yet', [heroPillLabel]);
+  const attendeeSummaryLabel = useMemo(
+    () => formatGoingCountLabel(heroGoingCount || participants.length, { includePeopleWord: true }),
+    [heroGoingCount, participants.length],
+  );
+  const rsvpContextTitle =
+    rsvpStatus === ParticipantStatus.Going
+      ? "You're going"
+      : rsvpStatus === ParticipantStatus.Interested
+        ? 'Interested for now'
+        : null;
+  const rsvpContextBody =
+    rsvpStatus === ParticipantStatus.Going
+      ? 'Lock the plan in now, then bring your people in before the moment passes.'
+      : rsvpStatus === ParticipantStatus.Interested
+        ? "We'll keep this on your radar as the event picks up."
+        : null;
   const stickyBarBottom = Math.max(insets.bottom, 24);
   const heroFallback = (
     <View style={[styles.heroPlaceholder, { backgroundColor: theme.colors.surfaceRaised }]}>
@@ -638,12 +661,6 @@ export function EventDetailsScreen() {
 
         <View style={styles.actionsRow}>
           <EventDetailActionButton icon="map" label="Directions" onPress={handleOpenDirections} tone="secondary" />
-          <EventDetailActionButton
-            icon="calendar"
-            label="Add to calendar"
-            onPress={handleAddToCalendar}
-            tone="secondary"
-          />
         </View>
 
         {eventSourceLink ? (
@@ -665,6 +682,43 @@ export function EventDetailsScreen() {
               onPress={handleMessageGatherle}
               tone="secondary"
             />
+          </View>
+        ) : null}
+
+        {rsvpContextTitle && rsvpContextBody ? (
+          <View
+            style={[
+              styles.rsvpContextCard,
+              {
+                backgroundColor:
+                  rsvpStatus === ParticipantStatus.Going ? theme.colors.successSoft : theme.colors.primarySoft,
+                borderColor: rsvpStatus === ParticipantStatus.Going ? theme.colors.success : theme.colors.primary,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.rsvpContextTitle,
+                {
+                  color: rsvpStatus === ParticipantStatus.Going ? theme.colors.success : theme.colors.primary,
+                },
+              ]}
+            >
+              {rsvpContextTitle}
+            </Text>
+            <Text style={[styles.rsvpContextBody, { color: theme.colors.textSecondary }]}>{rsvpContextBody}</Text>
+
+            {rsvpStatus === ParticipantStatus.Going ? (
+              <View style={styles.rsvpContextActions}>
+                <EventDetailActionButton
+                  icon="calendar"
+                  label="Add to calendar"
+                  onPress={handleAddToCalendar}
+                  tone="secondary"
+                />
+                <EventDetailActionButton icon="share-2" label="Invite friends" onPress={handleShare} tone="secondary" />
+              </View>
+            ) : null}
           </View>
         ) : null}
 
@@ -815,7 +869,7 @@ export function EventDetailsScreen() {
                 </Pressable>
               ))}
               <Text style={[styles.attendeeSummary, { color: theme.colors.textSecondary }]}>
-                {formatCountLabel(participantCount, 'person')}
+                {attendeeSummaryLabel}
               </Text>
             </View>
           </EventDetailSection>
@@ -1089,6 +1143,27 @@ const styles = StyleSheet.create({
     fontSize: 18,
     letterSpacing: -0.4,
     marginBottom: 6,
+  },
+  rsvpContextActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  rsvpContextBody: {
+    ...typography.bodyRegular,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  rsvpContextCard: {
+    borderRadius: 18,
+    borderWidth: 1.5,
+    gap: 8,
+    padding: 16,
+  },
+  rsvpContextTitle: {
+    ...typography.displayBold,
+    fontSize: 16,
+    letterSpacing: -0.3,
   },
   pageContent: {
     gap: 16,

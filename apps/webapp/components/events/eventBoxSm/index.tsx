@@ -2,7 +2,7 @@
 
 import CardMedia from '@mui/material/CardMedia';
 import { alpha, Avatar, AvatarGroup, Box, CardContent, Typography, Tooltip, Stack } from '@mui/material';
-import { CalendarToday, LocationOn, CheckBoxRounded } from '@mui/icons-material';
+import { CalendarToday, LocationOn } from '@mui/icons-material';
 import Link from 'next/link';
 import { SaveEventButton, EventShareButton, RsvpButton } from '@/components/events';
 import { useState, useEffect, type MouseEvent } from 'react';
@@ -20,14 +20,25 @@ import {
   getEventPreviewParticipantCount,
   getEventPreviewParticipants,
   isEventPreviewRsvpClosed,
-  getEventPreviewSaveCount,
   getEventPreviewScheduleText,
   getEventPreviewSlug,
   getEventPreviewTitle,
 } from '@/components/events/event-preview-utils';
-import type { EventParticipantRecord } from '@/components/events/participant-utils';
+import {
+  buildParticipantSocialProof,
+  getParticipantDisplayName,
+  getParticipantInitial,
+} from '@/components/events/participant-utils';
 
-export default function EventBoxSm({ event, href }: { event: AnyEventPreview; href?: string }) {
+export default function EventBoxSm({
+  event,
+  href,
+  followingUserIds,
+}: {
+  event: AnyEventPreview;
+  href?: string;
+  followingUserIds?: ReadonlySet<string>;
+}) {
   const title = getEventPreviewTitle(event);
   const resolvedHref = href || getEventPreviewHref(event);
   const eventId = getEventPreviewEventId(event);
@@ -42,8 +53,6 @@ export default function EventBoxSm({ event, href }: { event: AnyEventPreview; hr
   const participantList = getEventPreviewParticipants(event);
   const participantCount = getEventPreviewParticipantCount(event);
   const rsvpClosed = isEventPreviewRsvpClosed(event);
-  const saveCount = getEventPreviewSaveCount(event);
-  const isTrending = participantCount >= 20 || saveCount >= 12;
 
   // Local state for optimistic UI updates
   const [isSaved, setIsSaved] = useState(nextSavedState);
@@ -58,21 +67,66 @@ export default function EventBoxSm({ event, href }: { event: AnyEventPreview; hr
     setRsvpStatus(nextRsvpStatus);
   }, [nextRsvpStatus]);
 
-  const activeParticipants = participantList.filter(
-    (participant) => participant.status !== ParticipantStatus.Cancelled,
-  );
-  const visibleParticipants = activeParticipants.slice(0, 3);
-  const getParticipantLabel = (participant: EventParticipantRecord) => {
-    const nameParts = [participant.user?.given_name, participant.user?.family_name].filter(Boolean);
-
-    const fallbackName = participant.user?.username || `Guest • ${participant.userId?.slice(-4) ?? 'anon'}`;
-    return nameParts.length ? nameParts.join(' ') : fallbackName;
-  };
-  const getParticipantAvatarLetter = (participant: EventParticipantRecord) =>
-    participant.user?.given_name?.charAt(0) ??
-    participant.user?.username?.charAt(0) ??
-    participant.userId?.charAt(0) ??
-    '?';
+  const socialProof = buildParticipantSocialProof(participantList, {
+    counts: { totalCount: participantCount },
+    followingUserIds,
+  });
+  const rsvpLabel = rsvpClosed
+    ? 'Event ended'
+    : rsvpStatus === ParticipantStatus.Going
+      ? 'Going'
+      : rsvpStatus === ParticipantStatus.Interested
+        ? 'Interested'
+        : 'RSVP';
+  const rsvpButtonSx = {
+    minHeight: 34,
+    borderRadius: 2,
+    px: 1,
+    fontSize: '0.74rem',
+    boxShadow: 'none',
+    ...(rsvpClosed
+      ? {
+          bgcolor: 'action.hover',
+          borderColor: 'divider',
+          color: 'text.secondary',
+          '&:hover': {
+            bgcolor: 'action.hover',
+            borderColor: 'divider',
+            color: 'text.secondary',
+          },
+        }
+      : rsvpStatus === ParticipantStatus.Going
+        ? {
+            bgcolor: 'success.lighter',
+            borderColor: 'success.main',
+            color: 'success.main',
+            '&:hover': {
+              bgcolor: 'success.light',
+              borderColor: 'success.main',
+              color: 'success.dark',
+            },
+          }
+        : rsvpStatus === ParticipantStatus.Interested
+          ? {
+              bgcolor: 'primary.lighter',
+              borderColor: 'primary.main',
+              color: 'primary.main',
+              '&:hover': {
+                bgcolor: 'primary.light',
+                borderColor: 'primary.main',
+                color: 'primary.dark',
+              },
+            }
+          : {
+              bgcolor: 'secondary.main',
+              borderColor: 'secondary.main',
+              color: 'secondary.contrastText',
+              '&:hover': {
+                bgcolor: 'secondary.dark',
+                borderColor: 'secondary.dark',
+              },
+            }),
+  } as const;
 
   const handleLinkClick = (event: MouseEvent<HTMLAnchorElement>) => {
     const target = event.target as HTMLElement;
@@ -179,59 +233,56 @@ export default function EventBoxSm({ event, href }: { event: AnyEventPreview; hr
             </Typography>
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            {participantCount > 0 && (
-              <>
-                <CheckBoxRounded fontSize="inherit" sx={{ color: 'text.secondary', mr: 0.75, fontSize: '0.78rem' }} />
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.78rem' }}>
-                  {participantCount} going
-                </Typography>
-              </>
-            )}
-            {saveCount > 0 && (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ fontSize: '0.78rem', ml: participantCount > 0 ? 1 : 0 }}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, minHeight: 26 }}>
+            {socialProof.participants.length > 0 ? (
+              <AvatarGroup
+                max={3}
+                sx={{
+                  '& .MuiAvatar-root': { width: 26, height: 26, fontSize: '0.7rem' },
+                }}
               >
-                {saveCount} saves
-              </Typography>
-            )}
-            {isTrending && (
-              <Typography variant="body2" color="secondary.main" sx={{ fontSize: '0.78rem', ml: 1, fontWeight: 700 }}>
-                Trending
-              </Typography>
-            )}
-            <AvatarGroup
-              max={3}
+                {socialProof.participants.map((participant) => (
+                  <Tooltip
+                    key={participant.participantId}
+                    title={`${getParticipantDisplayName(participant)} · ${participant.status}`}
+                  >
+                    <Avatar src={participant.user?.profile_picture || undefined}>
+                      {getParticipantInitial(participant).toUpperCase()}
+                    </Avatar>
+                  </Tooltip>
+                ))}
+              </AvatarGroup>
+            ) : null}
+            <Typography
+              variant="body2"
+              color="text.secondary"
               sx={{
-                ml: 1,
-                '& .MuiAvatar-root': { width: 26, height: 26, fontSize: '0.7rem' },
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
             >
-              {visibleParticipants.map((participant) => (
-                <Tooltip
-                  key={participant.participantId}
-                  title={`${getParticipantLabel(participant)} · ${participant.status}`}
-                >
-                  <Avatar src={participant.user?.profile_picture || undefined}>
-                    {getParticipantAvatarLetter(participant).toUpperCase()}
-                  </Avatar>
-                </Tooltip>
-              ))}
-            </AvatarGroup>
+              {socialProof.text}
+            </Typography>
           </Box>
 
           {/* Action buttons */}
           <Stack direction="row" spacing={0.5} sx={{ mt: 'auto' }}>
-            <RsvpButton
-              eventId={eventId}
-              occurrenceId={occurrenceId}
-              currentStatus={rsvpStatus}
-              rsvpClosed={rsvpClosed}
-              size="small"
-              onRsvpChange={setRsvpStatus}
-            />
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <RsvpButton
+                eventId={eventId}
+                occurrenceId={occurrenceId}
+                currentStatus={rsvpStatus}
+                fullWidth
+                label={rsvpLabel}
+                rsvpClosed={rsvpClosed}
+                size="small"
+                onRsvpChange={setRsvpStatus}
+                sx={rsvpButtonSx}
+              />
+            </Box>
             <SaveEventButton eventId={eventId} isSaved={isSaved} size="small" showTooltip onSaveChange={setIsSaved} />
             <EventShareButton
               eventTitle={title}
