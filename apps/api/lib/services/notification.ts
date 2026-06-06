@@ -4,6 +4,7 @@ import { NotificationType, ParticipantStatus } from '@gatherle/commons/server/ty
 import { NotificationDAO, UserDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import { publishNotificationCreated, publishNotificationsCreated } from '@/websocket/publisher';
+import PushService from './push';
 
 /**
  * Parameters for creating a notification
@@ -225,6 +226,22 @@ const NOTIFICATION_TEMPLATES: Record<NotificationType, NotificationTemplate> = {
  * Central service for creating and managing notifications
  */
 class NotificationService {
+  private static dispatchPushNotifications(notifications: Notification[]): void {
+    const eligibleNotifications = notifications.filter((notification) =>
+      PushService.supportsNotificationType(notification.type),
+    );
+    if (eligibleNotifications.length === 0) {
+      return;
+    }
+
+    PushService.sendNotifications(eligibleNotifications).catch((error) => {
+      logger.warn('Failed to dispatch push notifications', {
+        error,
+        notificationIds: eligibleNotifications.map((notification) => notification.notificationId),
+      });
+    });
+  }
+
   /**
    * Create a notification for a single user
    */
@@ -293,6 +310,7 @@ class NotificationService {
     const notification = await NotificationDAO.create(input);
 
     await publishNotificationCreated(notification);
+    this.dispatchPushNotifications([notification]);
 
     // TODO: Future - dispatch to email/push based on user preferences
     // await this.dispatchToChannels(notification, recipientUserId);
@@ -375,6 +393,7 @@ class NotificationService {
     const notifications = await NotificationDAO.createMany(inputs);
 
     await publishNotificationsCreated(notifications);
+    this.dispatchPushNotifications(notifications);
 
     // TODO: Future - dispatch to email/push based on user preferences
     return notifications;

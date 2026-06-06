@@ -71,7 +71,7 @@ describe('mobile account form helpers', () => {
 
     expect(createSettingsForm(null, 'system')).toMatchObject({
       communicationEmailEnabled: true,
-      communicationPushEnabled: true,
+      communicationPushEnabled: false,
       defaultVisibility: SocialVisibility.Public,
       email: '',
       followPolicy: FollowPolicy.Public,

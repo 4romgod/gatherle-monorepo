@@ -16,6 +16,7 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
   const enableCustomDomains = process.env.ENABLE_CUSTOM_DOMAINS === 'true';
   const mongoDbUrl = process.env.MONGO_DB_URL?.trim();
   const jwtSecret = process.env.JWT_SECRET?.trim();
+  const firebaseFcmServiceAccountJson = process.env.FIREBASE_FCM_SERVICE_ACCOUNT_JSON?.trim();
   const shouldIncludeSecretsManagementStack = Boolean(mongoDbUrl && jwtSecret);
   const stackEnv = {
     account: account.accountNumber,
@@ -30,6 +31,7 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
         awsRegion: account.awsRegion,
         mongoDbUrl: mongoDbUrl as string,
         jwtSecret: jwtSecret as string,
+        firebaseFcmServiceAccountJson,
         description: 'This stack includes AWS Secrets Manager resources for the GraphQL API',
       })
     : undefined;

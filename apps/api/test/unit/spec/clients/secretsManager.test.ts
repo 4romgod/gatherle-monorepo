@@ -10,11 +10,13 @@ jest.mock('@aws-sdk/client-secrets-manager', () => ({
 const mockConstants = (overrides: Partial<Record<string, string>> = {}) =>
   jest.doMock('@/constants', () => ({
     AWS_REGION: 'us-east-1',
+    FIREBASE_FCM_SERVICE_ACCOUNT_JSON: '{"type":"service_account"}',
     JWT_SECRET: 'local-jwt',
     MONGO_DB_URL: 'mongodb://local',
     STAGE: APPLICATION_STAGES.DEV,
     SECRET_ARN: 'arn:aws:secretsmanager:region:123:secret:gatherle',
     SECRET_KEYS: {
+      FIREBASE_FCM_SERVICE_ACCOUNT_JSON: 'FIREBASE_FCM_SERVICE_ACCOUNT_JSON',
       JWT_SECRET: 'JWT_SECRET',
       MONGO_DB_URL: 'MONGO_DB_URL',
     },
@@ -32,6 +34,13 @@ describe('getConfigValue', () => {
     const { getConfigValue } = await import('@/clients/AWS/secretsManager');
 
     await expect(getConfigValue('JWT_SECRET')).resolves.toBe('local-jwt');
+  });
+
+  it('returns local firebase config when running in Dev', async () => {
+    mockConstants();
+    const { getConfigValue } = await import('@/clients/AWS/secretsManager');
+
+    await expect(getConfigValue('FIREBASE_FCM_SERVICE_ACCOUNT_JSON')).resolves.toBe('{"type":"service_account"}');
   });
 
   it('throws when local config is missing', async () => {

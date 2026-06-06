@@ -136,7 +136,6 @@ export function MessagesScreen() {
     return (
       <MainTabScreenLayout toolbarProps={messagesToolbarProps}>
         <PageContainer>
-          <PageHeading title="Messages" />
           <AuthPromptCard
             description="Sign in to search conversations, reply in threads, and keep your Gatherle community in one place."
             onPressPrimary={() => navigation.navigate('Login')}
@@ -154,7 +153,6 @@ export function MessagesScreen() {
     return (
       <MainTabScreenLayout toolbarProps={messagesToolbarProps}>
         <PageContainer>
-          <PageHeading title="Messages" />
           <StateNotice message="Log in with a real account token to load your conversations from the API." />
         </PageContainer>
       </MainTabScreenLayout>
@@ -249,7 +247,7 @@ export function MessagesScreen() {
             ))}
           </View>
         ) : (
-          <StateNotice message="No conversations yet." />
+          <StateNotice message="No conversations yet." title="No conversations yet" />
         )}
       </PageContainer>
     </MainTabScreenLayout>

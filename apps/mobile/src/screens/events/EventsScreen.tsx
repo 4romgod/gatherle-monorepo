@@ -235,8 +235,8 @@ export function EventsScreen() {
           style={[
             styles.introCard,
             {
-              backgroundColor: theme.colors.surfaceMuted,
-              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.surfaceRaised,
+              borderWidth: 0,
             },
           ]}
         >

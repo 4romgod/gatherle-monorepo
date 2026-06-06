@@ -53,7 +53,7 @@ export function createSettingsForm(
   return {
     birthdate: profile?.birthdate ?? '',
     communicationEmailEnabled: profile?.preferences?.communicationPrefs?.emailEnabled ?? true,
-    communicationPushEnabled: profile?.preferences?.communicationPrefs?.pushEnabled ?? true,
+    communicationPushEnabled: profile?.preferences?.communicationPrefs?.pushEnabled ?? false,
     defaultVisibility: privateUsersEnabled
       ? (profile?.defaultVisibility ?? SocialVisibility.Public)
       : SocialVisibility.Public,

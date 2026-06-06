@@ -81,6 +81,7 @@ registerEnumType(OAuthProvider, {
 });
 
 @ObjectType('CommunicationPrefs')
+@modelOptions({ schemaOptions: { _id: false, id: false } })
 export class CommunicationPrefs {
   @prop({ type: () => Boolean })
   @Field(() => Boolean, { nullable: true })
@@ -116,7 +117,7 @@ export class SessionState {
 }
 
 @ObjectType('UserPreferences')
-@modelOptions({ options: { allowMixed: Severity.ALLOW } })
+@modelOptions({ schemaOptions: { _id: false, id: false }, options: { allowMixed: Severity.ALLOW } })
 export class UserPreferences {
   @prop({ type: () => CommunicationPrefs })
   @Field(() => CommunicationPrefs, { nullable: true })

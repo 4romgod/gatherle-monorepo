@@ -19,6 +19,8 @@ import { apolloClient } from '@data/graphql/apollo-client';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { AppFeedbackProvider } from '@/app/providers/AppFeedbackProvider';
 import { AppShellProvider } from '@/app/providers/AppShellProvider';
+import { PushNotificationsProvider } from '@/app/providers/PushNotificationsProvider';
+import { usePushNotifications } from '@/app/providers/PushNotificationsProvider';
 import { RealtimeInboxProvider } from '@/app/providers/RealtimeInboxProvider';
 import { RootNavigator } from '@/app/navigation/RootNavigator';
 import { navigationRef } from '@/app/navigation/navigationRef';
@@ -29,6 +31,7 @@ import { configureMobileGoogleSignIn } from '@/lib/auth/googleSignIn';
 function AppContent() {
   const { isDark, navigationTheme } = useAppTheme();
   const { isSessionReady } = useAppShell();
+  const { handlePendingNotificationResponse } = usePushNotifications();
 
   if (!isSessionReady) {
     return (
@@ -40,7 +43,13 @@ function AppContent() {
 
   return (
     <View style={styles.appFrame}>
-      <NavigationContainer ref={navigationRef} theme={navigationTheme}>
+      <NavigationContainer
+        onReady={() => {
+          void handlePendingNotificationResponse();
+        }}
+        ref={navigationRef}
+        theme={navigationTheme}
+      >
         <StatusBar style={isDark ? 'light' : 'dark'} />
         <RootNavigator />
       </NavigationContainer>
@@ -73,13 +82,15 @@ export default function App() {
           <AppThemeProvider>
             <KeyboardProvider>
               <AppShellProvider>
-                <RealtimeInboxProvider>
-                  <AppFeedbackProvider>
-                    <BottomSheetModalProvider>
-                      <AppContent />
-                    </BottomSheetModalProvider>
-                  </AppFeedbackProvider>
-                </RealtimeInboxProvider>
+                <PushNotificationsProvider>
+                  <RealtimeInboxProvider>
+                    <AppFeedbackProvider>
+                      <BottomSheetModalProvider>
+                        <AppContent />
+                      </BottomSheetModalProvider>
+                    </AppFeedbackProvider>
+                  </RealtimeInboxProvider>
+                </PushNotificationsProvider>
               </AppShellProvider>
             </KeyboardProvider>
           </AppThemeProvider>

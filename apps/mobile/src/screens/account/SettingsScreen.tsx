@@ -15,13 +15,14 @@ import {
 } from '@data/graphql/types/graphql';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList, SettingsTabKey } from '@/app/navigation/routes';
 import { useAppFeedback } from '@/app/providers/AppFeedbackProvider';
 import { useAppShell } from '@/app/providers/AppShellProvider';
+import { usePushNotifications } from '@/app/providers/PushNotificationsProvider';
 import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
@@ -144,6 +145,7 @@ export function SettingsScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const route = useRoute<SettingsRoute>();
   const { showToast, withBlockingLoader } = useAppFeedback();
+  const { requestPermissionAndRegister } = usePushNotifications();
   const { authToken, isAuthenticated, setPendingVerificationEmail, signOut, updateSessionIdentity, userId } =
     useAppShell();
   const { preference, setPreference, theme } = useAppTheme();
@@ -403,6 +405,7 @@ export function SettingsScreen() {
     const normalizedCurrentEmail = profile.email.trim().toLowerCase();
     const normalizedNextEmail = settingsForm.email.trim().toLowerCase();
     const emailChanged = normalizedCurrentEmail !== normalizedNextEmail;
+    const shouldRegisterPush = settingsForm.communicationPushEnabled;
 
     try {
       await withBlockingLoader('Saving your settings…', async () => {
@@ -429,10 +432,47 @@ export function SettingsScreen() {
           ...createSettingsForm(updatedUser, current.themePreference),
           themePreference: current.themePreference,
         }));
+        const pushRegistrationStatus = shouldRegisterPush ? await requestPermissionAndRegister() : null;
+
+        let successMessage = emailChanged
+          ? 'Settings updated. Verify your new email address.'
+          : 'Settings updated successfully.';
+
+        if (pushRegistrationStatus === 'granted') {
+          successMessage = emailChanged
+            ? 'Settings updated. Verify your new email address, and push alerts are ready on this device.'
+            : 'Settings updated. Push alerts are ready on this device.';
+        } else if (pushRegistrationStatus === 'denied') {
+          successMessage = emailChanged
+            ? 'Settings updated. Verify your new email address, then enable device notifications when you want push alerts.'
+            : 'Settings updated. Enable device notifications when you want push alerts.';
+        } else if (pushRegistrationStatus === 'error') {
+          successMessage = emailChanged
+            ? 'Settings updated. Verify your new email address. Push registration will retry when the app reconnects.'
+            : 'Settings updated. Push registration will retry when the app reconnects.';
+        }
+
         showToast({
-          message: emailChanged ? 'Settings updated. Verify your new email address.' : 'Settings updated successfully.',
+          message: successMessage,
           tone: 'success',
         });
+
+        if (pushRegistrationStatus === 'denied') {
+          Alert.alert(
+            'Enable notifications',
+            'Push is enabled in Gatherle, but device notifications are blocked for this app. Open system settings to allow notifications.',
+            [
+              { text: 'Not now', style: 'cancel' },
+              {
+                text: 'Open settings',
+                onPress: () => {
+                  void Linking.openSettings();
+                },
+              },
+            ],
+          );
+        }
+
         void refetch();
 
         if (emailChanged) {
@@ -1003,7 +1043,7 @@ export function SettingsScreen() {
                 value={settingsForm.communicationEmailEnabled}
               />
               <AccountSwitchRow
-                description="Prepare for future native push alerts on your device."
+                description="Receive follow requests, organizer invites, and other time-sensitive alerts on this device."
                 onValueChange={(communicationPushEnabled) =>
                   setSettingsForm((current) => ({ ...current, communicationPushEnabled }))
                 }

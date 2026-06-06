@@ -6,6 +6,7 @@ import { CreateUserDocument } from '@data/graphql/mutation/User/mutation';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList } from '@/app/navigation/routes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
+import { usePushNotifications } from '@/app/providers/PushNotificationsProvider';
 import { AuthFormField } from '@/components/auth/AuthFormField';
 import { AuthScreenShell } from '@/components/auth/AuthScreenShell';
 import { DatePickerField } from '@/components/core/DatePickerField';
@@ -20,6 +21,7 @@ export function RegisterScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const route = useRoute<RegisterRoute>();
   const { isAuthenticated, setPendingVerificationEmail } = useAppShell();
+  const { hasPendingNotificationResponse } = usePushNotifications();
   const { theme } = useAppTheme();
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -34,7 +36,7 @@ export function RegisterScreen() {
   const redirectTab = route.params?.redirectTab;
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || hasPendingNotificationResponse) {
       return;
     }
 
@@ -42,7 +44,7 @@ export function RegisterScreen() {
       index: 0,
       routes: [{ name: 'MainTabs', params: { screen: redirectTab ?? 'Account' } }],
     });
-  }, [isAuthenticated, navigation, redirectTab]);
+  }, [hasPendingNotificationResponse, isAuthenticated, navigation, redirectTab]);
 
   const actionsDisabled = useMemo(
     () => Object.values(values).some((value) => !value.trim()) || loading,

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList } from '@/app/navigation/routes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
+import { usePushNotifications } from '@/app/providers/PushNotificationsProvider';
 import { LoginUserDocument } from '@data/graphql/mutation/User/mutation';
 import { AuthFormField } from '@/components/auth/AuthFormField';
 import { AuthScreenShell } from '@/components/auth/AuthScreenShell';
@@ -19,6 +20,7 @@ export function LoginScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const route = useRoute<EmailLoginRoute>();
   const { isAuthenticated, signIn } = useAppShell();
+  const { hasPendingNotificationResponse } = usePushNotifications();
   const { theme } = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,7 +30,7 @@ export function LoginScreen() {
   const redirectTab = route.params?.redirectTab ?? 'Home';
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || hasPendingNotificationResponse) {
       return;
     }
 
@@ -36,7 +38,7 @@ export function LoginScreen() {
       index: 0,
       routes: [{ name: 'MainTabs', params: { screen: redirectTab } }],
     });
-  }, [isAuthenticated, navigation, redirectTab]);
+  }, [hasPendingNotificationResponse, isAuthenticated, navigation, redirectTab]);
 
   const actionsDisabled = useMemo(() => !email.trim() || !password.trim() || loading, [email, password, loading]);
 
@@ -71,6 +73,9 @@ export function LoginScreen() {
       }
 
       signIn(response.data.loginUser);
+      if (hasPendingNotificationResponse) {
+        return;
+      }
       navigation.reset({
         index: 0,
         routes: [{ name: 'MainTabs', params: { screen: redirectTab } }],

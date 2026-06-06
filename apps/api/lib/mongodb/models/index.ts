@@ -11,6 +11,7 @@ export { default as Venue } from './venue';
 export { default as Activity } from './activity';
 export { default as Follow } from './follow';
 export { default as Notification } from './notification';
+export { default as PushSubscription } from './pushSubscription';
 export { default as ChatMessage } from './chatMessage';
 export { default as ChatConversationUnreadState } from './chatConversationUnreadState';
 export { default as WebSocketConnection } from './websocketConnection';

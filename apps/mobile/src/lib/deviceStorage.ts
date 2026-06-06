@@ -7,6 +7,7 @@ export const DEVICE_STORAGE_KEYS = {
   chatEmojiRecents: `${APP_STORAGE_PREFIX}.chat-emoji-recents`,
   eventsFilters: `${APP_STORAGE_PREFIX}.events-filters`,
   lastOpenChatUsername: `${APP_STORAGE_PREFIX}.last-open-chat-username`,
+  pushInstallationId: `${APP_STORAGE_PREFIX}.push-installation-id`,
   tabSelection: `${APP_STORAGE_PREFIX}.tab-selection`,
   themePreference: `${APP_STORAGE_PREFIX}.theme-preference`,
 } as const;

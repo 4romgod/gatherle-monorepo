@@ -669,6 +669,12 @@ jobs:
           EXPO_PUBLIC_GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url || needs.resolve-deploy-context.outputs.graphql_url }}
         run: npm run codegen
 
+      - name: Prepare Android Firebase Config
+        working-directory: ./apps/mobile
+        env:
+          ANDROID_GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_BASE64 }}
+        run: node ./scripts/prepare-android-firebase-config.mjs
+
       - name: Expo Prebuild (Android)
         working-directory: ./apps/mobile
         run: npx expo prebuild --no-install --platform android

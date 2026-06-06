@@ -1,4 +1,5 @@
 export { default as NotificationService } from './notification';
+export { default as PushService } from './push';
 export { default as EventSeriesService } from './eventSeries';
 export { default as EventOccurrenceService } from './eventOccurrence';
 export { default as EventOccurrenceMaintenanceService } from './eventOccurrenceMaintenance';

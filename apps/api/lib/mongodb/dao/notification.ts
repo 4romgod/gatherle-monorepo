@@ -243,6 +243,19 @@ class NotificationDAO {
     }
   }
 
+  static async markPushSentMany(notificationIds: string[]): Promise<void> {
+    if (notificationIds.length === 0) {
+      return;
+    }
+
+    try {
+      await NotificationModel.updateMany({ notificationId: { $in: notificationIds } }, { pushSent: true }).exec();
+    } catch (error) {
+      logDaoError('Error marking pushes as sent', { error, notificationIds });
+      throw KnownCommonError(error);
+    }
+  }
+
   static async deleteByUserId(userId: string): Promise<void> {
     try {
       await NotificationModel.deleteMany({

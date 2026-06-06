@@ -1,4 +1,12 @@
-import { AWS_REGION, JWT_SECRET, MONGO_DB_URL, STAGE, SECRET_ARN, SECRET_KEYS } from '@/constants';
+import {
+  AWS_REGION,
+  FIREBASE_FCM_SERVICE_ACCOUNT_JSON,
+  JWT_SECRET,
+  MONGO_DB_URL,
+  STAGE,
+  SECRET_ARN,
+  SECRET_KEYS,
+} from '@/constants';
 import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 import { APPLICATION_STAGES } from '@gatherle/commons/server';
 import { logger } from '@/utils/logger';
@@ -47,6 +55,7 @@ export async function getConfigValue(key: string): Promise<string> {
     const secretConfig = {
       [SECRET_KEYS.JWT_SECRET]: JWT_SECRET,
       [SECRET_KEYS.MONGO_DB_URL]: MONGO_DB_URL,
+      [SECRET_KEYS.FIREBASE_FCM_SERVICE_ACCOUNT_JSON]: FIREBASE_FCM_SERVICE_ACCOUNT_JSON,
     };
 
     const value = secretConfig[key];
