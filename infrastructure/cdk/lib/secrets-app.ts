@@ -21,12 +21,13 @@ const requireNonEmptyEnv = (name: 'JWT_SECRET' | 'MONGO_DB_URL'): string => {
 if (!deploymentStage || !deploymentRegion) {
   throw new Error(
     'Missing deployment target configuration. Provide both stage and region via `STAGE` and `AWS_REGION`. Example: ' +
-      "`STAGE=Beta AWS_REGION=af-south-1 MONGO_DB_URL='<mongo-url-with-db-name>' JWT_SECRET='<jwt-secret>' npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively`.",
+      "`STAGE=Beta AWS_REGION=af-south-1 MONGO_DB_URL='<mongo-url-with-db-name>' JWT_SECRET='<jwt-secret>' FIREBASE_FCM_SERVICE_ACCOUNT_JSON=\"$(jq -c . /secure/path/firebase-admin.json)\" npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively`.",
   );
 }
 
 const mongoDbUrl = requireNonEmptyEnv('MONGO_DB_URL');
 const jwtSecret = requireNonEmptyEnv('JWT_SECRET');
+const firebaseFcmServiceAccountJson = process.env.FIREBASE_FCM_SERVICE_ACCOUNT_JSON?.trim();
 
 const serviceAccount = resolveServiceAccount(deploymentStage, deploymentRegion);
 
@@ -40,6 +41,7 @@ new SecretsManagementStack(app, 'SecretsManagementStack', {
   awsRegion: serviceAccount.awsRegion,
   mongoDbUrl,
   jwtSecret,
+  firebaseFcmServiceAccountJson,
   description: 'This stack includes AWS Secrets Manager resources for the GraphQL API',
 });
 

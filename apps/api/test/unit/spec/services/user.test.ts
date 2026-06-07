@@ -89,6 +89,9 @@ jest.mock('@/mongodb/dao', () => ({
   NotificationDAO: {
     deleteByUserId: jest.fn(),
   },
+  PushSubscriptionDAO: {
+    deleteByUserId: jest.fn(),
+  },
   UserFeedDAO: {
     clearFeedForUser: jest.fn(),
   },
@@ -128,6 +131,7 @@ import {
   NotificationDAO,
   OrganizationMembershipDAO,
   PasswordResetTokenDAO,
+  PushSubscriptionDAO,
   UserDAO,
   UserFeedDAO,
 } from '@/mongodb/dao';
@@ -297,6 +301,7 @@ describe('UserService', () => {
       expect(OrganizationMembershipDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
       expect(ActivityDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
       expect(NotificationDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
+      expect(PushSubscriptionDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
       expect(UserFeedDAO.clearFeedForUser).toHaveBeenCalledWith('user-1');
       expect(EventOccurrenceParticipantDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
       expect(EmailVerificationTokenDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
@@ -331,6 +336,7 @@ describe('UserService', () => {
       const result = await UserService.deleteById('user-1');
 
       expect(UserDAO.deleteUserById).toHaveBeenCalledWith('user-1');
+      expect(PushSubscriptionDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
       expect(OrganizationMembershipDAO.deleteByUserId).toHaveBeenCalledWith('user-1');
       expect(logger.error).toHaveBeenCalledWith(
         '[UserService.cleanupDeletedUserData] Best-effort cleanup step failed',

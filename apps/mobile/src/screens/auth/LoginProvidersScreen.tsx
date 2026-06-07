@@ -10,6 +10,7 @@ import { OAuthProvider } from '@data/graphql/types/graphql';
 import type { DetailNavigation } from '@/app/navigation/navigationTypes';
 import type { RootStackParamList } from '@/app/navigation/routes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
+import { usePushNotifications } from '@/app/providers/PushNotificationsProvider';
 import { AuthScreenShell } from '@/components/auth/AuthScreenShell';
 import { signInWithApple, type AppleOAuthIdentity } from '@/lib/auth/appleSignIn';
 import { getApolloErrorMessage } from '@/lib/auth/apolloErrors';
@@ -59,6 +60,7 @@ export function LoginProvidersScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const route = useRoute<LoginRoute>();
   const { isAuthenticated, signIn } = useAppShell();
+  const { hasPendingNotificationResponse } = usePushNotifications();
   const { theme } = useAppTheme();
   const [providerNotice, setProviderNotice] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -68,7 +70,7 @@ export function LoginProvidersScreen() {
   const googleConfigured = isGoogleSignInConfiguredForPlatform();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || hasPendingNotificationResponse) {
       return;
     }
 
@@ -76,7 +78,7 @@ export function LoginProvidersScreen() {
       index: 0,
       routes: [{ name: 'MainTabs', params: { screen: redirectTab ?? 'Account' } }],
     });
-  }, [isAuthenticated, navigation, redirectTab]);
+  }, [hasPendingNotificationResponse, isAuthenticated, navigation, redirectTab]);
 
   const openEmailLogin = () => {
     setProviderNotice(null);
@@ -108,6 +110,9 @@ export function LoginProvidersScreen() {
     }
 
     signIn(response.data.loginWithOAuth);
+    if (hasPendingNotificationResponse) {
+      return;
+    }
     navigation.reset({
       index: 0,
       routes: [{ name: 'MainTabs', params: { screen: redirectTab ?? 'Account' } }],

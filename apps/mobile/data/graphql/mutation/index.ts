@@ -10,6 +10,7 @@ export * from './Media/mutation';
 export * from './Notification/mutation';
 export * from './Organization/mutation';
 export * from './OrganizationMembership/mutation';
+export * from './PushSubscription/mutation';
 export * from './SessionState/mutation';
 export * from './User/mutation';
 export * from './User/types';

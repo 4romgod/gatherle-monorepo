@@ -8,6 +8,7 @@ import {
   NotificationDAO,
   OrganizationMembershipDAO,
   PasswordResetTokenDAO,
+  PushSubscriptionDAO,
   UserDAO,
   UserFeedDAO,
 } from '@/mongodb/dao';
@@ -33,6 +34,7 @@ class UserService {
       ['organization memberships', () => OrganizationMembershipDAO.deleteByUserId(userId)],
       ['activities', () => ActivityDAO.deleteByUserId(userId)],
       ['notifications', () => NotificationDAO.deleteByUserId(userId)],
+      ['push subscriptions', () => PushSubscriptionDAO.deleteByUserId(userId)],
       ['feed items', () => UserFeedDAO.clearFeedForUser(userId)],
       ['occurrence participants', () => EventOccurrenceParticipantDAO.deleteByUserId(userId)],
       ['email verification tokens', () => EmailVerificationTokenDAO.deleteByUserId(userId)],

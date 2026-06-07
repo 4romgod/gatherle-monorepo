@@ -4,6 +4,7 @@ import {
   GetSavedEventsDocument,
   IsEventSavedDocument,
 } from '@data/graphql/query/Follow/query';
+import type { MobileNotification } from '@data/graphql/query/Notification/types';
 import {
   GetMyEventOccurrenceRsvpStatusDocument,
   GetMyEventOccurrenceRsvpsDocument,
@@ -195,6 +196,37 @@ function removeMomentRefFromPagedList(
   };
 }
 
+function normalizeMobileNotification(
+  notification: MobileRealtimeNotificationPayload['notification'],
+  existingItem?: MobileNotification | null,
+): MobileNotification {
+  const existingActor = existingItem?.actor ?? null;
+
+  return {
+    ...existingItem,
+    ...notification,
+    actorUserId: notification.actorUserId ?? existingItem?.actorUserId ?? null,
+    actor:
+      notification.actor === undefined
+        ? existingActor
+        : notification.actor
+          ? {
+              ...existingActor,
+              ...notification.actor,
+              family_name: notification.actor.family_name ?? existingActor?.family_name ?? '',
+              given_name: notification.actor.given_name ?? existingActor?.given_name ?? '',
+              profile_picture: notification.actor.profile_picture ?? existingActor?.profile_picture ?? null,
+              userId: notification.actor.userId,
+              username: notification.actor.username,
+            }
+          : null,
+    targetType: notification.targetType ?? existingItem?.targetType ?? null,
+    targetId: notification.targetId ?? existingItem?.targetId ?? null,
+    readAt: notification.readAt ?? existingItem?.readAt ?? null,
+    actionUrl: notification.actionUrl ?? existingItem?.actionUrl ?? null,
+  };
+}
+
 export const createMobileNotificationRealtimeCacheHandlers = ({
   client,
   userId,
@@ -226,18 +258,15 @@ export const createMobileNotificationRealtimeCacheHandlers = ({
           (item) => item.notificationId === payload.notification.notificationId,
         );
         const maxItems = Math.max(currentItems.length, DEFAULT_NOTIFICATION_PAGE_LIMIT);
+        const existingItem = existingIndex >= 0 ? currentItems[existingIndex] : null;
+        const normalizedNotification = normalizeMobileNotification(payload.notification, existingItem);
 
         const nextItems =
           existingIndex >= 0
             ? currentItems.map((item, index) =>
-                index === existingIndex
-                  ? ({
-                      ...item,
-                      ...payload.notification,
-                    } as (typeof currentItems)[number])
-                  : item,
+                index === existingIndex ? (normalizedNotification as (typeof currentItems)[number]) : item,
               )
-            : [payload.notification as (typeof currentItems)[number], ...currentItems].slice(0, maxItems);
+            : [normalizedNotification as (typeof currentItems)[number], ...currentItems].slice(0, maxItems);
 
         return {
           ...existing,

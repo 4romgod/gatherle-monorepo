@@ -17,4 +17,5 @@ export * from './follow';
 export * from './activity';
 export * from './chat';
 export * from './notification';
+export * from './pushSubscription';
 export * from './media';

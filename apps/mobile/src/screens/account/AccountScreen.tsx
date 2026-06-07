@@ -239,13 +239,12 @@ export function AccountScreen() {
     return (
       <MainTabScreenLayout>
         <PageContainer>
-          <PageHeading title="Join Gatherle" />
           <View
             style={[
               styles.guestThemeCard,
               {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.surfaceRaised,
+                borderWidth: 0,
               },
             ]}
           >

@@ -314,7 +314,7 @@ dig +short www.beta.gatherle.com CNAME
 Use this when bootstrapping a new stage+region secret or intentionally rotating backend secret values.
 
 ```bash
-STAGE=Beta AWS_REGION=af-south-1 MONGO_DB_URL='<mongo-url-with-db-name>' JWT_SECRET='<jwt-secret>' npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively --profile gatherle-beta
+STAGE=Beta AWS_REGION=af-south-1 MONGO_DB_URL='<mongo-url-with-db-name>' JWT_SECRET='<jwt-secret>' FIREBASE_FCM_SERVICE_ACCOUNT_JSON="$(jq -c . /secure/path/firebase-admin.json)" npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively --profile gatherle-beta
 ```
 
 Verify:
@@ -575,7 +575,7 @@ gh secret set ASSUME_ROLE_ARN --env dns-<region>
 7. Ensure backend secret exists: `gatherle/backend/<stage-lower>-<region>`.
 
 ```bash
-STAGE=<Stage> AWS_REGION=<region> MONGO_DB_URL='<mongo-url-with-db-name>' JWT_SECRET='<jwt-secret>' npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively --profile <profile>
+STAGE=<Stage> AWS_REGION=<region> MONGO_DB_URL='<mongo-url-with-db-name>' JWT_SECRET='<jwt-secret>' FIREBASE_FCM_SERVICE_ACCOUNT_JSON="$(jq -c . /secure/path/firebase-admin.json)" npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively --profile <profile>
 ```
 
 8. **Request SES production access** for the new account+region (see section 6A above). New AWS accounts/regions default

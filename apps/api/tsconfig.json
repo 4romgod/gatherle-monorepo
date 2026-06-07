@@ -7,6 +7,10 @@
     "noEmit": true,
     "types": ["node", "jest"],
     "paths": {
+      "@gatherle/commons/client": ["packages/commons/lib/client/index.ts"],
+      "@gatherle/commons/client/*": ["packages/commons/lib/client/*.ts", "packages/commons/lib/client/*/index.ts"],
+      "@gatherle/commons/server": ["packages/commons/lib/server/index.ts"],
+      "@gatherle/commons/server/*": ["packages/commons/lib/server/*.ts", "packages/commons/lib/server/*/index.ts"],
       "@/test/*": ["apps/api/test/*.ts", "apps/api/test/*/index.ts"],
       "@/*": ["apps/api/lib/*.ts", "apps/api/lib/*/index.ts"]
     }

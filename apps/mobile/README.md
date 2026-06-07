@@ -127,6 +127,28 @@ For Google sign-in:
   client uses package `com.gatherle.mobile` with the repo signing SHA1 reported for `npm run android` and
   `npm run apk:release`
 
+For Android Firebase / push setup:
+
+- local Android dev build: put `google-services.json` at `apps/mobile/google-services.json`
+- EAS Android preview/production builds: upload that same file to EAS as a file env var named `GOOGLE_SERVICES_JSON`
+- GitHub CI Android APK builds: store that same file as `ANDROID_GOOGLE_SERVICES_JSON_BASE64`
+- if you keep the file elsewhere locally, set `EXPO_ANDROID_GOOGLE_SERVICES_FILE=/absolute/or/relative/path`
+- `npm run android`, `npm run apk:release`, and `npm run native:sync*` now prepare that Firebase file before prebuild
+
+This project keeps one Android package name, `com.gatherle.mobile`, across local dev, EAS preview/production, and the
+CI-built release APK, so the same `google-services.json` works across all of those build paths.
+
+For iOS push setup:
+
+- iOS uses Expo push tokens in the app and Expo Push Service on the backend path; there is no `GoogleService-Info.plist`
+  or Firebase client file for iOS in the current implementation
+- configure APNs push credentials for `com.gatherle.mobile` in EAS before testing on a real iPhone
+- use EAS development / preview / production builds for iOS; the app already uses the same Expo project ID across those
+  environments
+- remote push notifications must be tested on a physical iPhone, not the iOS Simulator
+- after installing the build, enable `Push notifications` in Gatherle Settings, background the app, then trigger a
+  supported notification type such as `FOLLOW_REQUEST` or `ORG_INVITE`
+
 For Apple sign-in:
 
 - iOS uses the native `expo-apple-authentication` module, so rebuild the iOS dev client or release build after pulling

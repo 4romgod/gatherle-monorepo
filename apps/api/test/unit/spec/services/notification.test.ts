@@ -54,6 +54,16 @@ jest.mock('@/mongodb/dao', () => ({
   },
 }));
 
+jest.mock('@/services/push', () => ({
+  __esModule: true,
+  default: {
+    sendNotifications: jest.fn().mockResolvedValue(undefined),
+    supportsNotificationType: jest.fn((type: string) =>
+      ['FOLLOW_RECEIVED', 'FOLLOW_REQUEST', 'FOLLOW_ACCEPTED', 'ORG_INVITE', 'ORG_ROLE_CHANGED'].includes(type),
+    ),
+  },
+}));
+
 jest.mock('@/utils/logger', () => ({
   logger: {
     debug: jest.fn(),
@@ -65,6 +75,7 @@ jest.mock('@/utils/logger', () => ({
 
 import { NotificationService } from '@/services';
 import { NotificationDAO, UserDAO } from '@/mongodb/dao';
+import PushService from '@/services/push';
 import type { Notification, User } from '@gatherle/commons/server/types';
 import { NotificationType, NotificationTargetType, ParticipantStatus } from '@gatherle/commons/server/types';
 
@@ -122,6 +133,7 @@ describe('NotificationService', () => {
         }),
       );
       expect(result).toEqual(mockNotification);
+      expect(PushService.sendNotifications).toHaveBeenCalledWith([mockNotification]);
     });
 
     it('uses custom title and message when provided', async () => {
@@ -211,6 +223,7 @@ describe('NotificationService', () => {
           message: 'Your event is happening tomorrow',
         }),
       );
+      expect(PushService.sendNotifications).not.toHaveBeenCalled();
     });
 
     it('persists occurrenceId and generates an occurrence-aware event actionUrl', async () => {
@@ -259,8 +272,8 @@ describe('NotificationService', () => {
     it('creates notifications for multiple recipients', async () => {
       (UserDAO.readUserById as jest.Mock).mockResolvedValue(mockUser);
       (NotificationDAO.createMany as jest.Mock).mockResolvedValue([
-        { ...mockNotification, recipientUserId: 'user-3' },
-        { ...mockNotification, recipientUserId: 'user-4' },
+        { ...mockNotification, recipientUserId: 'user-3', type: NotificationType.EVENT_UPDATED },
+        { ...mockNotification, recipientUserId: 'user-4', type: NotificationType.EVENT_UPDATED },
       ]);
 
       const result = await NotificationService.notifyMany(['user-3', 'user-4'], {
@@ -275,6 +288,7 @@ describe('NotificationService', () => {
         expect.objectContaining({ recipientUserId: 'user-4' }),
       ]);
       expect(result).toHaveLength(2);
+      expect(PushService.sendNotifications).not.toHaveBeenCalled();
     });
 
     it('filters out actor from recipients', async () => {
@@ -328,6 +342,7 @@ describe('NotificationService', () => {
 
       expect(NotificationDAO.createMany).not.toHaveBeenCalled();
       expect(result).toEqual([]);
+      expect(PushService.sendNotifications).not.toHaveBeenCalled();
     });
   });
 

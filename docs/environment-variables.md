@@ -47,6 +47,11 @@ The following commands work without any environment variables:
   - `GOOGLE_OAUTH_CLIENT_ID_WEB` (required to verify web Google OAuth identity tokens in the API).
   - `GOOGLE_OAUTH_CLIENT_ID_ANDROID` (required when testing Android mobile Google sign-in against the local API).
   - `GOOGLE_OAUTH_CLIENT_ID_IOS` (required when testing iOS mobile Google sign-in against the local API).
+  - `FIREBASE_FCM_SERVICE_ACCOUNT_PATH` (optional; absolute or repo-relative path to the Firebase service-account JSON
+    used for direct Android FCM delivery from the API in local dev).
+  - `FIREBASE_FCM_SERVICE_ACCOUNT_JSON` (optional alternative to `_PATH`; raw single-line JSON string for the same
+    Firebase service-account credential. This can live in `apps/api/.env.local` because that file is gitignored.
+    `jq -c . /secure/path/firebase-admin.json` is the easiest way to produce the value.)
   - Apple OAuth verification uses fixed Apple client identifiers in code: `com.gatherle.web` for web/browser flows and
     `com.gatherle.mobile` for native iOS. No separate API env vars are required for Apple client IDs.
   - Legacy `APPLE_CLIENT_ID` has no env-var replacement for the API and is no longer read; remove it from local env
@@ -59,8 +64,9 @@ The following commands work without any environment variables:
 
 ### Deployed stages (Staging/Prod)
 
-- Secrets Manager stores `MONGO_DB_URL` and `JWT_SECRET` inside a secret whose name follows
-  `gatherle/backend/${STAGE.toLowerCase()}-${AWS_REGION.toLowerCase()}` (for example `gatherle/backend/beta-eu-west-1`).
+- Secrets Manager stores `MONGO_DB_URL`, `JWT_SECRET`, and optionally `FIREBASE_FCM_SERVICE_ACCOUNT_JSON` inside a
+  secret whose name follows `gatherle/backend/${STAGE.toLowerCase()}-${AWS_REGION.toLowerCase()}` (for example
+  `gatherle/backend/beta-eu-west-1`).
 - CDK injects these into the lambda by looking up that secret via `Secret.fromSecretNameV2` and supplying `SECRET_ARN`
   (the actual ARN returned by Secrets Manager) and `AWS_REGION`.
 - Lambda environment:
@@ -83,6 +89,11 @@ The following commands work without any environment variables:
     audience too).
   - `GOOGLE_OAUTH_CLIENT_ID_IOS` (optional until iOS mobile Google sign-in is enabled; when set, the API accepts this
     audience too).
+  - `FIREBASE_FCM_SERVICE_ACCOUNT_JSON` (optional until direct Android FCM delivery is enabled in the target
+    environment; when present in the backend Secrets Manager secret, the API sends Android push notifications directly
+    to Firebase instead of Expo).
+  - `FIREBASE_FCM_SERVICE_ACCOUNT_PATH` is mainly for local/server-based environments and is usually unnecessary in
+    Lambda, where the raw JSON env var or a future Secrets Manager entry is the better fit.
   - Apple OAuth verification uses fixed Apple client identifiers in code: `com.gatherle.web` for web/browser flows and
     `com.gatherle.mobile` for native iOS. No deployed API env vars are required for Apple client IDs.
   - Legacy `APPLE_CLIENT_ID` has no deployed env-var replacement for the API and is no longer read; do not add it to
@@ -181,6 +192,16 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
     Defaults to `https://gatherle.com` if omitted.)
   - `EXPO_PUBLIC_ENABLE_PRIVATE_USERS` (optional feature flag; set to `true` to expose private-user privacy controls and
     follow-request review flows. Defaults to disabled, so frontend users are treated as public).
+  - Android Firebase config for native push:
+    - local dev / local APK: place `google-services.json` at `apps/mobile/google-services.json` (gitignored), or set
+      `EXPO_ANDROID_GOOGLE_SERVICES_FILE` to another file path before running `npm run android` / `npm run apk:release`
+    - GitHub CI APK builds: set `ANDROID_GOOGLE_SERVICES_JSON_BASE64` or `ANDROID_GOOGLE_SERVICES_JSON`
+    - EAS Android preview/production builds: upload the same file as an EAS file env var named `GOOGLE_SERVICES_JSON`
+      and the app config will use that path automatically during the remote build
+  - iOS native push in the current implementation does not use a Firebase client config file. It uses Expo push tokens,
+    so the app-side requirement is an EAS-built iOS app with APNs credentials configured for `com.gatherle.mobile`.
+  - Remote iOS push testing requires a physical iPhone. The iOS Simulator can run the app, but it is not the target for
+    remote push verification.
 
 ### Production & Staging
 
@@ -189,8 +210,15 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - Inject `EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS` for iOS builds.
 - Inject `EXPO_PUBLIC_WEBAPP_URL` for Android/iOS builds when Apple sign-in should use a non-production HTTPS web host
   such as `https://beta.gatherle.com`.
+- For Android native push, use one shared `google-services.json` across local dev builds, EAS preview/production builds,
+  and GitHub CI release APK builds:
+  - local: `apps/mobile/google-services.json` or `EXPO_ANDROID_GOOGLE_SERVICES_FILE`
+  - EAS: file env var `GOOGLE_SERVICES_JSON`
+  - GitHub Actions: secret `ANDROID_GOOGLE_SERVICES_JSON_BASE64` (or raw `ANDROID_GOOGLE_SERVICES_JSON`)
 - Configure Expo EAS environments (`development`, `preview`, `production`) with the required `EXPO_PUBLIC_GOOGLE_*`
   values so remote EAS builds inline the correct client IDs.
+- Configure iOS push credentials in EAS for `com.gatherle.mobile` so Expo can hand iOS notifications off to APNs for
+  development, preview, and production builds.
 - Native iOS Apple sign-in does not use a public Expo client ID env var. The app uses the bundle ID
   `com.gatherle.mobile`, and the API accepts that audience in addition to the fixed Apple Services ID `com.gatherle.web`
   used by web and Android browser flows.
@@ -250,6 +278,8 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - `ANDROID_RELEASE_KEYSTORE_PASSWORD` (required for the GitHub Actions Android APK build).
 - `ANDROID_RELEASE_KEY_ALIAS` (required for the GitHub Actions Android APK build).
 - `ANDROID_RELEASE_KEY_PASSWORD` (required for the GitHub Actions Android APK build).
+- `ANDROID_GOOGLE_SERVICES_JSON_BASE64` (required for the GitHub Actions Android APK build once native Android push is
+  enabled; base64-encoded `google-services.json` used by Firebase/FCM).
 - `SECRET_ARN` is resolved dynamically in CI/CD from Secrets Manager using `STAGE` + `AWS_REGION`, so you do not need to
   store it in GitHub variables.
 
@@ -333,11 +363,12 @@ Use the matching output key per environment:
 - Runtime deployment intentionally excludes `SecretsManagementStack`.
 - The main runtime CDK app now only instantiates `SecretsManagementStack` when both `MONGO_DB_URL` and `JWT_SECRET` are
   provided, so routine synth/deploy flows do not accidentally stage blank secret values.
-- Bootstrap or rotate backend secret values manually:
+- Bootstrap or rotate backend secret values manually. `FIREBASE_FCM_SERVICE_ACCOUNT_JSON` is optional and can be added
+  at the same time when Android direct FCM delivery should be enabled:
 
 ```bash
 cd /home/bigfish/code/projects/gatherle-monorepo
-STAGE=Beta AWS_REGION=af-south-1 MONGO_DB_URL='<mongo-url-with-db-name>' JWT_SECRET='<jwt-secret>' npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively
+STAGE=Beta AWS_REGION=af-south-1 MONGO_DB_URL='<mongo-url-with-db-name>' JWT_SECRET='<jwt-secret>' FIREBASE_FCM_SERVICE_ACCOUNT_JSON="$(jq -c . /secure/path/firebase-admin.json)" npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively
 ```
 
 - Verify secret ARN:

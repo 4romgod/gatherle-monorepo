@@ -19,8 +19,8 @@ export function StateNotice({ actionLabel, message, onPressAction, title }: Stat
       style={[
         styles.stateNotice,
         {
-          backgroundColor: theme.colors.surfaceMuted,
-          borderColor: theme.colors.border,
+          backgroundColor: theme.colors.surfaceRaised,
+          borderWidth: 0,
         },
       ]}
     >

@@ -33,6 +33,13 @@
     },
     "plugins": [
       "expo-font",
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "default",
+          "enableBackgroundRemoteNotifications": false
+        }
+      ],
       "expo-secure-store",
       "expo-video",
       [

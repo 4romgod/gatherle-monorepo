@@ -134,7 +134,6 @@ export function NotificationsScreen() {
     return (
       <MainTabScreenLayout toolbarProps={notificationsToolbarProps}>
         <PageContainer>
-          <PageHeading title="Notifications" />
           <AuthPromptCard
             description="Sign in to see reminders, invites, follow activity, and message nudges from your Gatherle network."
             onPressPrimary={() => navigation.navigate('Login')}
@@ -152,7 +151,6 @@ export function NotificationsScreen() {
     return (
       <MainTabScreenLayout toolbarProps={notificationsToolbarProps}>
         <PageContainer>
-          <PageHeading title="Notifications" />
           <StateNotice message="Log in with a real account token to load your notifications and follow requests." />
         </PageContainer>
       </MainTabScreenLayout>
@@ -262,8 +260,8 @@ export function NotificationsScreen() {
           </View>
         ) : (
           <StateNotice
-            message="The important stuff will surface here first: event reminders, friend activity, and organizer updates."
-            title="You’re all caught up"
+            message="Event reminders, friend activity, and organizer updates will surface here."
+            title="No notifications yet"
           />
         )}
       </PageContainer>

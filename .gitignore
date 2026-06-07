@@ -47,9 +47,12 @@ yarn-error.log*
 
 # Generated shared assets
 packages/commons/schema.graphql
+apps/mobile/google-services.json
 
 # System files
 .DS_Store
 
 # Ignore the entire scratch folder and all its contents
 .scratch/
+
+credentials/

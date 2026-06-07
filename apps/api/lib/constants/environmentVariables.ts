@@ -1,9 +1,11 @@
 import { APPLICATION_STAGES, AWS_REGIONS } from '@gatherle/commons/server';
 import { config } from 'dotenv';
+import { resolve } from 'node:path';
 import { z } from 'zod';
 import { initLogger, LOG_LEVEL_MAP, LogLevel } from '@/utils/logger';
 
-config();
+config({ path: resolve(__dirname, '../../.env.local') });
+config({ path: resolve(__dirname, '../../.env') });
 
 type Stage = (typeof APPLICATION_STAGES)[keyof typeof APPLICATION_STAGES];
 
@@ -23,6 +25,8 @@ const BaseEnvSchema = z.object({
   GOOGLE_OAUTH_CLIENT_ID_WEB: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_ID_ANDROID: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_ID_IOS: z.string().optional(),
+  FIREBASE_FCM_SERVICE_ACCOUNT_JSON: z.string().optional(),
+  FIREBASE_FCM_SERVICE_ACCOUNT_PATH: z.string().optional(),
   // Apple client IDs are fixed constants in code (`com.gatherle.web` / `com.gatherle.mobile`).
   LOG_LEVEL: z
     .string()
@@ -128,6 +132,15 @@ export function validateEnv(): void {
   console.log(`  - Extra CORS Origins: ${env.CORS_ALLOWED_ORIGINS || 'not set'}`);
   console.log(`  - Email From: ${env.EMAIL_FROM}`);
   console.log(`  - Webapp URL: ${env.WEBAPP_URL}`);
+  console.log(
+    `  - Firebase FCM Admin Config: ${
+      env.FIREBASE_FCM_SERVICE_ACCOUNT_JSON
+        ? 'configured via FIREBASE_FCM_SERVICE_ACCOUNT_JSON'
+        : env.FIREBASE_FCM_SERVICE_ACCOUNT_PATH
+          ? `configured via FIREBASE_FCM_SERVICE_ACCOUNT_PATH (${env.FIREBASE_FCM_SERVICE_ACCOUNT_PATH})`
+          : 'not set in local env'
+    }`,
+  );
 }
 
 export const AWS_REGION = env.AWS_REGION;
@@ -143,6 +156,8 @@ export const WEBAPP_URL = env.WEBAPP_URL;
 export const GOOGLE_OAUTH_CLIENT_ID_WEB = env.GOOGLE_OAUTH_CLIENT_ID_WEB;
 export const GOOGLE_OAUTH_CLIENT_ID_ANDROID = env.GOOGLE_OAUTH_CLIENT_ID_ANDROID;
 export const GOOGLE_OAUTH_CLIENT_ID_IOS = env.GOOGLE_OAUTH_CLIENT_ID_IOS;
+export const FIREBASE_FCM_SERVICE_ACCOUNT_JSON = env.FIREBASE_FCM_SERVICE_ACCOUNT_JSON;
+export const FIREBASE_FCM_SERVICE_ACCOUNT_PATH = env.FIREBASE_FCM_SERVICE_ACCOUNT_PATH;
 export const GOOGLE_CLIENT_IDS = [
   ...new Set(
     [env.GOOGLE_OAUTH_CLIENT_ID_WEB, env.GOOGLE_OAUTH_CLIENT_ID_ANDROID, env.GOOGLE_OAUTH_CLIENT_ID_IOS]

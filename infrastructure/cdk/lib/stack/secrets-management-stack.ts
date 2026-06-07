@@ -11,6 +11,7 @@ export interface SecretsManagementStackProps extends StackProps {
   awsRegion: string;
   mongoDbUrl: string;
   jwtSecret: string;
+  firebaseFcmServiceAccountJson?: string;
 }
 
 export class SecretsManagementStack extends Stack {
@@ -25,6 +26,11 @@ export class SecretsManagementStack extends Stack {
       secretObjectValue: {
         MONGO_DB_URL: SecretValue.unsafePlainText(props.mongoDbUrl),
         JWT_SECRET: SecretValue.unsafePlainText(props.jwtSecret),
+        ...(props.firebaseFcmServiceAccountJson
+          ? {
+              FIREBASE_FCM_SERVICE_ACCOUNT_JSON: SecretValue.unsafePlainText(props.firebaseFcmServiceAccountJson),
+            }
+          : {}),
       },
     });
   }
