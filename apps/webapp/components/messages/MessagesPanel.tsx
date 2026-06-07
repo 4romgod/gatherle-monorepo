@@ -20,6 +20,7 @@ import {
 import { alpha, useTheme } from '@mui/material/styles';
 import { ChatBubbleOutline, Search } from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
+import QueryErrorState from '@/components/errors/QueryErrorState';
 import { useChatConversations, useResolveConversationUsers } from '@/hooks';
 import { ROUTES } from '@/lib/constants';
 import { getAvatarSrc } from '@/lib/utils';
@@ -47,6 +48,7 @@ export default function MessagesPanel() {
     conversations,
     loading: conversationsLoading,
     error: conversationsError,
+    refetch: refetchConversations,
   } = useChatConversations({ limit: CHAT_CONVERSATIONS_LIMIT });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -183,7 +185,12 @@ export default function MessagesPanel() {
           </Box>
         ) : conversationsError ? (
           <Box sx={{ p: 3 }}>
-            <Typography color="error">Failed to load conversations.</Typography>
+            <QueryErrorState
+              compact
+              error={conversationsError}
+              onRetry={() => void refetchConversations()}
+              resourceName="your conversations"
+            />
           </Box>
         ) : filteredConversationItems.length === 0 ? (
           <Box

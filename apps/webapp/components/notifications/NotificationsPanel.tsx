@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { DoneAll as MarkAllReadIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { FollowApprovalStatus, FollowTargetType, type GetFollowRequestsQuery } from '@/data/graphql/types/graphql';
+import QueryErrorState from '@/components/errors/QueryErrorState';
 import NotificationItem from './NotificationItem';
 import PendingFollowRequestItem from './follow/PendingFollowRequestItem';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
@@ -237,14 +238,11 @@ export default function NotificationsPage() {
           {isLoadingFeed || isRefreshing ? (
             <NotificationsSkeleton />
           ) : blockingError ? (
-            <Box sx={{ py: 8, textAlign: 'center' }}>
-              <Typography color="error" fontWeight={700}>
-                We couldn&apos;t load your notifications.
-              </Typography>
-              <Button onClick={() => void handleRefresh()} sx={{ mt: 2 }}>
-                Try again
-              </Button>
-            </Box>
+            <QueryErrorState
+              error={blockingError}
+              onRetry={() => void handleRefresh()}
+              resourceName="your notifications"
+            />
           ) : groupedFeed.length === 0 ? (
             <Box sx={{ py: 8, textAlign: 'center' }}>
               <Typography fontWeight={700}>You&apos;re all caught up.</Typography>

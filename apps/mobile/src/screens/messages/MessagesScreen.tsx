@@ -1,5 +1,4 @@
-import type { ApolloError } from '@apollo/client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { HeaderIconButton } from '@/app/navigation/HeaderIconButton';
@@ -8,14 +7,14 @@ import { useAppShell } from '@/app/providers/AppShellProvider';
 import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
 import { PageContainer } from '@/components/core/PageContainer';
-import { PageHeading } from '@/components/core/PageHeading';
 import { RemoteImage } from '@/components/core/RemoteImage';
+import { ScreenErrorState } from '@/components/core/ScreenErrorState';
 import { SearchField } from '@/components/core/SearchField';
 import { StateNotice } from '@/components/core/StateNotice';
 import { SwipeableConversationRow } from '@/components/messages/SwipeableConversationRow';
 import { ConversationRowSkeleton } from '@/components/skeleton/ConversationRowSkeleton';
-import { getApolloErrorCode } from '@/lib/auth/apolloErrors';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
+import { useSessionExpiryRedirect } from '@/hooks/core/useSessionExpiryRedirect';
 import { useChatRealtime } from '@/hooks/messages/useChatRealtime';
 import { useMessages } from '@/hooks/messages/useMessages';
 import { useUserSearch } from '@/hooks/search/useUserSearch';
@@ -25,7 +24,7 @@ import { fontSize, typography } from '@/app/theme/typography';
 
 export function MessagesScreen() {
   const navigation = useNavigation<MainTabNavigation>();
-  const { authToken, hasLiveSession, isAuthenticated, signOut } = useAppShell();
+  const { authToken, isAuthenticated } = useAppShell();
   const { theme } = useAppTheme();
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,6 +49,10 @@ export function MessagesScreen() {
     onChatConversationUpdated: () => {
       void refetch();
     },
+  });
+  const failureKind = useSessionExpiryRedirect({
+    error,
+    redirectTab: 'Messages',
   });
 
   const filteredConversations = useMemo(() => {
@@ -118,19 +121,6 @@ export function MessagesScreen() {
             />
           ),
         };
-
-  useEffect(() => {
-    if (!hasLiveSession || !error) {
-      return;
-    }
-
-    if (getApolloErrorCode(error as ApolloError) !== 'UNAUTHENTICATED') {
-      return;
-    }
-
-    signOut();
-    navigation.navigate('Login', { redirectTab: 'Messages' });
-  }, [error, hasLiveSession, navigation, signOut]);
 
   if (!isAuthenticated) {
     return (
@@ -218,12 +208,8 @@ export function MessagesScreen() {
             <ConversationRowSkeleton />
             <ConversationRowSkeleton />
           </View>
-        ) : error ? (
-          <StateNotice
-            actionLabel="Retry"
-            message="We couldn’t load your conversations."
-            onPressAction={() => void refetch()}
-          />
+        ) : error && failureKind !== 'session-expired' ? (
+          <ScreenErrorState error={error} onRetry={() => void refetch()} resourceName="your conversations" />
         ) : filteredConversations.length > 0 ? (
           <View style={styles.messageList}>
             {filteredConversations.map((conversation) => (

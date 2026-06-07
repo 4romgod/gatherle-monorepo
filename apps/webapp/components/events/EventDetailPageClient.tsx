@@ -83,6 +83,7 @@ import UserPreviewItem from '@/components/users/UserPreviewItem';
 import { useFollowingUserIds } from '@/hooks/useFollow';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import ErrorPage from '@/components/errors/ErrorPage';
+import QueryErrorState from '@/components/errors/QueryErrorState';
 import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
 import { IMPORTED_EVENT_SYSTEM_USERNAME } from '@/lib/constants/general';
 import EventOperationsModal from '@/components/core/modal/EventOperationsModal';
@@ -436,9 +437,13 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
 
   if (error || !event) {
     return (
-      <Typography color="error" sx={{ mt: 4, textAlign: 'center' }}>
-        Unable to load this event right now.
-      </Typography>
+      <Box sx={{ mt: 4 }}>
+        <QueryErrorState
+          error={error ?? new Error('Event data was unavailable.')}
+          onRetry={() => window.location.reload()}
+          resourceName="this event"
+        />
+      </Box>
     );
   }
 

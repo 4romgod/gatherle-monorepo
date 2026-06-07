@@ -16,13 +16,24 @@ export interface RealtimeEventEnvelope<TPayload> {
 
 const managementClientCache = new Map<string, ApiGatewayManagementApiClient>();
 
+const EXECUTE_API_HOSTNAME_PATTERN = /^[a-z0-9-]+\.execute-api\.[a-z0-9-]+\.amazonaws\.com(?:\.cn)?$/i;
+
+const isExecuteApiDomain = (hostname: string): boolean => EXECUTE_API_HOSTNAME_PATTERN.test(hostname);
+
 const toManagementEndpoint = (domainName: string, stage: string): string => {
   const normalizedDomain = domainName.startsWith('http') ? domainName : `https://${domainName}`;
   const endpointUrl = new URL(normalizedDomain);
   const normalizedStage = stage.replace(/^\/+|\/+$/g, '');
   const pathSegments = endpointUrl.pathname.split('/').filter(Boolean);
 
-  if (normalizedStage && pathSegments[pathSegments.length - 1] !== normalizedStage) {
+  // API Gateway Management API uses different callback URLs depending on the host:
+  // - default execute-api domains require the stage segment
+  // - custom domains already map to a stage/base path and must not have the stage appended again
+  if (
+    normalizedStage &&
+    isExecuteApiDomain(endpointUrl.hostname) &&
+    pathSegments[pathSegments.length - 1] !== normalizedStage
+  ) {
     pathSegments.push(normalizedStage);
   }
 

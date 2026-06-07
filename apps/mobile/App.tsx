@@ -9,7 +9,7 @@ import {
 import { SpaceGrotesk_500Medium, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, useColorScheme } from 'react-native';
 import { ApolloProvider } from '@apollo/client';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -26,6 +26,8 @@ import { RootNavigator } from '@/app/navigation/RootNavigator';
 import { navigationRef } from '@/app/navigation/navigationRef';
 import { AppThemeProvider } from '@/app/theme/AppThemeProvider';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { AppErrorBoundary } from '@/components/core/AppErrorBoundary';
+import { MobileRuntimeErrorReporter } from '@/components/core/MobileRuntimeErrorReporter';
 import { configureMobileGoogleSignIn } from '@/lib/auth/googleSignIn';
 
 function AppContent() {
@@ -71,31 +73,36 @@ export default function App() {
     configureMobileGoogleSignIn();
   }, []);
 
+  const systemScheme = useColorScheme();
+
   if (!fontsLoaded) {
     return null;
   }
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <ApolloProvider client={apolloClient}>
-        <SafeAreaProvider>
-          <AppThemeProvider>
-            <KeyboardProvider>
-              <AppShellProvider>
-                <PushNotificationsProvider>
-                  <RealtimeInboxProvider>
-                    <AppFeedbackProvider>
-                      <BottomSheetModalProvider>
-                        <AppContent />
-                      </BottomSheetModalProvider>
-                    </AppFeedbackProvider>
-                  </RealtimeInboxProvider>
-                </PushNotificationsProvider>
-              </AppShellProvider>
-            </KeyboardProvider>
-          </AppThemeProvider>
-        </SafeAreaProvider>
-      </ApolloProvider>
+      <AppErrorBoundary isDark={systemScheme === 'dark'}>
+        <ApolloProvider client={apolloClient}>
+          <SafeAreaProvider>
+            <AppThemeProvider>
+              <KeyboardProvider>
+                <AppShellProvider>
+                  <PushNotificationsProvider>
+                    <RealtimeInboxProvider>
+                      <AppFeedbackProvider>
+                        <BottomSheetModalProvider>
+                          <MobileRuntimeErrorReporter />
+                          <AppContent />
+                        </BottomSheetModalProvider>
+                      </AppFeedbackProvider>
+                    </RealtimeInboxProvider>
+                  </PushNotificationsProvider>
+                </AppShellProvider>
+              </KeyboardProvider>
+            </AppThemeProvider>
+          </SafeAreaProvider>
+        </ApolloProvider>
+      </AppErrorBoundary>
     </GestureHandlerRootView>
   );
 }

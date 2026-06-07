@@ -4,6 +4,7 @@ import { useQuery } from '@apollo/client';
 import { Box, Container, Stack, Typography } from '@mui/material';
 import { GetEventCategoriesDocument, GetEventsDocument, SortOrderInput } from '@/data/graphql/types/graphql';
 import { useSession } from 'next-auth/react';
+import QueryErrorState from '@/components/errors/QueryErrorState';
 import { HeroSection, CategoryExplorer, NearbyEventsSection } from '@/components/home';
 import HomeBrowseSection from '@/components/home/HomeBrowseSection';
 import ToolbarEventSearchAction from '@/components/navigation/ToolbarEventSearchAction';
@@ -32,7 +33,12 @@ export default function HomeClient() {
   const authContext = { headers: getAuthHeader(session?.user?.token) };
   const isAuthenticated = Boolean(session?.user?.userId && session?.user?.token);
 
-  const { data: trendingEventsData, loading: trendingEventsLoading } = useQuery(GetEventOccurrencesDocument, {
+  const {
+    data: trendingEventsData,
+    error: trendingEventsError,
+    loading: trendingEventsLoading,
+    refetch: refetchTrendingEvents,
+  } = useQuery(GetEventOccurrencesDocument, {
     fetchPolicy: 'cache-and-network',
     context: authContext,
     variables: {
@@ -44,7 +50,12 @@ export default function HomeClient() {
     },
   });
 
-  const { data: featuredEventsData, loading: featuredEventsLoading } = useQuery(GetEventsDocument, {
+  const {
+    data: featuredEventsData,
+    error: featuredEventsError,
+    loading: featuredEventsLoading,
+    refetch: refetchFeaturedEvents,
+  } = useQuery(GetEventsDocument, {
     fetchPolicy: 'cache-and-network',
     context: authContext,
     variables: {
@@ -55,7 +66,12 @@ export default function HomeClient() {
     },
   });
 
-  const { data: categoriesData, loading: categoriesLoading } = useQuery(GetEventCategoriesDocument, {
+  const {
+    data: categoriesData,
+    error: categoriesError,
+    loading: categoriesLoading,
+    refetch: refetchCategories,
+  } = useQuery(GetEventCategoriesDocument, {
     fetchPolicy: 'cache-and-network',
   });
 
@@ -113,6 +129,13 @@ export default function HomeClient() {
                   itemCount={5}
                   renderSkeletonItem={() => <EventBoxSmSkeleton />}
                 />
+              ) : trendingEventsError ? (
+                <QueryErrorState
+                  compact
+                  error={trendingEventsError}
+                  onRetry={() => void refetchTrendingEvents()}
+                  resourceName="trending events"
+                />
               ) : trendingEvents.length > 0 ? (
                 <Carousel
                   items={trendingEvents}
@@ -138,6 +161,13 @@ export default function HomeClient() {
                   itemCount={5}
                   renderSkeletonItem={() => <EventBoxSmSkeleton />}
                 />
+              ) : featuredEventsError ? (
+                <QueryErrorState
+                  compact
+                  error={featuredEventsError}
+                  onRetry={() => void refetchFeaturedEvents()}
+                  resourceName="featured events"
+                />
               ) : (
                 <Carousel
                   items={featuredEvents}
@@ -158,12 +188,23 @@ export default function HomeClient() {
         </Container>
       </Box>
 
-      <CategoryExplorer
-        title={'Choose your kind of magic'}
-        description={'Discover spaces built for music lovers, builders, founders, foodies, and everyone in between.'}
-        categories={eventCategories}
-        isLoading={isCategoriesInitialLoading}
-      />
+      {categoriesError ? (
+        <Container maxWidth="md" sx={{ pb: { xs: 6, md: 8 } }}>
+          <QueryErrorState
+            compact
+            error={categoriesError}
+            onRetry={() => void refetchCategories()}
+            resourceName="event categories"
+          />
+        </Container>
+      ) : (
+        <CategoryExplorer
+          title={'Choose your kind of magic'}
+          description={'Discover spaces built for music lovers, builders, founders, foodies, and everyone in between.'}
+          categories={eventCategories}
+          isLoading={isCategoriesInitialLoading}
+        />
+      )}
 
       {/* <SocialProofSection
         topCities={topCities}

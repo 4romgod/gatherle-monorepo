@@ -8,19 +8,39 @@ type StateNoticeProps = {
   actionLabel?: string;
   message: string;
   onPressAction?: () => void;
+  tone?: 'default' | 'error' | 'info';
   title?: string;
 };
 
-export function StateNotice({ actionLabel, message, onPressAction, title }: StateNoticeProps) {
+export function StateNotice({ actionLabel, message, onPressAction, title, tone = 'default' }: StateNoticeProps) {
   const { theme } = useAppTheme();
+  const surfaceColors =
+    tone === 'error'
+      ? {
+          backgroundColor: theme.colors.errorSoft,
+          borderColor: theme.colors.error,
+          borderWidth: 1,
+        }
+      : tone === 'info'
+        ? {
+            backgroundColor: theme.colors.primarySoft,
+            borderColor: theme.colors.primary,
+            borderWidth: 1,
+          }
+        : {
+            backgroundColor: theme.colors.surfaceRaised,
+            borderColor: 'transparent',
+            borderWidth: 0,
+          };
 
   return (
     <View
       style={[
         styles.stateNotice,
         {
-          backgroundColor: theme.colors.surfaceRaised,
-          borderWidth: 0,
+          backgroundColor: surfaceColors.backgroundColor,
+          borderColor: surfaceColors.borderColor,
+          borderWidth: surfaceColors.borderWidth,
         },
       ]}
     >
