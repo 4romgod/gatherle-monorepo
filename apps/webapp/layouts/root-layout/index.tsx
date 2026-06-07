@@ -14,6 +14,7 @@ import ToastProvider from '@/components/context/providers/ToastProvider';
 import MainNavigation from '@/components/navigation/main';
 import MobileBottomNav, { MOBILE_BOTTOM_NAV_HEIGHT } from '@/components/navigation/MobileBottomNav';
 import Footer from '@/components/footer';
+import GlobalClientErrorReporter from '@/components/errors/GlobalClientErrorReporter';
 import NotificationRealtimeListener from '@/components/notifications/NotificationRealtimeListener';
 import ChatRealtimeListener from '@/components/messages/ChatRealtimeListener';
 import { PullToRefreshShell } from '@/components/core/PullToRefreshShell';
@@ -51,6 +52,7 @@ export default function RootLayout({ children, session }: RootLayoutProps) {
               <CustomAppContextProvider>
                 <CustomThemeProvider>
                   <>
+                    <GlobalClientErrorReporter />
                     <NotificationRealtimeListener />
                     <ChatRealtimeListener />
                   </>

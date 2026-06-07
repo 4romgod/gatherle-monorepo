@@ -1,8 +1,22 @@
-import { ApolloClient, HttpLink, InMemoryCache } from '@apollo/client';
+import { ApolloClient, HttpLink, InMemoryCache, from } from '@apollo/client';
+import { onError } from '@apollo/client/link/error';
+import { reportFrontendError } from '@/lib/errors/reportFrontendError';
 
 export const DEFAULT_GRAPHQL_URL = 'https://api.beta.af-south-1.gatherle.com/graphql';
 export const GRAPHQL_URL = process.env.EXPO_PUBLIC_GRAPHQL_URL?.trim() || DEFAULT_GRAPHQL_URL;
 export const isUsingDefaultGraphqlUrl = !process.env.EXPO_PUBLIC_GRAPHQL_URL?.trim();
+
+const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
+  if (!graphQLErrors?.length && !networkError) {
+    return;
+  }
+
+  reportFrontendError('Apollo operation failed', undefined, {
+    graphQLErrors,
+    networkError,
+    operationName: operation.operationName,
+  });
+});
 
 export const apolloClient = new ApolloClient({
   cache: new InMemoryCache({
@@ -50,7 +64,10 @@ export const apolloClient = new ApolloClient({
       },
     },
   }),
-  link: new HttpLink({
-    uri: GRAPHQL_URL,
-  }),
+  link: from([
+    errorLink,
+    new HttpLink({
+      uri: GRAPHQL_URL,
+    }),
+  ]),
 });

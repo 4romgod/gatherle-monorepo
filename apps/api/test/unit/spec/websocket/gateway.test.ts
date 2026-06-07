@@ -75,6 +75,63 @@ describe('websocket gateway', () => {
     );
   });
 
+  it('does not append the stage for a websocket custom domain', async () => {
+    const { postToConnection } = await import('@/websocket/gateway');
+
+    await postToConnection(
+      {
+        connectionId: 'conn-custom-domain',
+        domainName: 'ws.beta.af-south-1.gatherle.com',
+        stage: 'beta',
+      },
+      { type: 'ping', payload: { ok: true }, sentAt: '2026-06-01T00:00:00.000Z' },
+    );
+
+    expect(clientConstructorMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        endpoint: 'https://ws.beta.af-south-1.gatherle.com',
+      }),
+    );
+  });
+
+  it('preserves an existing custom-domain base path without appending the stage', async () => {
+    const { postToConnection } = await import('@/websocket/gateway');
+
+    await postToConnection(
+      {
+        connectionId: 'conn-custom-domain-path',
+        domainName: 'https://ws.example.com/realtime',
+        stage: 'beta',
+      },
+      { type: 'ping', payload: { ok: true }, sentAt: '2026-06-01T00:00:00.000Z' },
+    );
+
+    expect(clientConstructorMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        endpoint: 'https://ws.example.com/realtime',
+      }),
+    );
+  });
+
+  it('does not treat custom domains containing .execute-api. as default AWS hosts', async () => {
+    const { postToConnection } = await import('@/websocket/gateway');
+
+    await postToConnection(
+      {
+        connectionId: 'conn-lookalike-domain',
+        domainName: 'https://ws.execute-api.af-south-1.gatherle.com/realtime',
+        stage: 'beta',
+      },
+      { type: 'ping', payload: { ok: true }, sentAt: '2026-06-01T00:00:00.000Z' },
+    );
+
+    expect(clientConstructorMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        endpoint: 'https://ws.execute-api.af-south-1.gatherle.com/realtime',
+      }),
+    );
+  });
+
   it('routes local websocket delivery through the local gateway helper', async () => {
     const { postToConnection } = await import('@/websocket/gateway');
 

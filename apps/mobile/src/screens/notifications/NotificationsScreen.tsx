@@ -1,6 +1,5 @@
-import type { ApolloError } from '@apollo/client';
 import { useApolloClient } from '@apollo/client';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MainTabScreenLayout } from '@/app/navigation/MainTabScreenLayout';
@@ -11,15 +10,15 @@ import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { AuthPromptCard } from '@/components/auth/AuthPromptCard';
 import { PageContainer } from '@/components/core/PageContainer';
-import { PageHeading } from '@/components/core/PageHeading';
+import { ScreenErrorState } from '@/components/core/ScreenErrorState';
 import { StateNotice } from '@/components/core/StateNotice';
 import { InlineButton } from '@/components/core/InlineButton';
 import { NotificationRowSkeleton } from '@/components/skeleton/NotificationRowSkeleton';
 import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
-import { getApolloErrorCode } from '@/lib/auth/apolloErrors';
 import { SwipeableNotificationRow } from '@/components/notifications/SwipeableNotificationRow';
 import { useInfiniteScroll } from '@/hooks/core/useInfiniteScroll';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
+import { useSessionExpiryRedirect } from '@/hooks/core/useSessionExpiryRedirect';
 import { getNotificationEyebrow, groupNotificationFeedItems } from '@/lib/notifications/feed';
 import { useNotifications } from '@/hooks/notifications/useNotifications';
 import { formatRelativeTime, getDisplayName } from '@/lib/events/formatters';
@@ -34,7 +33,7 @@ type NotificationFeedItem =
 export function NotificationsScreen() {
   const apolloClient = useApolloClient();
   const navigation = useNavigation<MainTabNavigation>();
-  const { authToken, hasLiveSession, isAuthenticated, signOut } = useAppShell();
+  const { authToken, isAuthenticated } = useAppShell();
   const { theme } = useAppTheme();
   const {
     acceptFollowRequest,
@@ -59,19 +58,10 @@ export function NotificationsScreen() {
       await refetch();
     }, [refetch]),
   );
-
-  useEffect(() => {
-    if (!hasLiveSession || !error) {
-      return;
-    }
-
-    if (getApolloErrorCode(error as ApolloError) !== 'UNAUTHENTICATED') {
-      return;
-    }
-
-    signOut();
-    navigation.navigate('Login', { redirectTab: 'Notifications' });
-  }, [error, hasLiveSession, navigation, signOut]);
+  const failureKind = useSessionExpiryRedirect({
+    error,
+    redirectTab: 'Notifications',
+  });
 
   const feedItems = useMemo<NotificationFeedItem[]>(
     () => [
@@ -184,11 +174,9 @@ export function NotificationsScreen() {
             </View>
           </View>
         ) : error ? (
-          <StateNotice
-            actionLabel="Retry"
-            message="We couldn’t load your notifications."
-            onPressAction={() => void refetch()}
-          />
+          failureKind !== 'session-expired' ? (
+            <ScreenErrorState error={error} onRetry={() => void refetch()} resourceName="your notifications" />
+          ) : null
         ) : groupedFeed.length > 0 ? (
           <View style={styles.feed}>
             {groupedFeed.map((group) => (

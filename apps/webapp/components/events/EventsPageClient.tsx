@@ -12,6 +12,7 @@ import { DATE_FILTER_LABELS, DATE_FILTER_OPTIONS } from '@/lib/constants/date-fi
 import { getAuthHeader } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import EventsPageSkeleton from '@/components/events/EventsPageSkeleton';
+import QueryErrorState from '@/components/errors/QueryErrorState';
 import EventsSidebar, { PlatformStats } from '@/components/events/EventsSidebar';
 import ActiveFiltersPills from '@/components/events/filters/ActiveFiltersPills';
 import EventsList from '@/components/events/filters/EventsList';
@@ -99,9 +100,11 @@ export default function EventsPageClient() {
 
   if (hasError) {
     return (
-      <Typography color="error" sx={{ mt: 4 }}>
-        Unable to load events right now. Please try again shortly.
-      </Typography>
+      <QueryErrorState
+        error={eventsError ?? categoriesError ?? organizationsError}
+        onRetry={() => window.location.reload()}
+        resourceName="the event map"
+      />
     );
   }
 

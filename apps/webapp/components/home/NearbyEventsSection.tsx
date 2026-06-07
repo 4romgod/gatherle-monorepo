@@ -13,6 +13,7 @@ import {
 } from '@/data/graphql/types/graphql';
 import { useSession } from 'next-auth/react';
 import { getAuthHeader, logger } from '@/lib/utils';
+import QueryErrorState from '@/components/errors/QueryErrorState';
 import Carousel from '@/components/carousel';
 import CarouselSkeleton from '@/components/carousel/CarouselSkeleton';
 import EventBoxSm from '@/components/events/eventBoxSm';
@@ -136,7 +137,7 @@ export default function NearbyEventsSection() {
     return 'Share your location to discover the most relevant events nearby.';
   }, [permissionState, statusMessage]);
 
-  const { data, loading, error } = useQuery<GetEventOccurrencesQuery, GetEventOccurrencesQueryVariables>(
+  const { data, loading, error, refetch } = useQuery<GetEventOccurrencesQuery, GetEventOccurrencesQueryVariables>(
     GetEventOccurrencesDocument,
     {
       skip: !locationFilter,
@@ -268,7 +269,7 @@ export default function NearbyEventsSection() {
     }
 
     if (error) {
-      return <Typography color="error">Failed to load nearby events. Try again shortly.</Typography>;
+      return <QueryErrorState compact error={error} onRetry={() => void refetch()} resourceName="nearby events" />;
     }
 
     if (events.length === 0) {

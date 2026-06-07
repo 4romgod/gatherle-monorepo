@@ -12,6 +12,7 @@ import type { RootStackParamList } from '@/app/navigation/routes';
 import { useAppFeedback } from '@/app/providers/AppFeedbackProvider';
 import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 import { RemoteImage } from '@/components/core/RemoteImage';
+import { ScreenErrorState } from '@/components/core/ScreenErrorState';
 import { EventDetailActionButton } from '@/components/events/detail/EventDetailActionButton';
 import { EventImageViewerModal } from '@/components/events/detail/EventImageViewerModal';
 import { EventRsvpSheet } from '@/components/events/detail/EventRsvpSheet';
@@ -46,6 +47,8 @@ import {
 } from '@/lib/events/deviceActions';
 import { getApolloAuthContext } from '@/lib/auth';
 import { IMPORTED_EVENT_SYSTEM_USERNAME } from '@/lib/constants/general';
+import { useSessionExpiryRedirect } from '@/hooks/core/useSessionExpiryRedirect';
+import { extractFrontendErrorMessage } from '@/lib/errors/frontendFailure';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
@@ -182,7 +185,11 @@ export function EventDetailsScreen() {
   const routeOccurrence = route.params.occurrence;
   const occurrenceSlug = routeOccurrence.eventSeries?.slug ?? null;
   const occurrencesFromDate = useMemo(() => new Date().toISOString(), []);
-  const { data: eventNavigationData } = useQuery(GetEventBySlugForNavigationDocument, {
+  const {
+    data: eventNavigationData,
+    error: eventNavigationError,
+    refetch: refetchEventNavigation,
+  } = useQuery(GetEventBySlugForNavigationDocument, {
     skip: !occurrenceSlug,
     variables: {
       slug: occurrenceSlug ?? '',
@@ -244,6 +251,10 @@ export function EventDetailsScreen() {
     useEventDetailActions(occurrence, authToken);
   const [deleteEventById] = useMutation(DeleteEventByIdDocument, getApolloAuthContext(authToken));
   const { error: momentsError, moments, refetch: refetchMoments } = useEventMoments(eventId, authToken);
+  const failureKind = useSessionExpiryRedirect({
+    error: eventNavigationError ?? momentsError,
+    redirectTab: 'Events',
+  });
   const [rsvpSheetVisible, setRsvpSheetVisible] = useState(false);
   const [composerVisible, setComposerVisible] = useState(false);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
@@ -405,7 +416,7 @@ export function EventDetailsScreen() {
         setRsvpSheetVisible(false);
       })
       .catch((error: unknown) => {
-        Alert.alert('RSVP failed', error instanceof Error ? error.message : 'We could not update your RSVP.');
+        Alert.alert('RSVP failed', extractFrontendErrorMessage(error, 'We could not update your RSVP.'));
       });
   };
 
@@ -417,7 +428,7 @@ export function EventDetailsScreen() {
         setRsvpSheetVisible(false);
       })
       .catch((error: unknown) => {
-        Alert.alert('RSVP failed', error instanceof Error ? error.message : 'We could not update your RSVP.');
+        Alert.alert('RSVP failed', extractFrontendErrorMessage(error, 'We could not update your RSVP.'));
       });
   };
 
@@ -429,7 +440,7 @@ export function EventDetailsScreen() {
         setRsvpSheetVisible(false);
       })
       .catch((error: unknown) => {
-        Alert.alert('RSVP failed', error instanceof Error ? error.message : 'We could not update your RSVP.');
+        Alert.alert('RSVP failed', extractFrontendErrorMessage(error, 'We could not update your RSVP.'));
       });
   };
 
@@ -439,19 +450,19 @@ export function EventDetailsScreen() {
     }
 
     void toggleSave().catch((error: unknown) => {
-      Alert.alert('Save failed', error instanceof Error ? error.message : 'We could not update the saved state.');
+      Alert.alert('Save failed', extractFrontendErrorMessage(error, 'We could not update the saved state.'));
     });
   };
 
   const handleShare = () => {
     void shareEvent(occurrence).catch((error: unknown) => {
-      Alert.alert('Share failed', error instanceof Error ? error.message : 'We could not open the share sheet.');
+      Alert.alert('Share failed', extractFrontendErrorMessage(error, 'We could not open the share sheet.'));
     });
   };
 
   const handleOpenDirections = () => {
     void openEventLocationInMaps(occurrence).catch((error: unknown) => {
-      Alert.alert('Directions unavailable', error instanceof Error ? error.message : 'We could not open directions.');
+      Alert.alert('Directions unavailable', extractFrontendErrorMessage(error, 'We could not open directions.'));
     });
   };
 
@@ -459,14 +470,14 @@ export function EventDetailsScreen() {
     void addEventToCalendar(occurrence).catch((error: unknown) => {
       Alert.alert(
         'Calendar unavailable',
-        error instanceof Error ? error.message : 'We could not add this event to calendar.',
+        extractFrontendErrorMessage(error, 'We could not add this event to calendar.'),
       );
     });
   };
 
   const handleOpenEventSource = () => {
     void openEventSourceLink(eventSourceLink).catch((error: unknown) => {
-      Alert.alert('Source unavailable', error instanceof Error ? error.message : 'We could not open the source link.');
+      Alert.alert('Source unavailable', extractFrontendErrorMessage(error, 'We could not open the source link.'));
     });
   };
 
@@ -538,7 +549,7 @@ export function EventDetailsScreen() {
     void shareEventSeriesLink(occurrence).catch((error: unknown) => {
       Alert.alert(
         'Share failed',
-        error instanceof Error ? error.message : 'We could not open the share sheet for this event series.',
+        extractFrontendErrorMessage(error, 'We could not open the share sheet for this event series.'),
       );
     });
   };
@@ -549,7 +560,7 @@ export function EventDetailsScreen() {
     void shareEventSessionLink(occurrence).catch((error: unknown) => {
       Alert.alert(
         'Share failed',
-        error instanceof Error ? error.message : 'We could not open the share sheet for this event session.',
+        extractFrontendErrorMessage(error, 'We could not open the share sheet for this event session.'),
       );
     });
   };
@@ -659,6 +670,14 @@ export function EventDetailsScreen() {
           <Text style={[styles.heroTitle, { color: theme.colors.textPrimary }]}>{title}</Text>
         </View>
 
+        {eventNavigationError && failureKind !== 'session-expired' ? (
+          <ScreenErrorState
+            error={eventNavigationError}
+            onRetry={() => void refetchEventNavigation()}
+            resourceName="live event details"
+          />
+        ) : null}
+
         <View style={styles.actionsRow}>
           <EventDetailActionButton icon="map" label="Directions" onPress={handleOpenDirections} tone="secondary" />
         </View>
@@ -739,10 +758,12 @@ export function EventDetailsScreen() {
               myRsvpStatus={rsvpStatus ?? null}
               onPressAddMoment={handleOpenMomentComposer}
             />
-            {momentsError ? (
-              <Text style={[styles.momentsErrorText, { color: theme.colors.textMuted }]}>
-                We could not load event moments right now.
-              </Text>
+            {momentsError && failureKind !== 'session-expired' ? (
+              <ScreenErrorState
+                error={momentsError}
+                onRetry={() => void refetchMoments()}
+                resourceName="event moments"
+              />
             ) : null}
           </EventDetailSection>
         ) : null}

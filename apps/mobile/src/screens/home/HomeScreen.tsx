@@ -8,6 +8,7 @@ import type { MainTabNavigation } from '@/app/navigation/navigationTypes';
 import { EventPreviewCarousel } from '@/components/carousel/EventPreviewCarousel';
 import { EventSearchBar } from '@/components/core/EventSearchBar';
 import { PageContainer } from '@/components/core/PageContainer';
+import { ScreenErrorState } from '@/components/core/ScreenErrorState';
 import { SectionHeading } from '@/components/core/SectionHeading';
 import { StateNotice } from '@/components/core/StateNotice';
 import { EventCard } from '@/components/events/EventCard';
@@ -15,12 +16,13 @@ import { HomeBrowseSection } from '@/components/home/HomeBrowseSection';
 import type { HomeBrowseItem } from '@/components/home/HomeBrowseSection';
 import { FollowedMomentsStrip } from '@/components/moments/FollowedMomentsStrip';
 import { EventCardSkeleton } from '@/components/skeleton/EventCardSkeleton';
+import { useSessionExpiryRedirect } from '@/hooks/core/useSessionExpiryRedirect';
 import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
 import { useMyUpcomingRsvps } from '@/hooks/home/useMyUpcomingRsvps';
 import { useFollowedMoments } from '@/hooks/moments/useFollowedMoments';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { buildRecommendedOccurrences } from '@/lib/events/formatters';
-import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
+import { reportFrontendError } from '@/lib/errors/reportFrontendError';
 import type { MobileSearchResult } from '@/hooks/search/useEventSearch';
 
 function navigateToEventSeriesResults(navigation: MainTabNavigation, event: MobileSearchResult) {
@@ -35,7 +37,12 @@ export function HomeScreen() {
   const { authToken, isAuthenticated } = useAppShell();
   const { width } = useWindowDimensions();
   const { heroEvent, loading, error, refetch, trendingEvents, upcomingEvents } = useMobileHomeDiscovery(authToken);
-  const { upcomingRsvps, refetch: refetchRsvps } = useMyUpcomingRsvps(isAuthenticated ? authToken : null);
+  const {
+    error: upcomingRsvpsError,
+    loading: upcomingRsvpsLoading,
+    upcomingRsvps,
+    refetch: refetchRsvps,
+  } = useMyUpcomingRsvps(isAuthenticated ? authToken : null);
   const {
     moments: followedMoments,
     refetch: refetchFollowedMoments,
@@ -46,7 +53,7 @@ export function HomeScreen() {
 
   useEffect(() => {
     if (followedMomentsError) {
-      console.warn('[HomeScreen] Failed to load followed moments:', followedMomentsError.message);
+      reportFrontendError('HomeScreen failed to load followed moments', followedMomentsError);
     }
   }, [followedMomentsError]);
   const { onRefresh, refreshing } = usePullToRefresh(
@@ -54,6 +61,13 @@ export function HomeScreen() {
       await Promise.all([refetch(), refetchFollowedMoments(), refetchRsvps()]);
     }, [refetch, refetchFollowedMoments, refetchRsvps]),
   );
+  const failureKind = useSessionExpiryRedirect({
+    error: error ?? upcomingRsvpsError ?? followedMomentsError,
+    redirectTab: 'Home',
+  });
+  const primarySectionError = isAuthenticated ? upcomingRsvpsError : error;
+  const primarySectionLoading = isAuthenticated ? upcomingRsvpsLoading : loading;
+  const recommendationsError = error;
 
   const carouselEvents = useMemo(
     () => (isAuthenticated ? upcomingRsvps : trendingEvents.slice(0, 3)),
@@ -106,6 +120,18 @@ export function HomeScreen() {
     >
       <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
         {isAuthenticated && followedMoments.length > 0 ? <FollowedMomentsStrip moments={followedMoments} /> : null}
+        {isAuthenticated &&
+        followedMoments.length === 0 &&
+        followedMomentsError &&
+        failureKind !== 'session-expired' ? (
+          <StateNotice
+            actionLabel="Retry"
+            message="We couldn’t load the moments from people you follow. Pull to refresh or try again."
+            onPressAction={() => void refetchFollowedMoments()}
+            title="Followed moments unavailable"
+            tone="error"
+          />
+        ) : null}
 
         <SectionHeading
           eyebrow={isAuthenticated ? 'Your plans' : 'Happening now'}
@@ -119,13 +145,13 @@ export function HomeScreen() {
           title={isAuthenticated ? 'Your upcoming RSVPs' : 'Featured events'}
         />
 
-        {loading && carouselEvents.length === 0 && !heroEvent ? (
+        {primarySectionLoading && carouselEvents.length === 0 && !heroEvent ? (
           <EventCardSkeleton cardWidth={cardWidth} variant="featured" />
-        ) : error ? (
-          <StateNotice
-            actionLabel="Retry"
-            message="We couldn’t load the discovery feed just now."
-            onPressAction={() => void refetch()}
+        ) : primarySectionError && failureKind !== 'session-expired' ? (
+          <ScreenErrorState
+            error={primarySectionError}
+            onRetry={() => void Promise.all([refetch(), refetchRsvps()])}
+            resourceName={isAuthenticated ? 'your plans' : 'the discovery feed'}
           />
         ) : carouselEvents.length > 0 ? (
           <EventPreviewCarousel
@@ -168,6 +194,12 @@ export function HomeScreen() {
             <EventCardSkeleton />
             <EventCardSkeleton />
           </View>
+        ) : recommendationsError && failureKind !== 'session-expired' ? (
+          <ScreenErrorState
+            error={recommendationsError}
+            onRetry={() => void refetch()}
+            resourceName="your recommendations"
+          />
         ) : (
           <StateNotice
             message="Browse categories, venues, or hosts to teach Gatherle what kinds of nights and communities you care about."

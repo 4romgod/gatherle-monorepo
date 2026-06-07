@@ -11,12 +11,14 @@ import { useAppShell } from '@/app/providers/AppShellProvider';
 import { EventsFilterSheet } from '@/components/events/EventsFilterSheet';
 import { FilterChip } from '@/components/core/FilterChip';
 import { PageContainer } from '@/components/core/PageContainer';
+import { ScreenErrorState } from '@/components/core/ScreenErrorState';
 import { StateNotice } from '@/components/core/StateNotice';
 import { EventSearchBar } from '@/components/core/EventSearchBar';
 import { EventCard } from '@/components/events/EventCard';
 import { SkeletonBlock } from '@/components/skeleton/SkeletonBlock';
 import { EventCardSkeleton } from '@/components/skeleton/EventCardSkeleton';
 import { useInfiniteScroll } from '@/hooks/core/useInfiniteScroll';
+import { useSessionExpiryRedirect } from '@/hooks/core/useSessionExpiryRedirect';
 import { countActiveFilters, useEventsFilters } from '@/hooks/events/useEventsFilters';
 import { useFilteredMobileEvents } from '@/hooks/events/useFilteredMobileEvents';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
@@ -68,6 +70,10 @@ export function EventsScreen() {
 
   const { categories, error, events, hasMore, isFetchingMore, loadMore, loading, refetch, totalEvents } =
     useFilteredMobileEvents(appliedFilters, authToken, selectedEventId || undefined);
+  const failureKind = useSessionExpiryRedirect({
+    error,
+    redirectTab: 'Events',
+  });
   const { onRefresh, refreshing } = usePullToRefresh(
     useCallback(async () => {
       await refetch();
@@ -320,12 +326,8 @@ export function EventsScreen() {
             <EventCardSkeleton />
             <EventCardSkeleton />
           </View>
-        ) : error ? (
-          <StateNotice
-            actionLabel="Retry"
-            message="The event feed failed to load."
-            onPressAction={() => void refetch()}
-          />
+        ) : error && failureKind !== 'session-expired' ? (
+          <ScreenErrorState error={error} onRetry={() => void refetch()} resourceName="the event feed" />
         ) : personalizedEvents.length > 0 ? (
           <View style={styles.feedList}>
             {personalizedEvents.map((event) => (
