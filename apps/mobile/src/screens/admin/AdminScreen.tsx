@@ -19,6 +19,7 @@ import { AdminMetricCard } from '@/components/admin/AdminMetricCard';
 import { AdminDomainLinkCard } from '@/components/admin/AdminDomainLinkCard';
 
 type AdminDomainKey =
+  | 'AdminDevices'
   | 'AdminEvents'
   | 'AdminOrganizations'
   | 'AdminVenues'
@@ -35,6 +36,13 @@ type AdminDomainLink = {
 };
 
 const ADMIN_DOMAIN_LINKS: AdminDomainLink[] = [
+  {
+    description: 'Review native app installs and block or re-open them when needed.',
+    icon: 'smartphone',
+    label: 'Devices',
+    route: 'AdminDevices',
+    title: 'Devices',
+  },
   {
     description: 'Review, moderate, and clean up event records.',
     icon: 'calendar',

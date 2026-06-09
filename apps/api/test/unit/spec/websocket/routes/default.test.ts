@@ -6,6 +6,7 @@ import { handleChatSend } from '@/websocket/routes/chatSend';
 import { handleNotificationSubscribe } from '@/websocket/routes/notificationSubscribe';
 import { handlePing } from '@/websocket/routes/ping';
 import { touchConnection } from '@/websocket/routes/touch';
+import { readAuthorizedWebSocketConnection } from '@/websocket/access';
 
 jest.mock('@/websocket/database', () => ({
   ensureDatabaseConnection: jest.fn(),
@@ -31,6 +32,10 @@ jest.mock('@/websocket/routes/ping', () => ({
   handlePing: jest.fn(),
 }));
 
+jest.mock('@/websocket/access', () => ({
+  readAuthorizedWebSocketConnection: jest.fn(),
+}));
+
 const toHttpResponse = (result: Awaited<ReturnType<typeof handleDefault>>): { statusCode: number; body?: string } =>
   result as { statusCode: number; body?: string };
 
@@ -38,6 +43,12 @@ describe('websocket route: $default', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (ensureDatabaseConnection as jest.Mock).mockResolvedValue(undefined);
+    (readAuthorizedWebSocketConnection as jest.Mock).mockResolvedValue({
+      connectionId: 'conn-default',
+      userId: 'user-1',
+      domainName: 'api.example.com',
+      stage: 'beta',
+    });
     (touchConnection as jest.Mock).mockResolvedValue('conn-default');
   });
 
@@ -103,13 +114,19 @@ describe('websocket route: $default', () => {
   });
 
   it('returns 400 for unknown actions', async () => {
-    const response = toHttpResponse(await handleDefault({ body: JSON.stringify({ action: 'unknown.action' }) } as any));
+    const response = toHttpResponse(
+      await handleDefault({
+        body: JSON.stringify({ action: 'unknown.action' }),
+        requestContext: { connectionId: 'conn-default' },
+      } as any),
+    );
 
     expect(handleChatSend).not.toHaveBeenCalled();
     expect(handleChatRead).not.toHaveBeenCalled();
     expect(handleNotificationSubscribe).not.toHaveBeenCalled();
     expect(handlePing).not.toHaveBeenCalled();
     expect(ensureDatabaseConnection).toHaveBeenCalledTimes(1);
+    expect(readAuthorizedWebSocketConnection).toHaveBeenCalledWith('conn-default');
     expect(touchConnection).toHaveBeenCalledTimes(1);
     expect(response.statusCode).toBe(HttpStatusCode.BAD_REQUEST);
     expect(JSON.parse(response.body ?? '{}')).toEqual({

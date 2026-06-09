@@ -11,8 +11,8 @@ import {
   sendSharedRealtimeAction,
   updateSharedRealtimeSubscriber,
 } from '@/lib/utils/realtime';
-import { WEBSOCKET_URL } from '@/lib/constants';
-import { logger, normalizeWebSocketBaseUrl } from '@/lib/utils';
+import { GRAPHQL_URL, WEBSOCKET_URL } from '@/lib/constants';
+import { logger, resolveWebappWebsocketBaseUrl } from '@/lib/utils';
 import { createNotificationRealtimeCacheHandlers } from './notificationRealtimeCache';
 import {
   isRealtimeEventSavePayload,
@@ -36,8 +36,10 @@ export function useNotificationRealtime(enabled: boolean = true) {
   const { data: session } = useSession();
   const token = session?.user?.token;
   const userId = session?.user?.userId;
-  const websocketBaseUrl = useMemo(() => normalizeWebSocketBaseUrl(WEBSOCKET_URL), []);
-  const websocketSource = websocketBaseUrl ? 'explicit' : 'missing';
+  const { websocketBaseUrl, websocketSource } = useMemo(
+    () => resolveWebappWebsocketBaseUrl(WEBSOCKET_URL, GRAPHQL_URL),
+    [],
+  );
 
   const subscriberIdRef = useRef<number | null>(null);
   const handleRealtimeEventRsvpRef = useRef<((payload: unknown) => void) | null>(null);

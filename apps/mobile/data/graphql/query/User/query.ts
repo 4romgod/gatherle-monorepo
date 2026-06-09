@@ -253,3 +253,44 @@ export const GetUserProfileDocument = graphql(`
     }
   }
 `);
+
+export const GetAdminUsersDocument = graphql(`
+  query GetAdminUsers($options: QueryOptionsInput) {
+    readUsers(options: $options) {
+      userId
+      email
+      emailVerified
+      hasLocalPassword
+      username
+      bio
+      birthdate
+      family_name
+      gender
+      given_name
+      phone_number
+      profile_picture
+      defaultVisibility
+      userRole
+      appAccessBlocked
+      followersCount
+      followingCount
+      location {
+        city
+        state
+        country
+        coordinates {
+          latitude
+          longitude
+        }
+      }
+      interests {
+        eventCategoryId
+        slug
+        name
+        iconName
+        description
+        color
+      }
+    }
+  }
+`);

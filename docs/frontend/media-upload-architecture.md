@@ -83,7 +83,7 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000
 **`apps/webapp/.env.local`**
 
 ```
-NEXT_PUBLIC_S3_MEDIA_URL=https://gatherle-media-beta-af-south-1.s3.af-south-1.amazonaws.com
+MEDIA_UPLOAD_S3_URL=https://gatherle-media-beta-af-south-1.s3.af-south-1.amazonaws.com
 ```
 
 The API uses `STAGE=Dev` so all keys are prefixed `dev/`, keeping them separate from real Beta data. Local AWS

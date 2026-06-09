@@ -90,13 +90,13 @@ describe('Apollo CORS helpers', () => {
     process.env.STAGE = 'Beta';
     process.env.CORS_ALLOWED_ORIGINS = '';
 
-    const { createCorsHeaders } = loadModule();
+    const { createCorsHeaders, CORS_ALLOWED_HEADERS } = loadModule();
     const headers = createCorsHeaders('https://beta.gatherle.com');
 
     expect(headers).toEqual({
       Vary: 'Origin',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': CORS_ALLOWED_HEADERS,
       'Access-Control-Max-Age': '86400',
       'Access-Control-Allow-Origin': 'https://beta.gatherle.com',
     });
@@ -106,13 +106,13 @@ describe('Apollo CORS helpers', () => {
     process.env.STAGE = 'Beta';
     process.env.CORS_ALLOWED_ORIGINS = '';
 
-    const { createCorsHeaders } = loadModule();
+    const { createCorsHeaders, CORS_ALLOWED_HEADERS } = loadModule();
     const headers = createCorsHeaders('http://localhost:8081');
 
     expect(headers).toEqual({
       Vary: 'Origin',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': CORS_ALLOWED_HEADERS,
       'Access-Control-Max-Age': '86400',
       'Access-Control-Allow-Origin': 'http://localhost:8081',
     });
@@ -122,13 +122,13 @@ describe('Apollo CORS helpers', () => {
     process.env.STAGE = 'Dev';
     process.env.CORS_ALLOWED_ORIGINS = '';
 
-    const { createCorsHeaders } = loadModule();
+    const { createCorsHeaders, CORS_ALLOWED_HEADERS } = loadModule();
     const headers = createCorsHeaders('http://localhost:8081');
 
     expect(headers).toEqual({
       Vary: 'Origin',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': CORS_ALLOWED_HEADERS,
       'Access-Control-Max-Age': '86400',
       'Access-Control-Allow-Origin': 'http://localhost:8081',
     });
@@ -138,13 +138,13 @@ describe('Apollo CORS helpers', () => {
     process.env.STAGE = 'Beta';
     process.env.CORS_ALLOWED_ORIGINS = '';
 
-    const { createCorsHeaders } = loadModule();
+    const { createCorsHeaders, CORS_ALLOWED_HEADERS } = loadModule();
     const headers = createCorsHeaders('https://evil.example');
 
     expect(headers).toEqual({
       Vary: 'Origin',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': CORS_ALLOWED_HEADERS,
       'Access-Control-Max-Age': '86400',
     });
   });

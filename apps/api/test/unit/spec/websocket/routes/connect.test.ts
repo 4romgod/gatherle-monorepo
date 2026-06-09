@@ -5,6 +5,8 @@ import { extractToken, getConnectionMetadata } from '@/websocket/event';
 import { handleConnect } from '@/websocket/routes/connect';
 import { WebSocketConnectionDAO } from '@/mongodb/dao';
 import { assertWebSocketRateLimit } from '@/websocket/abuseControl';
+import { assertWebSocketAccessAllowed } from '@/websocket/access';
+import { CustomError, ErrorTypes } from '@/utils/exceptions';
 
 jest.mock('@/utils/auth', () => ({
   verifyToken: jest.fn(),
@@ -23,6 +25,10 @@ jest.mock('@/websocket/database', () => ({
 
 jest.mock('@/websocket/abuseControl', () => ({
   assertWebSocketRateLimit: jest.fn(),
+}));
+
+jest.mock('@/websocket/access', () => ({
+  assertWebSocketAccessAllowed: jest.fn(),
 }));
 
 jest.mock('@/websocket/event', () => ({
@@ -51,6 +57,7 @@ describe('websocket route: connect', () => {
     jest.clearAllMocks();
     (ensureDatabaseConnection as jest.Mock).mockResolvedValue(undefined);
     (assertWebSocketRateLimit as jest.Mock).mockResolvedValue(undefined);
+    (assertWebSocketAccessAllowed as jest.Mock).mockResolvedValue(undefined);
     (verifyToken as jest.Mock).mockResolvedValue({ userId: 'user-abc' });
     (getConnectionMetadata as jest.Mock).mockReturnValue({
       connectionId: 'conn-123',
@@ -104,6 +111,10 @@ describe('websocket route: connect', () => {
 
       expect(ensureDatabaseConnection).toHaveBeenCalledTimes(1);
       expect(assertWebSocketRateLimit).toHaveBeenCalledWith('$connect', { userId: 'user-abc' });
+      expect(assertWebSocketAccessAllowed).toHaveBeenCalledWith({
+        deviceInstallationId: undefined,
+        userId: 'user-abc',
+      });
       expect(WebSocketConnectionDAO.upsertConnection).toHaveBeenCalledWith(
         expect.objectContaining({
           connectionId: 'conn-123',
@@ -113,6 +124,38 @@ describe('websocket route: connect', () => {
         }),
       );
       expect(result.statusCode).toBe(HttpStatusCode.OK);
+    });
+
+    it('stores the device installation id when the websocket protocols include it', async () => {
+      const event = makeEvent({
+        'sec-websocket-protocol': 'graphql-ws, gatherle.jwt.valid-token, gatherle.installation.device-123',
+      });
+
+      await handleConnect(event);
+
+      expect(assertWebSocketAccessAllowed).toHaveBeenCalledWith({
+        deviceInstallationId: 'device-123',
+        userId: 'user-abc',
+      });
+      expect(WebSocketConnectionDAO.upsertConnection).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deviceInstallationId: 'device-123',
+        }),
+      );
+    });
+
+    it('returns the access denial response when the user or device is blocked', async () => {
+      (assertWebSocketAccessAllowed as jest.Mock).mockRejectedValue(
+        CustomError('This account has been blocked from using Gatherle.', ErrorTypes.APP_ACCESS_BLOCKED),
+      );
+
+      const result = (await handleConnect(makeEvent())) as { statusCode: number; body: string };
+
+      expect(result.statusCode).toBe(HttpStatusCode.UNAUTHORIZED);
+      expect(JSON.parse(result.body)).toEqual({
+        message: 'This account has been blocked from using Gatherle.',
+      });
+      expect(WebSocketConnectionDAO.upsertConnection).not.toHaveBeenCalled();
     });
 
     describe('extractAuthProtocol / Sec-WebSocket-Protocol response header', () => {

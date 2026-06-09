@@ -11,8 +11,10 @@ import {
   TextWidget,
   TreatMissingData,
 } from 'aws-cdk-lib/aws-cloudwatch';
+import { SnsAction } from 'aws-cdk-lib/aws-cloudwatch-actions';
 import { IFunction } from 'aws-cdk-lib/aws-lambda';
 import { ILogGroup } from 'aws-cdk-lib/aws-logs';
+import { ITopic } from 'aws-cdk-lib/aws-sns';
 import { Duration } from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
 import {
@@ -36,6 +38,7 @@ export interface WebsocketMonitoringDashboardConstructProps {
   websocketLambdaLogGroup: ILogGroup;
   websocketApi: WebSocketApi;
   websocketStage: WebSocketStage;
+  alertTopic?: ITopic;
 }
 
 export class WebsocketMonitoringDashboardConstruct extends Construct {
@@ -44,8 +47,26 @@ export class WebsocketMonitoringDashboardConstruct extends Construct {
   constructor(scope: Construct, id: string, props: WebsocketMonitoringDashboardConstructProps) {
     super(scope, id);
 
-    const { stageName, targetSuffix, websocketLambdaFunction, websocketLambdaLogGroup, websocketApi, websocketStage } =
-      props;
+    const {
+      stageName,
+      targetSuffix,
+      websocketLambdaFunction,
+      websocketLambdaLogGroup,
+      websocketApi,
+      websocketStage,
+      alertTopic,
+    } = props;
+
+    const alertAction = alertTopic ? new SnsAction(alertTopic) : undefined;
+    const attachAlarmAction = (...alarms: Alarm[]) => {
+      if (!alertAction) {
+        return;
+      }
+
+      alarms.forEach((alarm) => {
+        alarm.addAlarmAction(alertAction);
+      });
+    };
 
     this.dashboard = new Dashboard(this, 'GatherleWebSocketDashboard', {
       dashboardName: `Gatherle-WebSocket-${targetSuffix}`,
@@ -155,6 +176,16 @@ export class WebsocketMonitoringDashboardConstruct extends Construct {
       alarmDescription:
         'Triggers when WebSocket message volume stays materially above baseline across 2 of 3 consecutive 5-minute periods.',
     });
+
+    attachAlarmAction(
+      websocketLambdaErrorAlarm,
+      websocketLambdaThrottleAlarm,
+      websocketClientErrorAlarm,
+      websocketIntegrationErrorAlarm,
+      websocketExecutionErrorAlarm,
+      websocketConnectSpikeAlarm,
+      websocketMessageSpikeAlarm,
+    );
 
     const runtimeAwareErrorQueryLines = [
       'fields @timestamp, level, message, context.routeKey as routeKey, context.connectionId as connectionId, error.name as errorName, error.message as errorMessage, @message',

@@ -18,6 +18,7 @@ import GlobalClientErrorReporter from '@/components/errors/GlobalClientErrorRepo
 import NotificationRealtimeListener from '@/components/notifications/NotificationRealtimeListener';
 import ChatRealtimeListener from '@/components/messages/ChatRealtimeListener';
 import { PullToRefreshShell } from '@/components/core/PullToRefreshShell';
+import AppAccessBlockSessionManager from '@/components/core/AppAccessBlockSessionManager';
 import { Box } from '@mui/material';
 import { Session } from 'next-auth';
 import { logger } from '@/lib/utils';
@@ -53,6 +54,7 @@ export default function RootLayout({ children, session }: RootLayoutProps) {
                 <CustomThemeProvider>
                   <>
                     <GlobalClientErrorReporter />
+                    <AppAccessBlockSessionManager />
                     <NotificationRealtimeListener />
                     <ChatRealtimeListener />
                   </>

@@ -28,8 +28,8 @@ import { useAppContext } from '@/hooks';
 import { AdminUsersSectionProps } from '@/components/admin/types';
 import { getAuthHeader } from '@/lib/utils/auth';
 import { SortOrderInput, UserRole } from '@/data/graphql/types/graphql';
-import { GetUsersDocument } from '@/data/graphql/query/User/query';
-import { DeleteUserByIdDocument, UpdateUserDocument } from '@/data/graphql/query/User/mutation';
+import { GetAdminUsersDocument } from '@/data/graphql/query/User/query';
+import { AdminUpdateUserDocument, DeleteUserByIdDocument } from '@/data/graphql/query/User/mutation';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import {
@@ -45,6 +45,7 @@ const PAGE_SIZE = 16;
 type UserQueue = 'all' | 'admins' | 'hosts' | 'unverified';
 
 type UserFormState = {
+  appAccessBlocked: boolean;
   userRole: UserRole;
   emailVerified: boolean;
 };
@@ -75,8 +76,13 @@ function buildUserQueryOptions(searchQuery: string, limit: number, skip = 0, que
   };
 }
 
-function buildUserFormState(user: { userRole?: UserRole | null; emailVerified?: boolean | null }): UserFormState {
+function buildUserFormState(user: {
+  appAccessBlocked?: boolean | null;
+  userRole?: UserRole | null;
+  emailVerified?: boolean | null;
+}): UserFormState {
   return {
+    appAccessBlocked: user.appAccessBlocked ?? false,
     userRole: user.userRole ?? UserRole.User,
     emailVerified: user.emailVerified ?? false,
   };
@@ -90,7 +96,7 @@ export default function AdminUsersSection({ token, currentUserId }: AdminUsersSe
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [activeQueue, setActiveQueue] = useState<UserQueue>('all');
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
-  const { data, loading, error, refetch, fetchMore } = useQuery(GetUsersDocument, {
+  const { data, loading, error, refetch, fetchMore } = useQuery(GetAdminUsersDocument, {
     variables: {
       options: buildUserQueryOptions(debouncedSearchQuery, PAGE_SIZE, 0, activeQueue),
     },
@@ -115,7 +121,7 @@ export default function AdminUsersSection({ token, currentUserId }: AdminUsersSe
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
-  const [updateUser] = useMutation(UpdateUserDocument, {
+  const [updateUser] = useMutation(AdminUpdateUserDocument, {
     context: { headers: getAuthHeader(token) },
   });
   const [deleteUser] = useMutation(DeleteUserByIdDocument, {
@@ -179,6 +185,7 @@ export default function AdminUsersSection({ token, currentUserId }: AdminUsersSe
       await updateUser({
         variables: {
           input: {
+            appAccessBlocked: payload.appAccessBlocked,
             userId,
             userRole: payload.userRole,
             emailVerified: payload.emailVerified,
@@ -343,6 +350,9 @@ export default function AdminUsersSection({ token, currentUserId }: AdminUsersSe
                           variant={user.emailVerified ? 'filled' : 'outlined'}
                           label={user.emailVerified ? 'Verified' : 'Unverified'}
                         />
+                        {user.appAccessBlocked ? (
+                          <Chip size="small" color="error" variant="filled" label="App blocked" />
+                        ) : null}
                         {currentUserId === user.userId ? <Chip size="small" variant="outlined" label="You" /> : null}
                       </Stack>
                     </Stack>
@@ -440,6 +450,25 @@ export default function AdminUsersSection({ token, currentUserId }: AdminUsersSe
                   ))}
                 </Select>
               </Stack>
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formState[editingUserId]?.appAccessBlocked ?? editingUser?.appAccessBlocked ?? false}
+                    disabled={currentUserId === editingUserId}
+                    onChange={(_event, checked) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        [editingUserId]: {
+                          ...(prev[editingUserId] ?? buildUserFormState(editingUser ?? {})),
+                          appAccessBlocked: checked,
+                        },
+                      }))
+                    }
+                  />
+                }
+                label="Block app access"
+              />
 
               <FormControlLabel
                 control={

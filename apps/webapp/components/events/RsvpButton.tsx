@@ -52,6 +52,7 @@ export default function RsvpButton({
   const isGoing = currentStatus === ParticipantStatus.Going;
   const isInterested = currentStatus === ParticipantStatus.Interested;
   const hasRsvpd = isGoing || isInterested;
+  const activeColor = isGoing ? 'success' : isInterested ? 'primary' : null;
 
   const handleButtonClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -133,8 +134,10 @@ export default function RsvpButton({
   const tooltipText = rsvpClosed ? 'Event ended' : hasRsvpd ? (isGoing ? 'Going' : 'Interested') : 'RSVP to this event';
   const icon = isLoading ? (
     <CircularProgress size={size === 'small' ? 16 : size === 'large' ? 28 : 22} />
-  ) : hasRsvpd ? (
+  ) : isGoing ? (
     <EventAvailable />
+  ) : isInterested ? (
+    <Star />
   ) : (
     <EventAvailableOutlined />
   );
@@ -147,24 +150,24 @@ export default function RsvpButton({
   };
   const labeledButtonSx = mergeSx({
     minHeight: 52,
-    borderRadius: 3,
+    borderRadius: 1,
     justifyContent: 'center',
     textTransform: 'none',
     fontWeight: 700,
-    bgcolor: hasRsvpd ? 'success.main' : 'transparent',
-    borderColor: hasRsvpd ? 'success.main' : 'divider',
+    bgcolor: activeColor ? `${activeColor}.main` : 'transparent',
+    borderColor: activeColor ? `${activeColor}.main` : 'divider',
     color: hasRsvpd ? 'common.white' : 'text.primary',
     '&:hover': {
-      bgcolor: hasRsvpd ? 'success.dark' : 'action.hover',
-      borderColor: hasRsvpd ? 'success.dark' : 'success.main',
+      bgcolor: activeColor ? `${activeColor}.dark` : 'action.hover',
+      borderColor: activeColor ? `${activeColor}.dark` : 'success.main',
     },
   });
   const iconButtonSx = mergeSx({
-    color: hasRsvpd ? 'success.main' : 'text.secondary',
-    bgcolor: hasRsvpd ? 'success.lighter' : 'transparent',
+    color: activeColor ? `${activeColor}.main` : 'text.secondary',
+    bgcolor: activeColor ? `${activeColor}.lighter` : 'transparent',
     '&:hover': {
-      color: hasRsvpd ? 'success.dark' : 'success.main',
-      bgcolor: hasRsvpd ? 'success.light' : 'action.hover',
+      color: activeColor ? `${activeColor}.dark` : 'success.main',
+      bgcolor: activeColor ? `${activeColor}.light` : 'action.hover',
     },
   });
 

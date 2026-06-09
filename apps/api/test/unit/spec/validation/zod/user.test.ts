@@ -128,6 +128,16 @@ describe('User', () => {
       expect(success).toBe(true);
     });
 
+    it('should allow null location when clearing the saved profile location', () => {
+      const validInput = {
+        userId: mockID,
+        location: null,
+      };
+
+      const { success } = UpdateUserInputSchema.safeParse(validInput);
+      expect(success).toBe(true);
+    });
+
     it('should invalidate future birthdate', () => {
       const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
       const invalidInput = {

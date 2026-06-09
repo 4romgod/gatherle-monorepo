@@ -80,7 +80,7 @@ export default function EventBox({
         : 'RSVP';
   const rsvpButtonSx = {
     minHeight: 38,
-    borderRadius: 2,
+    borderRadius: 1,
     px: 1.5,
     fontSize: '0.78rem',
     boxShadow: 'none',
@@ -97,24 +97,24 @@ export default function EventBox({
         }
       : rsvpStatus === ParticipantStatus.Going
         ? {
-            bgcolor: 'success.lighter',
+            bgcolor: 'success.main',
             borderColor: 'success.main',
-            color: 'success.main',
+            color: 'common.white',
             '&:hover': {
-              bgcolor: 'success.light',
-              borderColor: 'success.main',
-              color: 'success.dark',
+              bgcolor: 'success.dark',
+              borderColor: 'success.dark',
+              color: 'common.white',
             },
           }
         : rsvpStatus === ParticipantStatus.Interested
           ? {
-              bgcolor: 'primary.lighter',
+              bgcolor: 'primary.main',
               borderColor: 'primary.main',
-              color: 'primary.main',
+              color: 'common.white',
               '&:hover': {
-                bgcolor: 'primary.light',
-                borderColor: 'primary.main',
-                color: 'primary.dark',
+                bgcolor: 'primary.dark',
+                borderColor: 'primary.dark',
+                color: 'common.white',
               },
             }
           : {
@@ -136,7 +136,11 @@ export default function EventBox({
         backgroundColor: 'background.default',
         backgroundImage: 'none',
         display: 'grid',
-        gridTemplateColumns: { xs: '1fr', sm: '240px minmax(0, 1fr)' },
+        gridTemplateColumns: {
+          xs: '1fr',
+          sm: '260px minmax(0, 1fr)',
+          md: '280px minmax(0, 1fr)',
+        },
         gridTemplateRows: { xs: 'auto auto', sm: 'auto' },
         gap: 0,
         height: 'auto',
@@ -155,10 +159,11 @@ export default function EventBox({
       <Box
         sx={{
           backgroundColor: alpha(theme.palette.primary.light, 0.08),
-          alignSelf: 'start',
+          alignSelf: { xs: 'start', sm: 'stretch' },
           position: 'relative',
-          aspectRatio: '16 / 9',
+          aspectRatio: { xs: '16 / 9', sm: 'auto' },
           width: '100%',
+          minHeight: { xs: 'auto', sm: 0 },
           overflow: 'hidden',
         }}
       >
@@ -182,7 +187,6 @@ export default function EventBox({
           }
           imageSx={{
             objectFit: 'cover',
-            position: 'relative',
             transition: 'none',
           }}
           showLoader
@@ -301,8 +305,22 @@ export default function EventBox({
         </Box>
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 'auto', width: '100%' }}>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              ml: 'auto',
+              width: { xs: '100%', sm: 'auto' },
+            }}
+          >
+            <Box
+              sx={{
+                flex: { xs: 1, sm: '0 0 auto' },
+                width: { xs: '100%', sm: 180 },
+                minWidth: 0,
+              }}
+            >
               <RsvpButton
                 eventId={eventId}
                 occurrenceId={occurrenceId}

@@ -1,26 +1,25 @@
 import type { APIGatewayProxyResultV2 } from 'aws-lambda';
+import { GraphQLError } from 'graphql';
 import { verifyToken } from '@/utils/auth';
 import type { AuthClaims } from '@/utils/auth';
 import { logger } from '@/utils/logger';
 import { CONNECTION_TTL_HOURS, WEBSOCKET_AUTH_PROTOCOL_PREFIX, WEBSOCKET_ROUTES } from '@/websocket/constants';
 import { ensureDatabaseConnection } from '@/websocket/database';
-import { extractToken, getConnectionMetadata, getHeader } from '@/websocket/event';
-import { response } from '@/websocket/response';
+import {
+  extractDeviceInstallationId,
+  extractToken,
+  findProtocolByPrefix,
+  getConnectionMetadata,
+} from '@/websocket/event';
+import { graphQlErrorToResponse, response } from '@/websocket/response';
 import type { WebSocketRequestEvent } from '@/websocket/types';
 import { WebSocketConnectionDAO } from '@/mongodb/dao';
 import { assertWebSocketRateLimit } from '@/websocket/abuseControl';
 import { HttpStatusCode } from '@/constants';
+import { assertWebSocketAccessAllowed } from '@/websocket/access';
 
-const extractAuthProtocol = (event: WebSocketRequestEvent): string | undefined => {
-  const protocolHeader = getHeader(event.headers, 'sec-websocket-protocol');
-  if (!protocolHeader) {
-    return undefined;
-  }
-  return protocolHeader
-    .split(',')
-    .map((p) => p.trim())
-    .find((p) => p.startsWith(WEBSOCKET_AUTH_PROTOCOL_PREFIX));
-};
+const extractAuthProtocol = (event: WebSocketRequestEvent): string | undefined =>
+  findProtocolByPrefix(event, WEBSOCKET_AUTH_PROTOCOL_PREFIX);
 
 export const handleConnect = async (event: WebSocketRequestEvent): Promise<APIGatewayProxyResultV2> => {
   const token = extractToken(event);
@@ -58,9 +57,23 @@ export const handleConnect = async (event: WebSocketRequestEvent): Promise<APIGa
   await assertWebSocketRateLimit(WEBSOCKET_ROUTES.CONNECT, { userId: user.userId });
 
   const { connectionId, domainName, stage } = getConnectionMetadata(event);
+  const deviceInstallationId = extractDeviceInstallationId(event);
+
+  try {
+    await assertWebSocketAccessAllowed({
+      deviceInstallationId,
+      userId: user.userId,
+    });
+  } catch (error) {
+    if (error instanceof GraphQLError) {
+      return graphQlErrorToResponse(error);
+    }
+    throw error;
+  }
 
   await WebSocketConnectionDAO.upsertConnection({
     connectionId,
+    deviceInstallationId,
     userId: user.userId,
     domainName,
     stage,
@@ -69,6 +82,7 @@ export const handleConnect = async (event: WebSocketRequestEvent): Promise<APIGa
 
   logger.info('WebSocket client connected', {
     connectionId,
+    deviceInstallationId,
     userId: user.userId,
     stage,
   });

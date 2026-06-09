@@ -104,6 +104,7 @@ export type RootStackParamList = {
     venueName?: string;
   };
   Admin: undefined;
+  AdminDevices: undefined;
   AdminEvents: undefined;
   AdminUsers: undefined;
   AdminCategories: undefined;
@@ -350,6 +351,12 @@ export const detailScreenContent: Record<DetailRouteName, DetailScreenContent> =
     sectionLabel: 'Operations',
     title: 'Admin',
     description: 'A native admin dashboard for operations, moderation, inventory repair, and platform oversight.',
+    category: 'account',
+  },
+  AdminDevices: {
+    sectionLabel: 'Operations',
+    title: 'Admin devices',
+    description: 'Review native app installations and block or re-open them when needed.',
     category: 'account',
   },
   AdminEvents: {

@@ -15,6 +15,7 @@ import { VerifyEmailScreen } from '@/screens/auth/VerifyEmailScreen';
 import { VerifyPendingScreen } from '@/screens/auth/VerifyPendingScreen';
 import { AdminCategoriesScreen } from '@/screens/admin/AdminCategoriesScreen';
 import { AdminCategoryGroupsScreen } from '@/screens/admin/AdminCategoryGroupsScreen';
+import { AdminDevicesScreen } from '@/screens/admin/AdminDevicesScreen';
 import { AdminEventSessionsScreen } from '@/screens/admin/AdminEventSessionsScreen';
 import { AdminScreen } from '@/screens/admin/AdminScreen';
 import { AdminEventsScreen } from '@/screens/admin/AdminEventsScreen';
@@ -286,6 +287,11 @@ export function RootNavigator() {
         })}
       />
       <Stack.Screen component={AdminScreen} name="Admin" options={{ presentation: 'card', title: 'Admin' }} />
+      <Stack.Screen
+        component={AdminDevicesScreen}
+        name="AdminDevices"
+        options={{ presentation: 'card', title: 'Device access' }}
+      />
       <Stack.Screen
         component={AdminEventsScreen}
         name="AdminEvents"

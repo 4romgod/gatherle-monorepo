@@ -6,6 +6,7 @@ import { ROUTES } from './lib/constants';
  * @type {string[]}
  */
 export const publicRoutes: string[] = [
+  ROUTES.ACCOUNT_BLOCKED,
   ROUTES.ROOT,
   ROUTES.EVENTS.ROOT,
   ROUTES.USERS.ROOT,

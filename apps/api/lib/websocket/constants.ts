@@ -5,6 +5,7 @@ export const CONNECTION_TTL_HOURS =
   Number.isFinite(parsedTtl) && parsedTtl > 0 ? parsedTtl : FALLBACK_CONNECTION_TTL_HOURS;
 
 export const WEBSOCKET_AUTH_PROTOCOL_PREFIX = 'gatherle.jwt.';
+export const WEBSOCKET_INSTALLATION_PROTOCOL_PREFIX = 'gatherle.installation.';
 export const CHAT_MESSAGE_MAX_LENGTH = 2000;
 
 export const WEBSOCKET_ROUTES = {

@@ -27,6 +27,13 @@ import { EmailService, UserService } from '@/services';
 const isAuthenticationFailure = (error: unknown): boolean =>
   error instanceof GraphQLError && error.extensions?.code === 'UNAUTHENTICATED';
 
+const ADMIN_ONLY_UPDATE_USER_FIELDS: Array<keyof UpdateUserInput> = [
+  'appAccessBlocked',
+  'emailVerified',
+  'isTestUser',
+  'userRole',
+];
+
 const canViewSensitiveUserFields = (context: ServerContext, user: User): boolean => {
   const authenticatedUser = context.user;
   if (!authenticatedUser) {
@@ -151,8 +158,17 @@ export class UserResolver {
 
   @Authorized([UserRole.Admin, UserRole.User, UserRole.Host])
   @Mutation(() => User, { description: RESOLVER_DESCRIPTIONS.USER.updateUser })
-  async updateUser(@Arg('input', () => UpdateUserInput) input: UpdateUserInput): Promise<User> {
+  async updateUser(
+    @Arg('input', () => UpdateUserInput) input: UpdateUserInput,
+    @Ctx() context: ServerContext,
+  ): Promise<User> {
     validateInput<UpdateUserInput>(UpdateUserInputSchema, input);
+    const actor = getAuthenticatedUser(context);
+    const isAdmin = actor.userRole === UserRole.Admin;
+
+    if (!isAdmin && ADMIN_ONLY_UPDATE_USER_FIELDS.some((fieldName) => input[fieldName] !== undefined)) {
+      throw CustomError(ERROR_MESSAGES.UNAUTHORIZED, ErrorTypes.UNAUTHORIZED);
+    }
 
     const requestedEmail = typeof input.email === 'string' ? input.email.trim().toLowerCase() : null;
     let emailChanged = false;
@@ -163,7 +179,7 @@ export class UserResolver {
       emailChanged = requestedEmail !== previousEmail;
     }
 
-    const updatedUser = await UserDAO.updateUser(input);
+    const updatedUser = await UserDAO.updateUser(input, { allowAdminFields: isAdmin });
 
     if (emailChanged && updatedUser.email) {
       try {

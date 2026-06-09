@@ -6,9 +6,11 @@ import type {
   ParticipantStatus,
   ParticipantVisibility,
 } from '@gatherle/commons/server/types';
+import { GraphQLError } from 'graphql';
 import { NotificationDAO, WebSocketConnectionDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import { WEBSOCKET_EVENT_TYPES } from '@/websocket/constants';
+import { assertAuthorizedWebSocketConnectionRecord } from '@/websocket/access';
 import {
   createRealtimeEventEnvelope,
   isGoneConnectionError,
@@ -150,6 +152,7 @@ const publishToUserConnections = async <TPayload>(
   await Promise.all(
     connections.map(async (connection) => {
       try {
+        await assertAuthorizedWebSocketConnectionRecord(connection);
         await postToConnection(connection, eventPayload);
       } catch (error) {
         if (isGoneConnectionError(error)) {
@@ -158,6 +161,16 @@ const publishToUserConnections = async <TPayload>(
             connectionId: connection.connectionId,
             userId,
             eventType: eventPayload.type,
+          });
+          return;
+        }
+
+        if (error instanceof GraphQLError) {
+          logger.info('Skipped websocket publish because connection no longer has access', {
+            connectionId: connection.connectionId,
+            userId,
+            eventType: eventPayload.type,
+            code: error.extensions?.code,
           });
           return;
         }

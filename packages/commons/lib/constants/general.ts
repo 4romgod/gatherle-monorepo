@@ -3,6 +3,7 @@ const GENDER_VALUES = ['Male', 'Female', 'Other'];
 
 export const ERROR_MESSAGES = {
   ATLEAST_ONE: (type: string) => `Atleast one ${type} is required`,
+  APP_ACCESS_BLOCKED: 'This account has been blocked from using Gatherle.',
   INVALID: 'is invalid',
   INVALID_DATE: 'should be in YYYY-MM-DD format',
   INVALID_EMAIL: 'Invalid email format',
@@ -20,7 +21,16 @@ export const ERROR_MESSAGES = {
   TOO_SHORT: 'is too short',
   UNAUTHENTICATED: 'You must be logged in to access this resource.',
   UNAUTHORIZED: "You don't have permission to access this resource.",
+  MOBILE_DEVICE_ACCESS_BLOCKED: 'This device has been blocked from using the mobile app.',
+  MOBILE_DEVICE_ACCESS_PENDING: 'This device is waiting for approval before it can use the mobile app.',
 };
+
+export const APP_ACCESS_BLOCKED_ERROR_CODE = 'APP_ACCESS_BLOCKED';
+export const GATHERLE_CLIENT_PLATFORM_MOBILE = 'mobile';
+export const GATHERLE_CLIENT_PLATFORM_HEADER = 'x-gatherle-client-platform';
+export const GATHERLE_DEVICE_INSTALLATION_ID_HEADER = 'x-gatherle-device-installation-id';
+export const GATHERLE_APP_VERSION_HEADER = 'x-gatherle-app-version';
+export const GATHERLE_BUILD_VERSION_HEADER = 'x-gatherle-build-version';
 
 export const APPLICATION_STAGES = {
   DEV: 'Dev',

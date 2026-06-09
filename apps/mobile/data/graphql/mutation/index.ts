@@ -7,6 +7,7 @@ export * from './EventOccurrence/mutation';
 export * from './EventOccurrenceParticipant/mutation';
 export * from './Follow/mutation';
 export * from './Media/mutation';
+export * from './MobileDeviceAccess/mutation';
 export * from './Notification/mutation';
 export * from './Organization/mutation';
 export * from './OrganizationMembership/mutation';

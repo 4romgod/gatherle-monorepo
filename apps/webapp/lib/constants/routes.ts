@@ -1,4 +1,5 @@
 export const ROUTES = {
+  ACCOUNT_BLOCKED: '/account-blocked',
   ACCOUNT: {
     SETTINGS: '/account?tab=settings',
     TAB: (tab: string) => `/account?tab=${encodeURIComponent(tab)}`,

@@ -1,6 +1,7 @@
 export * from './Event/mutation';
 export * from './Event/query';
 export * from './Admin/query';
+export * from './MobileDeviceAccess/query';
 export * from './EventOccurrence/query';
 export * from './EventCategory/query';
 export * from './EventCategory/mutation';
@@ -32,3 +33,4 @@ export * from '../mutation/User/block';
 export * from '../mutation/User/mute';
 export * from '../mutation/EventMoment/mutation';
 export * from '../mutation/EventOccurrence/mutation';
+export * from '../mutation/MobileDeviceAccess/mutation';

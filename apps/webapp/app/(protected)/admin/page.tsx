@@ -10,7 +10,7 @@ import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Admin Console',
-  description: `Manage categories, users, groups, and operational workflows for the ${APP_NAME} platform.`,
+  description: `Manage devices, categories, users, groups, and operational workflows for the ${APP_NAME} platform.`,
   noIndex: true,
 });
 

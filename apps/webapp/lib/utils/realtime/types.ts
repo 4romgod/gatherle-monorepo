@@ -1,4 +1,4 @@
-export type RealtimeWebsocketSource = 'explicit' | 'missing';
+export type RealtimeWebsocketSource = 'explicit' | 'derived-local' | 'derived-remote' | 'missing';
 
 export interface SharedRealtimeSubscriber {
   enabled: boolean;

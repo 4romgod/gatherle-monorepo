@@ -1,4 +1,4 @@
-import { WEBSOCKET_AUTH_PROTOCOL_PREFIX } from '@/websocket/constants';
+import { WEBSOCKET_AUTH_PROTOCOL_PREFIX, WEBSOCKET_INSTALLATION_PROTOCOL_PREFIX } from '@/websocket/constants';
 import type { WebSocketRequestEvent } from '@/websocket/types';
 
 export const getHeader = (
@@ -13,32 +13,37 @@ export const getHeader = (
   return key ? headers[key] : undefined;
 };
 
-const parseProtocolHeaderForToken = (protocolHeader: string): string | undefined => {
-  const protocols = protocolHeader
+const parseProtocolHeader = (protocolHeader: string): string[] =>
+  protocolHeader
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean);
 
-  for (const protocol of protocols) {
-    if (protocol.startsWith(WEBSOCKET_AUTH_PROTOCOL_PREFIX)) {
-      const token = protocol.slice(WEBSOCKET_AUTH_PROTOCOL_PREFIX.length).trim();
-      if (token) {
-        return token;
-      }
-    }
+export const findProtocolByPrefix = (event: WebSocketRequestEvent, prefix: string): string | undefined => {
+  const protocolHeader = getHeader(event.headers, 'sec-websocket-protocol');
+  if (!protocolHeader) {
+    return undefined;
   }
 
-  return undefined;
+  return parseProtocolHeader(protocolHeader).find((protocol) => protocol.startsWith(prefix));
+};
+
+export const extractProtocolValue = (event: WebSocketRequestEvent, prefix: string): string | undefined => {
+  const matchingProtocol = findProtocolByPrefix(event, prefix);
+  if (!matchingProtocol) {
+    return undefined;
+  }
+
+  const value = matchingProtocol.slice(prefix.length).trim();
+  return value || undefined;
 };
 
 export const extractToken = (event: WebSocketRequestEvent): string | undefined => {
-  const protocolHeader = getHeader(event.headers, 'sec-websocket-protocol');
-  if (protocolHeader) {
-    return parseProtocolHeaderForToken(protocolHeader);
-  }
-
-  return undefined;
+  return extractProtocolValue(event, WEBSOCKET_AUTH_PROTOCOL_PREFIX);
 };
+
+export const extractDeviceInstallationId = (event: WebSocketRequestEvent): string | undefined =>
+  extractProtocolValue(event, WEBSOCKET_INSTALLATION_PROTOCOL_PREFIX);
 
 export const getConnectionMetadata = (event: WebSocketRequestEvent) => {
   const { connectionId, domainName, stage } = event.requestContext;

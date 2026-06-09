@@ -1,6 +1,7 @@
 import { useApolloClient } from '@apollo/client';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useAppShell } from '@/app/providers/AppShellProvider';
+import { useMobileDeviceAccess } from '@/app/providers/MobileDeviceAccessProvider';
 import { createMobileNotificationRealtimeCacheHandlers } from '@/lib/notifications/notificationRealtimeCache';
 import {
   isMobileRealtimeEventSavePayload,
@@ -30,6 +31,7 @@ const GRAPHQL_URL = process.env.EXPO_PUBLIC_GRAPHQL_URL ?? '';
 export function useNotificationRealtime(enabled = true) {
   const client = useApolloClient();
   const { authToken, userId } = useAppShell();
+  const { deviceInstallationId } = useMobileDeviceAccess();
   const { websocketBaseUrl, websocketSource } = useMemo(
     () => resolveMobileWebsocketBaseUrl(EXPLICIT_WEBSOCKET_URL, GRAPHQL_URL),
     [],
@@ -217,6 +219,7 @@ export function useNotificationRealtime(enabled = true) {
 
     subscriberIdRef.current = subscriberId;
     refreshSharedRealtimeConnection({
+      deviceInstallationId,
       token: authToken,
       userId,
       websocketBaseUrl,
@@ -230,7 +233,16 @@ export function useNotificationRealtime(enabled = true) {
     return () => {
       removeSharedRealtimeSubscriber(subscriberId);
     };
-  }, [authToken, enabled, handleRealtimeMessage, sendNotificationSubscribe, userId, websocketBaseUrl, websocketSource]);
+  }, [
+    authToken,
+    deviceInstallationId,
+    enabled,
+    handleRealtimeMessage,
+    sendNotificationSubscribe,
+    userId,
+    websocketBaseUrl,
+    websocketSource,
+  ]);
 
   useEffect(() => {
     if (!subscriberIdRef.current) {
@@ -244,6 +256,7 @@ export function useNotificationRealtime(enabled = true) {
     });
 
     refreshSharedRealtimeConnection({
+      deviceInstallationId,
       token: authToken,
       userId,
       websocketBaseUrl,
@@ -253,5 +266,14 @@ export function useNotificationRealtime(enabled = true) {
     if (enabled && getSharedRealtimeConnectionState()) {
       sendNotificationSubscribe();
     }
-  }, [authToken, enabled, handleRealtimeMessage, sendNotificationSubscribe, userId, websocketBaseUrl, websocketSource]);
+  }, [
+    authToken,
+    deviceInstallationId,
+    enabled,
+    handleRealtimeMessage,
+    sendNotificationSubscribe,
+    userId,
+    websocketBaseUrl,
+    websocketSource,
+  ]);
 }

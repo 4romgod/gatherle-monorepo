@@ -5,6 +5,7 @@ import { getClient } from '@/data/graphql';
 import { GetMyOrganizationsDocument } from '@/data/graphql/query/Organization/query';
 import { ROUTES } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
+import { redirectIfAppAccessBlocked } from '@/lib/utils/app-access-block-server';
 import OrganizationCard from '@/components/organization/organizationBox';
 import type { Metadata } from 'next';
 import { buildPageMetadata } from '@/lib/metadata';
@@ -22,10 +23,15 @@ export default async function AccountOrganizationsPage() {
     redirect(ROUTES.AUTH.LOGIN);
   }
 
-  const { data } = await getClient().query({
-    query: GetMyOrganizationsDocument,
-    context: { headers: getAuthHeader(session.user.token) },
-  });
+  const { data } = await getClient()
+    .query({
+      query: GetMyOrganizationsDocument,
+      context: { headers: getAuthHeader(session.user.token) },
+    })
+    .catch((error) => {
+      redirectIfAppAccessBlocked(error);
+      throw error;
+    });
 
   const userOrganizations = data.readMyOrganizations ?? [];
 

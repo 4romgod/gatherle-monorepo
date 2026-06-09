@@ -4,14 +4,16 @@ import { KnownCommonError, logDaoError } from '@/utils';
 export interface UpsertWebSocketConnectionInput {
   connectionId: string;
   userId: string;
+  deviceInstallationId?: string;
   domainName: string;
   stage: string;
   ttlHours?: number;
 }
 
-type WebSocketConnectionRecord = {
+export type WebSocketConnectionRecord = {
   connectionId: string;
   userId: string;
+  deviceInstallationId?: string;
   domainName: string;
   stage: string;
   connectedAt: Date;
@@ -38,6 +40,7 @@ class WebSocketConnectionDAO {
         {
           $set: {
             userId: input.userId,
+            deviceInstallationId: input.deviceInstallationId?.trim() || undefined,
             domainName: input.domainName,
             stage: input.stage,
             lastSeenAt: now,

@@ -30,6 +30,11 @@ jest.mock('@/components/admin/AdminEventsSection', () => ({
   default: () => <div>Events content</div>,
 }));
 
+jest.mock('@/components/admin/AdminDevicesSection', () => ({
+  __esModule: true,
+  default: () => <div>Devices content</div>,
+}));
+
 jest.mock('@/components/admin/AdminOrganizationsSection', () => ({
   __esModule: true,
   default: () => <div>Organizations content</div>,
@@ -69,17 +74,18 @@ describe('AdminDashboard', () => {
     expect(screen.getAllByText('Overview content').length).toBeGreaterThan(0);
     expect(screen.getByText('Manage domains')).toBeTruthy();
     const nav = screen.getByRole('navigation', { name: /admin domains/i });
+    expect(within(nav).getByText('Devices')).toBeTruthy();
     expect(within(nav).getByText('Events')).toBeTruthy();
     expect(within(nav).getByText('Organizations')).toBeTruthy();
     expect(within(nav).getByText('Users')).toBeTruthy();
   });
 
   it('renders the matching section when a tab query param is provided', () => {
-    mockTabParam = 'organizations';
+    mockTabParam = 'devices';
 
     render(<AdminDashboard token="token" currentUserId="user-1" />);
 
-    expect(screen.getAllByText('Organizations content').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Devices content').length).toBeGreaterThan(0);
   });
 
   it('falls back to the overview hub when the tab query param is unknown', () => {

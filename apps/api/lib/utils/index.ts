@@ -12,3 +12,4 @@ export * from './validateUserIdentifiers';
 export * from './rrule';
 export * from './requestMetadata';
 export * from './graphqlQueryGuardMetrics';
+export * from './mobileDeviceAccessMetrics';

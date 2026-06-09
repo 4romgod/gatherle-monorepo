@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useMutation, useQuery } from '@apollo/client';
-import { DeleteUserByIdDocument, UpdateUserDocument } from '@data/graphql/mutation/User/mutation';
-import { GetUsersDocument } from '@data/graphql/query/User/query';
+import { AdminUpdateUserDocument, DeleteUserByIdDocument } from '@data/graphql/mutation/User/mutation';
+import { GetAdminUsersDocument } from '@data/graphql/query/User/query';
 import { UserRole } from '@data/graphql/types/graphql';
 import { PageContainer } from '@/components/core/PageContainer';
 import { SearchField } from '@/components/core/SearchField';
@@ -35,6 +35,7 @@ const USER_QUEUE_OPTIONS: { key: AdminUserQueue; label: string }[] = [
 const USER_ROLE_OPTIONS = [UserRole.Admin, UserRole.Host, UserRole.User, UserRole.Guest];
 
 type UserAccessFormState = {
+  appAccessBlocked: boolean;
   emailVerified: boolean;
   userRole: UserRole;
 };
@@ -72,6 +73,7 @@ export function AdminUsersScreen() {
   const [activeQueue, setActiveQueue] = useState<AdminUserQueue>('all');
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [formState, setFormState] = useState<UserAccessFormState>({
+    appAccessBlocked: false,
     emailVerified: false,
     userRole: UserRole.User,
   });
@@ -79,7 +81,7 @@ export function AdminUsersScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
-  const query = useQuery(GetUsersDocument, {
+  const query = useQuery(GetAdminUsersDocument, {
     fetchPolicy: 'cache-and-network',
     notifyOnNetworkStatusChange: true,
     skip: !isAuthenticated || !authToken || !isAdmin,
@@ -93,7 +95,7 @@ export function AdminUsersScreen() {
     () => users.find((user) => user.userId === editingUserId) ?? null,
     [editingUserId, users],
   );
-  const [updateUser] = useMutation(UpdateUserDocument, getApolloAuthContext(authToken));
+  const [updateUser] = useMutation(AdminUpdateUserDocument, getApolloAuthContext(authToken));
   const [deleteUserById] = useMutation(DeleteUserByIdDocument, getApolloAuthContext(authToken));
 
   useEffect(() => {
@@ -183,6 +185,7 @@ export function AdminUsersScreen() {
     }
 
     setFormState({
+      appAccessBlocked: nextUser.appAccessBlocked ?? false,
       emailVerified: nextUser.emailVerified ?? false,
       userRole: nextUser.userRole ?? UserRole.User,
     });
@@ -199,7 +202,7 @@ export function AdminUsersScreen() {
     }
 
     if (editingUserId === userId) {
-      showToast({ message: 'You cannot change your own role or verification.', tone: 'error' });
+      showToast({ message: 'You cannot change your own role, verification, or app access.', tone: 'error' });
       return;
     }
 
@@ -208,6 +211,7 @@ export function AdminUsersScreen() {
       await updateUser({
         variables: {
           input: {
+            appAccessBlocked: formState.appAccessBlocked,
             emailVerified: formState.emailVerified,
             userId: editingUserId,
             userRole: formState.userRole,
@@ -350,6 +354,7 @@ export function AdminUsersScreen() {
                         label={user.emailVerified ? 'Verified' : 'Unverified'}
                         tone={user.emailVerified ? 'success' : 'default'}
                       />
+                      {user.appAccessBlocked ? <AdminPill label="App blocked" tone="error" /> : null}
                       {isCurrentAdmin ? <AdminPill label="You" tone="default" /> : null}
                     </>
                   }
@@ -400,6 +405,13 @@ export function AdminUsersScreen() {
             ))}
           </View>
         </View>
+
+        <AccountSwitchRow
+          description="Stop this account from using Gatherle while signed in."
+          onValueChange={(value) => setFormState((current) => ({ ...current, appAccessBlocked: value }))}
+          title="Block app access"
+          value={formState.appAccessBlocked}
+        />
 
         <AccountSwitchRow
           description="Mark whether this account's email address is trusted and verified."

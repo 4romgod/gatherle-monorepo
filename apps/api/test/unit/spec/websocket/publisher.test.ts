@@ -1,5 +1,6 @@
 import type { Notification } from '@gatherle/commons/server/types';
 import { FollowApprovalStatus, FollowTargetType, ParticipantStatus } from '@gatherle/commons/server/types';
+import { GraphQLError } from 'graphql';
 import { NotificationDAO, WebSocketConnectionDAO } from '@/mongodb/dao';
 import {
   publishEventSaveUpdated,
@@ -16,6 +17,7 @@ import {
 } from '@/websocket/publisher';
 import { WEBSOCKET_EVENT_TYPES } from '@/websocket/constants';
 import { createRealtimeEventEnvelope, isGoneConnectionError, postToConnection } from '@/websocket/gateway';
+import { assertAuthorizedWebSocketConnectionRecord } from '@/websocket/access';
 
 jest.mock('@/mongodb/dao', () => ({
   NotificationDAO: {
@@ -34,6 +36,10 @@ jest.mock('@/utils/logger', () => ({
     warn: jest.fn(),
     error: jest.fn(),
   },
+}));
+
+jest.mock('@/websocket/access', () => ({
+  assertAuthorizedWebSocketConnectionRecord: jest.fn(),
 }));
 
 jest.mock('@/websocket/gateway', () => ({
@@ -144,6 +150,7 @@ describe('websocket publisher', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (assertAuthorizedWebSocketConnectionRecord as jest.Mock).mockResolvedValue(undefined);
   });
 
   it('publishes notification.new to all active recipient connections', async () => {
@@ -158,6 +165,20 @@ describe('websocket publisher', () => {
       unreadCount: 4,
     });
     expect(postToConnection).toHaveBeenCalledTimes(2);
+  });
+
+  it('skips publish attempts when the connection no longer has access', async () => {
+    (NotificationDAO.countUnread as jest.Mock).mockResolvedValue(4);
+    (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock).mockResolvedValue([connectionOne]);
+    (assertAuthorizedWebSocketConnectionRecord as jest.Mock).mockRejectedValue(
+      new GraphQLError('Blocked', {
+        extensions: { code: 'APP_ACCESS_BLOCKED' },
+      }),
+    );
+
+    await publishNotificationCreated(notification);
+
+    expect(postToConnection).not.toHaveBeenCalled();
   });
 
   it('publishes notification.updated with the refreshed unread count', async () => {

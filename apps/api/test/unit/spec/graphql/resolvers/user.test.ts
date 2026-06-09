@@ -187,16 +187,22 @@ describe('UserResolver login hardening', () => {
       (EmailVerificationTokenDAO.create as jest.Mock).mockResolvedValue('verification-token');
       (EmailService.sendEmailVerification as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await resolver.updateUser({
-        userId: validUserId,
-        email: 'after@example.com',
-      } as any);
+      const result = await resolver.updateUser(
+        {
+          userId: validUserId,
+          email: 'after@example.com',
+        } as any,
+        ownerContext,
+      );
 
       expect(UserDAO.readUserById).toHaveBeenCalledWith(validUserId);
-      expect(UserDAO.updateUser).toHaveBeenCalledWith({
-        userId: validUserId,
-        email: 'after@example.com',
-      });
+      expect(UserDAO.updateUser).toHaveBeenCalledWith(
+        {
+          userId: validUserId,
+          email: 'after@example.com',
+        },
+        { allowAdminFields: false },
+      );
       expect(EmailVerificationTokenDAO.create).toHaveBeenCalledWith(validUserId);
       expect(EmailService.sendEmailVerification).toHaveBeenCalledWith('after@example.com', 'verification-token');
       expect(result.email).toBe('after@example.com');
@@ -213,10 +219,13 @@ describe('UserResolver login hardening', () => {
         username: 'same-user',
       });
 
-      await resolver.updateUser({
-        userId: validUserId,
-        email: 'same@example.com',
-      } as any);
+      await resolver.updateUser(
+        {
+          userId: validUserId,
+          email: 'same@example.com',
+        } as any,
+        ownerContext,
+      );
 
       expect(EmailVerificationTokenDAO.create).not.toHaveBeenCalled();
       expect(EmailService.sendEmailVerification).not.toHaveBeenCalled();
@@ -228,14 +237,66 @@ describe('UserResolver login hardening', () => {
         username: 'same-user',
       });
 
-      await resolver.updateUser({
-        userId: validUserId,
-        username: 'same-user',
-      } as any);
+      await resolver.updateUser(
+        {
+          userId: validUserId,
+          username: 'same-user',
+        } as any,
+        ownerContext,
+      );
 
       expect(UserDAO.readUserById).not.toHaveBeenCalled();
       expect(EmailVerificationTokenDAO.create).not.toHaveBeenCalled();
       expect(EmailService.sendEmailVerification).not.toHaveBeenCalled();
+    });
+
+    it('rejects admin-only fields for non-admin users before calling the dao', async () => {
+      await expect(
+        resolver.updateUser(
+          {
+            userId: validUserId,
+            appAccessBlocked: true,
+          } as any,
+          ownerContext,
+        ),
+      ).rejects.toMatchObject({
+        extensions: {
+          code: 'UNAUTHORIZED',
+        },
+      });
+
+      expect(UserDAO.updateUser).not.toHaveBeenCalled();
+    });
+
+    it('allows admins to update admin-only fields', async () => {
+      const adminContext = {
+        ...context,
+        user: {
+          userId: 'admin-1',
+          userRole: UserRole.Admin,
+        },
+      } as any;
+
+      (UserDAO.updateUser as jest.Mock).mockResolvedValue({
+        userId: validUserId,
+        appAccessBlocked: true,
+      });
+
+      await resolver.updateUser(
+        {
+          userId: validUserId,
+          appAccessBlocked: true,
+        } as any,
+        adminContext,
+      );
+
+      expect(UserDAO.updateUser).toHaveBeenCalledWith(
+        {
+          userId: validUserId,
+          appAccessBlocked: true,
+        },
+        { allowAdminFields: true },
+      );
     });
   });
 });

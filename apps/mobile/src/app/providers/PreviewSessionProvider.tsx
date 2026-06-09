@@ -2,11 +2,14 @@ import type { AuthenticatedMobileUser } from '@data/graphql/mutation/User/types'
 import { useApolloClient } from '@apollo/client';
 import { PropsWithChildren, createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { clearMobileGoogleSignInSession } from '@/lib/auth/googleSignIn';
+import { subscribeToAppAccessBlocked } from '@/lib/appAccessBlock';
 import { clearStoredSession, readStoredSession, writeStoredSession } from '@/lib/sessionStorage';
 import { validateStoredSession } from '@/lib/auth/sessionValidation';
 
 type PreviewSessionContextValue = {
   authToken: string | null;
+  blockedSessionMessage: string | null;
+  dismissBlockedSessionNotice: () => void;
   email: string | null;
   hasLiveSession: boolean;
   isAuthenticated: boolean;
@@ -33,10 +36,12 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
   const apolloClient = useApolloClient();
   const [isSessionReady, setSessionReady] = useState(false);
   const [liveSession, setLiveSession] = useState<AuthSession | null>(null);
+  const [blockedSessionMessage, setBlockedSessionMessage] = useState<string | null>(null);
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
 
   const clearSession = useCallback(() => {
     setLiveSession(null);
+    setBlockedSessionMessage(null);
     setPendingVerificationEmail(null);
     setSessionReady(true);
     void clearStoredSession().catch((error) => {
@@ -46,6 +51,28 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
       console.warn('[PreviewSessionProvider] Failed to clear Apollo store', error);
     });
   }, [apolloClient]);
+
+  const blockSession = useCallback(
+    (message: string) => {
+      setLiveSession(null);
+      setBlockedSessionMessage(message);
+      setPendingVerificationEmail(null);
+      setSessionReady(true);
+      void clearStoredSession().catch((error) => {
+        console.warn('[PreviewSessionProvider] Failed to clear stored session after account block', error);
+      });
+      void apolloClient.clearStore().catch((error) => {
+        console.warn('[PreviewSessionProvider] Failed to clear Apollo store after account block', error);
+      });
+    },
+    [apolloClient],
+  );
+
+  useEffect(() => {
+    return subscribeToAppAccessBlocked((message) => {
+      blockSession(message);
+    });
+  }, [blockSession]);
 
   useEffect(() => {
     let isMounted = true;
@@ -80,7 +107,13 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
         return;
       }
 
+      if (validationResult.kind === 'blocked') {
+        blockSession(validationResult.message);
+        return;
+      }
+
       setLiveSession(validationResult.session);
+      setBlockedSessionMessage(null);
       if (
         validationResult.session.email !== storedSession.email ||
         validationResult.session.userId !== storedSession.userId ||
@@ -109,6 +142,7 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
     };
 
     setLiveSession(nextSession);
+    setBlockedSessionMessage(null);
     setPendingVerificationEmail(null);
     setSessionReady(true);
     void writeStoredSession(nextSession).catch((error) => {
@@ -145,6 +179,8 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
   const value = useMemo<PreviewSessionContextValue>(
     () => ({
       authToken: liveSession?.token ?? null,
+      blockedSessionMessage,
+      dismissBlockedSessionNotice: () => setBlockedSessionMessage(null),
       email: liveSession?.email ?? pendingVerificationEmail,
       hasLiveSession: Boolean(liveSession),
       isAuthenticated: Boolean(liveSession),
@@ -158,6 +194,7 @@ export function PreviewSessionProvider({ children }: PropsWithChildren) {
       username: liveSession?.username ?? null,
     }),
     [
+      blockedSessionMessage,
       isSessionReady,
       liveSession,
       pendingVerificationEmail,

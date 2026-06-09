@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { WEBSOCKET_URL } from '@/lib/constants';
-import { logger, normalizeWebSocketBaseUrl } from '@/lib/utils';
+import { GRAPHQL_URL, WEBSOCKET_URL } from '@/lib/constants';
+import { logger, resolveWebappWebsocketBaseUrl } from '@/lib/utils';
 import {
   addSharedRealtimeSubscriber,
   getSharedRealtimeConnectionState,
@@ -11,7 +11,6 @@ import {
   removeSharedRealtimeSubscriber,
   sendSharedRealtimeAction,
   updateSharedRealtimeSubscriber,
-  type RealtimeWebsocketSource,
 } from '@/lib/utils/realtime';
 import type {
   ChatConversationUpdatedRealtimePayload,
@@ -72,8 +71,10 @@ export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
   const { data: session } = useSession();
   const token = session?.user?.token;
   const userId = session?.user?.userId;
-  const websocketBaseUrl = useMemo(() => normalizeWebSocketBaseUrl(WEBSOCKET_URL), []);
-  const websocketSource: RealtimeWebsocketSource = websocketBaseUrl ? 'explicit' : 'missing';
+  const { websocketBaseUrl, websocketSource } = useMemo(
+    () => resolveWebappWebsocketBaseUrl(WEBSOCKET_URL, GRAPHQL_URL),
+    [],
+  );
 
   const subscriberIdRef = useRef<number | null>(null);
   const onChatMessageRef = useRef<typeof onChatMessage>(onChatMessage);

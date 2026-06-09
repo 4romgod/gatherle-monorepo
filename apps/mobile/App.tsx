@@ -19,6 +19,7 @@ import { apolloClient } from '@data/graphql/apollo-client';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { AppFeedbackProvider } from '@/app/providers/AppFeedbackProvider';
 import { AppShellProvider } from '@/app/providers/AppShellProvider';
+import { MobileDeviceAccessProvider, useMobileDeviceAccess } from '@/app/providers/MobileDeviceAccessProvider';
 import { PushNotificationsProvider } from '@/app/providers/PushNotificationsProvider';
 import { usePushNotifications } from '@/app/providers/PushNotificationsProvider';
 import { RealtimeInboxProvider } from '@/app/providers/RealtimeInboxProvider';
@@ -26,13 +27,15 @@ import { RootNavigator } from '@/app/navigation/RootNavigator';
 import { navigationRef } from '@/app/navigation/navigationRef';
 import { AppThemeProvider } from '@/app/theme/AppThemeProvider';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { AppUserAccessGate } from '@/components/core/AppUserAccessGate';
 import { AppErrorBoundary } from '@/components/core/AppErrorBoundary';
+import { MobileDeviceAccessGate } from '@/components/core/MobileDeviceAccessGate';
 import { MobileRuntimeErrorReporter } from '@/components/core/MobileRuntimeErrorReporter';
 import { configureMobileGoogleSignIn } from '@/lib/auth/googleSignIn';
 
 function AppContent() {
   const { isDark, navigationTheme } = useAppTheme();
-  const { isSessionReady } = useAppShell();
+  const { blockedSessionMessage, dismissBlockedSessionNotice, isSessionReady } = useAppShell();
   const { handlePendingNotificationResponse } = usePushNotifications();
 
   if (!isSessionReady) {
@@ -41,6 +44,10 @@ function AppContent() {
         <ActivityIndicator color={navigationTheme.colors.primary} size="large" />
       </View>
     );
+  }
+
+  if (blockedSessionMessage) {
+    return <AppUserAccessGate message={blockedSessionMessage} onContinue={dismissBlockedSessionNotice} />;
   }
 
   return (
@@ -57,6 +64,32 @@ function AppContent() {
       </NavigationContainer>
     </View>
   );
+}
+
+function ApprovedAppRuntime() {
+  return (
+    <AppShellProvider>
+      <PushNotificationsProvider>
+        <RealtimeInboxProvider>
+          <AppFeedbackProvider>
+            <BottomSheetModalProvider>
+              <AppContent />
+            </BottomSheetModalProvider>
+          </AppFeedbackProvider>
+        </RealtimeInboxProvider>
+      </PushNotificationsProvider>
+    </AppShellProvider>
+  );
+}
+
+function AppBootstrap() {
+  const { isApproved } = useMobileDeviceAccess();
+
+  if (!isApproved) {
+    return <MobileDeviceAccessGate />;
+  }
+
+  return <ApprovedAppRuntime />;
 }
 
 export default function App() {
@@ -86,18 +119,10 @@ export default function App() {
           <SafeAreaProvider>
             <AppThemeProvider>
               <KeyboardProvider>
-                <AppShellProvider>
-                  <PushNotificationsProvider>
-                    <RealtimeInboxProvider>
-                      <AppFeedbackProvider>
-                        <BottomSheetModalProvider>
-                          <MobileRuntimeErrorReporter />
-                          <AppContent />
-                        </BottomSheetModalProvider>
-                      </AppFeedbackProvider>
-                    </RealtimeInboxProvider>
-                  </PushNotificationsProvider>
-                </AppShellProvider>
+                <MobileDeviceAccessProvider>
+                  <MobileRuntimeErrorReporter />
+                  <AppBootstrap />
+                </MobileDeviceAccessProvider>
               </KeyboardProvider>
             </AppThemeProvider>
           </SafeAreaProvider>

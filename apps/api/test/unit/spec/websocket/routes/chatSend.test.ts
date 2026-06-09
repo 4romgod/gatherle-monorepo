@@ -6,6 +6,8 @@ import { getConnectionMetadata } from '@/websocket/event';
 import { touchConnection } from '@/websocket/routes/touch';
 import { isGoneConnectionError, postToConnection } from '@/websocket/gateway';
 import { assertWebSocketRateLimit } from '@/websocket/abuseControl';
+import { readAuthorizedWebSocketConnection } from '@/websocket/access';
+import { CustomError, ErrorTypes } from '@/utils/exceptions';
 
 jest.mock('@/websocket/database', () => ({
   ensureDatabaseConnection: jest.fn(),
@@ -17,6 +19,10 @@ jest.mock('@/websocket/abuseControl', () => ({
 
 jest.mock('@/websocket/routes/touch', () => ({
   touchConnection: jest.fn(),
+}));
+
+jest.mock('@/websocket/access', () => ({
+  readAuthorizedWebSocketConnection: jest.fn(),
 }));
 
 jest.mock('@/websocket/event', () => ({
@@ -64,6 +70,12 @@ describe('websocket route: chat.send', () => {
     jest.clearAllMocks();
     (ensureDatabaseConnection as jest.Mock).mockResolvedValue(undefined);
     (assertWebSocketRateLimit as jest.Mock).mockResolvedValue(undefined);
+    (readAuthorizedWebSocketConnection as jest.Mock).mockResolvedValue({
+      connectionId: 'conn-sender',
+      userId: 'user-1',
+      domainName: 'api.example.com',
+      stage: 'beta',
+    });
     (getConnectionMetadata as jest.Mock).mockReturnValue({
       connectionId: 'conn-sender',
       domainName: 'api.example.com',
@@ -84,24 +96,19 @@ describe('websocket route: chat.send', () => {
   });
 
   it('returns 401 when sender connection metadata is missing', async () => {
-    (WebSocketConnectionDAO.readConnectionByConnectionId as jest.Mock).mockResolvedValue(null);
+    (readAuthorizedWebSocketConnection as jest.Mock).mockRejectedValue(
+      CustomError('Connection is not registered. Reconnect and try again.', ErrorTypes.UNAUTHENTICATED),
+    );
 
     const response = toHttpResponse(
       await handleChatSend({ body: JSON.stringify({ recipientUserId: 'user-2', message: 'hello' }) } as any),
     );
 
-    expect(WebSocketConnectionDAO.readConnectionByConnectionId).toHaveBeenCalledWith('conn-sender');
+    expect(readAuthorizedWebSocketConnection).toHaveBeenCalledWith('conn-sender');
     expect(response.statusCode).toBe(HttpStatusCode.UNAUTHENTICATED);
   });
 
   it('creates message and broadcasts updates to both users', async () => {
-    (WebSocketConnectionDAO.readConnectionByConnectionId as jest.Mock).mockResolvedValue({
-      connectionId: 'conn-sender',
-      userId: 'user-1',
-      domainName: 'api.example.com',
-      stage: 'beta',
-    });
-
     (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock)
       .mockResolvedValueOnce([
         { connectionId: 'conn-recipient', userId: 'user-2', domainName: 'api.example.com', stage: 'beta' },
@@ -152,13 +159,6 @@ describe('websocket route: chat.send', () => {
   });
 
   it('removes stale connections when gateway returns gone error', async () => {
-    (WebSocketConnectionDAO.readConnectionByConnectionId as jest.Mock).mockResolvedValue({
-      connectionId: 'conn-sender',
-      userId: 'user-1',
-      domainName: 'api.example.com',
-      stage: 'beta',
-    });
-
     (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock)
       .mockResolvedValueOnce([
         { connectionId: 'conn-recipient', userId: 'user-2', domainName: 'api.example.com', stage: 'beta' },
@@ -192,13 +192,6 @@ describe('websocket route: chat.send', () => {
   });
 
   it('passes reply context fields to ChatMessageDAO.create when present in payload', async () => {
-    (WebSocketConnectionDAO.readConnectionByConnectionId as jest.Mock).mockResolvedValue({
-      connectionId: 'conn-sender',
-      userId: 'user-1',
-      domainName: 'api.example.com',
-      stage: 'beta',
-    });
-
     (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock)
       .mockResolvedValueOnce([
         { connectionId: 'conn-recipient', userId: 'user-2', domainName: 'api.example.com', stage: 'beta' },
@@ -242,13 +235,6 @@ describe('websocket route: chat.send', () => {
   });
 
   it('strips reply context fields that are empty strings (treats as absent)', async () => {
-    (WebSocketConnectionDAO.readConnectionByConnectionId as jest.Mock).mockResolvedValue({
-      connectionId: 'conn-sender',
-      userId: 'user-1',
-      domainName: 'api.example.com',
-      stage: 'beta',
-    });
-
     (WebSocketConnectionDAO.readConnectionsByUserId as jest.Mock)
       .mockResolvedValueOnce([
         { connectionId: 'conn-recipient', userId: 'user-2', domainName: 'api.example.com', stage: 'beta' },

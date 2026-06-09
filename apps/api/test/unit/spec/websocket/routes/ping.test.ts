@@ -6,6 +6,8 @@ import { createRealtimeEventEnvelope, postToConnection } from '@/websocket/gatew
 import { handlePing } from '@/websocket/routes/ping';
 import { touchConnection } from '@/websocket/routes/touch';
 import { assertWebSocketRateLimit } from '@/websocket/abuseControl';
+import { readAuthorizedWebSocketConnection } from '@/websocket/access';
+import { CustomError, ErrorTypes } from '@/utils/exceptions';
 
 jest.mock('@/websocket/database', () => ({
   ensureDatabaseConnection: jest.fn(),
@@ -17,6 +19,10 @@ jest.mock('@/websocket/abuseControl', () => ({
 
 jest.mock('@/websocket/routes/touch', () => ({
   touchConnection: jest.fn(),
+}));
+
+jest.mock('@/websocket/access', () => ({
+  readAuthorizedWebSocketConnection: jest.fn(),
 }));
 
 jest.mock('@/websocket/event', () => ({
@@ -33,6 +39,12 @@ describe('websocket route: ping', () => {
     jest.clearAllMocks();
     (ensureDatabaseConnection as jest.Mock).mockResolvedValue(undefined);
     (assertWebSocketRateLimit as jest.Mock).mockResolvedValue(undefined);
+    (readAuthorizedWebSocketConnection as jest.Mock).mockResolvedValue({
+      connectionId: 'conn-ping',
+      userId: 'user-1',
+      domainName: 'example.execute-api.eu-west-1.amazonaws.com',
+      stage: 'beta',
+    });
     (touchConnection as jest.Mock).mockResolvedValue('conn-ping');
     (getConnectionMetadata as jest.Mock).mockReturnValue({
       connectionId: 'conn-ping',
@@ -59,7 +71,8 @@ describe('websocket route: ping', () => {
     const result = (await handlePing(event)) as { statusCode: number; body?: string };
 
     expect(ensureDatabaseConnection).toHaveBeenCalledTimes(1);
-    expect(assertWebSocketRateLimit).toHaveBeenCalledWith('ping', { connectionId: 'conn-ping' });
+    expect(readAuthorizedWebSocketConnection).toHaveBeenCalledWith('conn-ping');
+    expect(assertWebSocketRateLimit).toHaveBeenCalledWith('ping', { connectionId: 'conn-ping', userId: 'user-1' });
     expect(touchConnection).toHaveBeenCalledWith(event);
     expect(getConnectionMetadata).toHaveBeenCalledWith(event);
     expect(createRealtimeEventEnvelope).toHaveBeenCalledWith(WEBSOCKET_EVENT_TYPES.PING_PONG, {
@@ -79,5 +92,22 @@ describe('websocket route: ping', () => {
     );
     expect(result.statusCode).toBe(HttpStatusCode.OK);
     expect(JSON.parse(result.body ?? '{}')).toEqual({ message: 'pong' });
+  });
+
+  it('returns the access denial response when the connection has been revoked', async () => {
+    (readAuthorizedWebSocketConnection as jest.Mock).mockRejectedValue(
+      CustomError('This account has been blocked from using Gatherle.', ErrorTypes.APP_ACCESS_BLOCKED),
+    );
+
+    const result = (await handlePing({ requestContext: { connectionId: 'conn-ping' } } as any)) as {
+      statusCode: number;
+      body?: string;
+    };
+
+    expect(result.statusCode).toBe(HttpStatusCode.UNAUTHORIZED);
+    expect(JSON.parse(result.body ?? '{}')).toEqual({
+      message: 'This account has been blocked from using Gatherle.',
+    });
+    expect(postToConnection).not.toHaveBeenCalled();
   });
 });

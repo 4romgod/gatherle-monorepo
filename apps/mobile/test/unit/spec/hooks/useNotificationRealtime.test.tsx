@@ -3,6 +3,7 @@ import { useNotificationRealtime } from '@/hooks/notifications/useNotificationRe
 
 const mockUseApolloClient = jest.fn();
 const mockUseAppShell = jest.fn();
+const mockUseMobileDeviceAccess = jest.fn();
 
 jest.mock('@apollo/client', () => ({
   useApolloClient: () => mockUseApolloClient(),
@@ -10,6 +11,10 @@ jest.mock('@apollo/client', () => ({
 
 jest.mock('@/app/providers/AppShellProvider', () => ({
   useAppShell: () => mockUseAppShell(),
+}));
+
+jest.mock('@/app/providers/MobileDeviceAccessProvider', () => ({
+  useMobileDeviceAccess: () => mockUseMobileDeviceAccess(),
 }));
 
 const mockAddSharedRealtimeSubscriber = jest.fn(() => 1);
@@ -128,6 +133,9 @@ describe('useNotificationRealtime', () => {
       authToken: 'token-1',
       userId: 'user-1',
     });
+    mockUseMobileDeviceAccess.mockReturnValue({
+      deviceInstallationId: 'device-1',
+    });
   });
 
   it('registers a subscriber and removes it on unmount', () => {
@@ -136,6 +144,7 @@ describe('useNotificationRealtime', () => {
     expect(mockAddSharedRealtimeSubscriber).toHaveBeenCalledWith(expect.objectContaining({ enabled: true }));
     expect(mockRefreshSharedRealtimeConnection).toHaveBeenCalledWith(
       expect.objectContaining({
+        deviceInstallationId: 'device-1',
         token: 'token-1',
         userId: 'user-1',
       }),

@@ -15,7 +15,14 @@ export const isOriginAllowed = (origin?: string | null): origin is string => {
 };
 
 const CORS_METHODS = 'GET, POST, OPTIONS';
-const CORS_ALLOWED_HEADERS = 'Content-Type, Authorization';
+export const CORS_ALLOWED_HEADERS = [
+  'Content-Type',
+  'Authorization',
+  'x-gatherle-client-platform',
+  'x-gatherle-device-installation-id',
+  'x-gatherle-app-version',
+  'x-gatherle-build-version',
+].join(', ');
 const CORS_MAX_AGE_SECONDS = '86400';
 
 export const createCorsHeaders = (origin?: string | null) => {
@@ -43,6 +50,13 @@ export const createCorsMiddleware = () =>
       return callback(null, false);
     },
     methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-gatherle-client-platform',
+      'x-gatherle-device-installation-id',
+      'x-gatherle-app-version',
+      'x-gatherle-build-version',
+    ],
     maxAge: Number(CORS_MAX_AGE_SECONDS),
   });

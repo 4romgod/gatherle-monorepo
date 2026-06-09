@@ -1,9 +1,15 @@
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 import type { Express, Request, Response } from 'express';
-import type { GraphQLError, GraphQLFormattedError } from 'graphql';
+import type { GraphQLError, GraphQLFormattedError, OperationDefinitionNode } from 'graphql';
+import { Kind } from 'graphql';
 import { createHash } from 'crypto';
 import {
+  APP_ACCESS_BLOCKED_ERROR_CODE,
+  ERROR_MESSAGES as COMMON_ERROR_MESSAGES,
+} from '@gatherle/commons/server/constants';
+import {
+  GATHERLE_CLIENT_PLATFORM_MOBILE,
   INVALID_GRAPHQL_REQUEST_OPERATION,
   STAGE,
   UNKNOWN_GRAPHQL_OPERATION_TYPE,
@@ -33,16 +39,22 @@ import type {
   EventOccurrence,
   EventOccurrenceParticipant,
 } from '@gatherle/commons/server/types';
+import { MobileDeviceAccessStatus as MobileDeviceAccessStatusEnum, UserRole } from '@gatherle/commons/server/types';
 import type { AuthClaims } from '@/utils/auth';
 import type { APIGatewayProxyEvent, Context as LambdaContext } from 'aws-lambda';
 import { emitGraphqlQueryGuardMetrics } from '@/utils/graphqlQueryGuardMetrics';
 import type { EventOccurrenceQueryRequestCache } from '@/services/eventOccurrence';
+import type { MobileRequestAccessContext } from '@/utils/mobileDeviceAccess';
+import { MobileDeviceAccessDAO } from '@/mongodb/dao';
+import { emitMobileDeviceAccessMetrics } from '@/utils/mobileDeviceAccessMetrics';
+import { CustomError, ErrorTypes } from '@/utils/exceptions';
 
 type ServerRequestCache = {
   eventOccurrenceQuery: EventOccurrenceQueryRequestCache;
 };
 
 export interface ServerContext {
+  mobileDeviceAccess?: MobileRequestAccessContext;
   token?: string;
   user?: AuthClaims;
   req?: Request;
@@ -86,6 +98,8 @@ const ERROR_CODE_HTTP_STATUS_MAP: Record<string, HttpStatusCode> = {
   [ApolloServerErrorCode.PERSISTED_QUERY_NOT_FOUND]: HttpStatusCode.BAD_REQUEST,
   [ApolloServerErrorCode.PERSISTED_QUERY_NOT_SUPPORTED]: HttpStatusCode.BAD_REQUEST,
   [ApolloServerErrorCode.INTERNAL_SERVER_ERROR]: HttpStatusCode.INTERNAL_SERVER_ERROR,
+  [APP_ACCESS_BLOCKED_ERROR_CODE]: HttpStatusCode.UNAUTHORIZED,
+  DEVICE_ACCESS_DENIED: HttpStatusCode.UNAUTHORIZED,
   NOT_FOUND: HttpStatusCode.NOT_FOUND,
   CONFLICT: HttpStatusCode.CONFLICT,
   UNAUTHENTICATED: HttpStatusCode.UNAUTHENTICATED,
@@ -104,6 +118,11 @@ const getHttpStatusFromError = (errorCode: string, error: GraphQLError) => {
 const useInvalidQueryMessage = (code: string) => GRAPHQL_CLIENT_ERROR_CODES.has(code);
 
 const QUERY_GUARD_WARNING_CODES = new Set<string>(Object.values(QUERY_GUARD_ERROR_CODES));
+const MOBILE_DEVICE_ACCESS_ALLOWED_FIELDS = new Set<string>(['registerMobileDeviceAccess']);
+const MOBILE_DEVICE_ACCESS_ADMIN_ALLOWED_FIELDS = new Set<string>([
+  'readMobileDeviceAccesses',
+  'updateMobileDeviceAccessStatus',
+]);
 
 export const shouldWarnForGraphqlClientError = (
   errorCode: string,
@@ -142,11 +161,43 @@ const inferOperationNameFromQuery = (query: string): string | undefined => {
   return match?.[1];
 };
 
+const resolveOperationName = (requestContext: {
+  operationName?: string | null;
+  request: { operationName?: string | null; query?: GraphQLQueryValue };
+}) => {
+  const query = getQueryStringFromRequest(requestContext.request.query as GraphQLQueryValue | undefined).trim();
+  return requestContext.operationName ?? requestContext.request.operationName ?? inferOperationNameFromQuery(query);
+};
+
 const getQueryFingerprint = (query: string): string =>
   createHash('sha256')
     .update(query || '<query not provided>')
     .digest('hex')
     .slice(0, 16);
+
+const getTopLevelFieldNames = (requestOperation: OperationDefinitionNode): string[] =>
+  requestOperation.selectionSet.selections
+    .filter((selection) => selection.kind === Kind.FIELD)
+    .map((selection) => selection.name.value);
+
+const isMobileAccessExemptOperation = (
+  requestOperation: OperationDefinitionNode,
+  authenticatedUser?: AuthClaims,
+): boolean => {
+  const fieldNames = getTopLevelFieldNames(requestOperation);
+  if (fieldNames.length === 0) {
+    return false;
+  }
+
+  if (fieldNames.every((fieldName) => MOBILE_DEVICE_ACCESS_ALLOWED_FIELDS.has(fieldName))) {
+    return true;
+  }
+
+  return Boolean(
+    authenticatedUser?.userRole === UserRole.Admin &&
+    fieldNames.every((fieldName) => MOBILE_DEVICE_ACCESS_ADMIN_ALLOWED_FIELDS.has(fieldName)),
+  );
+};
 
 const isIntrospectionOperation = (operationName?: string, query?: string) =>
   operationName === 'IntrospectionQuery' ||
@@ -279,6 +330,140 @@ export const createGraphqlQueryGuardMetricsPlugin = (): ApolloServerPlugin<Serve
   },
 });
 
+export const createMobileDeviceAccessPlugin = (): ApolloServerPlugin<ServerContext> => ({
+  async requestDidStart() {
+    return {
+      async didResolveOperation(requestContext) {
+        if (!requestContext.operation) {
+          return;
+        }
+
+        const mobileDeviceAccess = requestContext.contextValue.mobileDeviceAccess;
+
+        if (!mobileDeviceAccess || mobileDeviceAccess.clientPlatform !== GATHERLE_CLIENT_PLATFORM_MOBILE) {
+          return;
+        }
+
+        if (isMobileAccessExemptOperation(requestContext.operation, requestContext.contextValue.user)) {
+          return;
+        }
+
+        const operationName = resolveOperationName(requestContext);
+        const effectiveStatus =
+          mobileDeviceAccess.status === MobileDeviceAccessStatusEnum.Blocked
+            ? MobileDeviceAccessStatusEnum.Blocked
+            : MobileDeviceAccessStatusEnum.Approved;
+
+        if (effectiveStatus !== MobileDeviceAccessStatusEnum.Blocked) {
+          emitMobileDeviceAccessMetrics({
+            appVersion: mobileDeviceAccess.appVersion,
+            buildVersion: mobileDeviceAccess.buildVersion,
+            clientPlatform: mobileDeviceAccess.clientPlatform,
+            deviceInstallationId: mobileDeviceAccess.deviceInstallationId,
+            metrics: {
+              ApprovedInstallationRequest: 1,
+            },
+            operation: operationName,
+            status: effectiveStatus,
+            userId: requestContext.contextValue.user?.userId,
+          });
+          return;
+        }
+
+        emitMobileDeviceAccessMetrics({
+          appVersion: mobileDeviceAccess.appVersion,
+          buildVersion: mobileDeviceAccess.buildVersion,
+          clientPlatform: mobileDeviceAccess.clientPlatform,
+          deviceInstallationId: mobileDeviceAccess.deviceInstallationId,
+          metrics: {
+            BlockedInstallationRequest: 1,
+          },
+          operation: operationName,
+          status: effectiveStatus,
+          userId: requestContext.contextValue.user?.userId,
+        });
+        throw CustomError(COMMON_ERROR_MESSAGES.MOBILE_DEVICE_ACCESS_BLOCKED, ErrorTypes.DEVICE_ACCESS_DENIED, {
+          mobileDeviceAccessStatus: effectiveStatus,
+        });
+      },
+    };
+  },
+});
+
+export const createUserAppAccessPlugin = (): ApolloServerPlugin<ServerContext> => ({
+  async requestDidStart() {
+    return {
+      async didResolveOperation(requestContext) {
+        if (!requestContext.operation) {
+          return;
+        }
+
+        const authenticatedUser = requestContext.contextValue.user;
+        if (!authenticatedUser?.userId) {
+          return;
+        }
+
+        const resolvedUser = await requestContext.contextValue.loaders.user.load(authenticatedUser.userId);
+        if (!resolvedUser?.userId) {
+          throw CustomError(COMMON_ERROR_MESSAGES.UNAUTHENTICATED, ErrorTypes.UNAUTHENTICATED);
+        }
+
+        const operationName = resolveOperationName(requestContext);
+        const mobileDeviceAccess = requestContext.contextValue.mobileDeviceAccess;
+
+        if (resolvedUser.appAccessBlocked) {
+          emitMobileDeviceAccessMetrics({
+            appVersion: mobileDeviceAccess?.appVersion,
+            buildVersion: mobileDeviceAccess?.buildVersion,
+            clientPlatform: mobileDeviceAccess?.clientPlatform ?? 'web',
+            deviceInstallationId: mobileDeviceAccess?.deviceInstallationId,
+            metrics: {
+              BlockedUserRequest: 1,
+            },
+            operation: operationName,
+            status: 'BlockedUser',
+            userId: resolvedUser.userId,
+          });
+          throw CustomError(COMMON_ERROR_MESSAGES.APP_ACCESS_BLOCKED, ErrorTypes.APP_ACCESS_BLOCKED);
+        }
+
+        if (
+          mobileDeviceAccess?.clientPlatform === GATHERLE_CLIENT_PLATFORM_MOBILE &&
+          mobileDeviceAccess.deviceInstallationId
+        ) {
+          emitMobileDeviceAccessMetrics({
+            appVersion: mobileDeviceAccess.appVersion,
+            buildVersion: mobileDeviceAccess.buildVersion,
+            clientPlatform: mobileDeviceAccess.clientPlatform,
+            deviceInstallationId: mobileDeviceAccess.deviceInstallationId,
+            metrics: {
+              AuthenticatedInstallationRequest: 1,
+            },
+            operation: operationName,
+            status: mobileDeviceAccess.status,
+            userId: resolvedUser.userId,
+          });
+
+          try {
+            await MobileDeviceAccessDAO.recordAuthenticatedUse({
+              appVersion: mobileDeviceAccess.appVersion,
+              buildVersion: mobileDeviceAccess.buildVersion,
+              deviceInstallationId: mobileDeviceAccess.deviceInstallationId,
+              userId: resolvedUser.userId,
+            });
+          } catch (error) {
+            logger.warn('[createUserAppAccessPlugin] Failed to record authenticated installation use', {
+              error,
+              deviceInstallationId: mobileDeviceAccess.deviceInstallationId,
+              userId: resolvedUser.userId,
+            });
+          }
+        }
+      },
+    };
+  },
+});
+
 export const createApolloServer = async (expressApp?: Express) => {
   logger.info('Creating Apollo Server...');
   const apolloServer = new ApolloServer<ServerContext>({
@@ -337,6 +522,8 @@ export const createApolloServer = async (expressApp?: Express) => {
       ...(expressApp ? [ApolloServerPluginDrainHttpServer({ httpServer: createServer(expressApp) })] : []),
       ...(STAGE !== APPLICATION_STAGES.PROD ? [createGraphQLRequestLoggingPlugin()] : []),
       createGraphqlQueryGuardMetricsPlugin(),
+      createMobileDeviceAccessPlugin(),
+      createUserAppAccessPlugin(),
     ],
   });
 

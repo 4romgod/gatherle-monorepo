@@ -31,6 +31,36 @@ on:
         required: false
         default: ""
         type: string
+  workflow_dispatch:
+    inputs:
+      build_mobile:
+        description: "Whether to build and publish the Android APK"
+        required: false
+        default: true
+        type: boolean
+      deploy_api:
+        description: "Whether to deploy API infrastructure/runtime and run API e2e tests"
+        required: false
+        default: true
+        type: boolean
+      deploy_webapp:
+        description: "Whether to deploy the webapp and run webapp e2e tests"
+        required: false
+        default: true
+        type: boolean
+      stage:
+        description: "Application stage (example: Beta, Prod)"
+        required: true
+        type: string
+      region:
+        description: "AWS region (example: af-south-1)"
+        required: true
+        type: string
+      web_domain_alias:
+        description: "Optional webapp custom domain alias (example: beta.gatherle.com)"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   id-token: write
@@ -119,6 +149,7 @@ jobs:
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
       ENABLE_CUSTOM_DOMAINS: ${{ vars.ENABLE_CUSTOM_DOMAINS || 'false' }}
+      ALERT_EMAIL_RECIPIENTS: ${{ vars.ALERT_EMAIL_RECIPIENTS || '' }}
       EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
       WEBAPP_URL: ${{ vars.WEBAPP_URL }}
       GOOGLE_OAUTH_CLIENT_ID_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_WEB }}
@@ -500,7 +531,7 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           NEXT_PUBLIC_GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url || needs.resolve-deploy-context.outputs.graphql_url }}
           NEXT_PUBLIC_WEBSOCKET_URL: ${{ needs.deploy-api.outputs.websocket_url || needs.resolve-deploy-context.outputs.websocket_url }}
-          NEXT_PUBLIC_S3_MEDIA_URL: ${{ needs.deploy-api.outputs.s3_media_url || needs.resolve-deploy-context.outputs.s3_media_url }}
+          MEDIA_UPLOAD_S3_URL: ${{ needs.deploy-api.outputs.s3_media_url || needs.resolve-deploy-context.outputs.s3_media_url }}
           NEXT_PUBLIC_MEDIA_CDN_URL: ${{ needs.deploy-api.outputs.media_cdn_url || needs.resolve-deploy-context.outputs.media_cdn_url }}
           GOOGLE_OAUTH_CLIENT_ID_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_WEB }}
           GOOGLE_OAUTH_CLIENT_SECRET_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET_WEB }}
@@ -511,7 +542,7 @@ jobs:
             --token=${{ secrets.VERCEL_TOKEN }} \
             --build-env NEXT_PUBLIC_GRAPHQL_URL="$NEXT_PUBLIC_GRAPHQL_URL" \
             --build-env NEXT_PUBLIC_WEBSOCKET_URL="$NEXT_PUBLIC_WEBSOCKET_URL" \
-            --build-env NEXT_PUBLIC_S3_MEDIA_URL="$NEXT_PUBLIC_S3_MEDIA_URL" \
+            --build-env MEDIA_UPLOAD_S3_URL="$MEDIA_UPLOAD_S3_URL" \
             --build-env NEXT_PUBLIC_MEDIA_CDN_URL="$NEXT_PUBLIC_MEDIA_CDN_URL" \
             --env GOOGLE_OAUTH_CLIENT_ID_WEB="$GOOGLE_OAUTH_CLIENT_ID_WEB" \
             --env GOOGLE_OAUTH_CLIENT_SECRET_WEB="$GOOGLE_OAUTH_CLIENT_SECRET_WEB" \

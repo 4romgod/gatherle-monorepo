@@ -5,6 +5,7 @@ import { getConnectionMetadata } from '@/websocket/event';
 import { touchConnection } from '@/websocket/routes/touch';
 import { logger } from '@/utils/logger';
 import { assertWebSocketRateLimit } from '@/websocket/abuseControl';
+import { readAuthorizedWebSocketConnection } from '@/websocket/access';
 
 jest.mock('@/websocket/database', () => ({
   ensureDatabaseConnection: jest.fn(),
@@ -16,6 +17,10 @@ jest.mock('@/websocket/abuseControl', () => ({
 
 jest.mock('@/websocket/routes/touch', () => ({
   touchConnection: jest.fn(),
+}));
+
+jest.mock('@/websocket/access', () => ({
+  readAuthorizedWebSocketConnection: jest.fn(),
 }));
 
 jest.mock('@/websocket/event', () => ({
@@ -43,6 +48,12 @@ describe('websocket route: notification.subscribe', () => {
     jest.clearAllMocks();
     (ensureDatabaseConnection as jest.Mock).mockResolvedValue(undefined);
     (assertWebSocketRateLimit as jest.Mock).mockResolvedValue(undefined);
+    (readAuthorizedWebSocketConnection as jest.Mock).mockResolvedValue({
+      connectionId: 'conn-bell',
+      userId: 'user-1',
+      domainName: 'example.execute-api.af-south-1.amazonaws.com',
+      stage: 'beta',
+    });
     (getConnectionMetadata as jest.Mock).mockReturnValue({
       connectionId: 'conn-bell',
       domainName: 'example.execute-api.af-south-1.amazonaws.com',
@@ -65,6 +76,7 @@ describe('websocket route: notification.subscribe', () => {
     });
     expect(assertWebSocketRateLimit).toHaveBeenCalledWith('notification.subscribe', {
       connectionId: 'conn-bell',
+      userId: 'user-1',
     });
     expect(logger.info).toHaveBeenCalledWith('Notification subscription acknowledged', {
       connectionId: 'conn-bell',

@@ -21,6 +21,7 @@ For deeper security and observability implementation detail, use:
 - `docs/security/abuse-controls-and-hardening.md`
 - `docs/security/threat-model-risk-register.md`
 - `docs/api/observability.md`
+- `docs/runbooks/operational-alerts-and-rollback.md`
 
 ---
 
@@ -82,18 +83,18 @@ Launch rule:
 
 ## Executive Summary
 
-| Priority | Workstream                                    | Current assessment                                                                                                              | Beta gate                                                                                                                     |
-| -------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| P0       | Realtime stability                            | WebSocket callback bug is fixed in code but still requires redeploy and beta verification                                       | Realtime messaging and in-app notifications must work without refresh                                                         |
-| P0       | Authentication truthfulness and authorization | Auth flows are stronger than older docs suggest, but the supported matrix and object-level auth still need a release audit      | We must be able to state exactly which auth methods are supported, and prove users cannot read or mutate data they do not own |
-| P0       | Launch dataset quality                        | Seeding exists, but launch quality depends on curated Gauteng data, not just populated tables                                   | Discovery must feel alive on day one                                                                                          |
-| P0       | Critical smoke suite                          | Many pieces exist, but beta needs one reliable end-to-end smoke pass for core flows                                             | Sign up, login, browse, RSVP, follow, message, notify, logout must all pass                                                   |
-| P0       | Trust, safety, and abuse controls             | Strong baseline exists for GraphQL and WebSocket, but some answers still need explicit verification rather than assumption      | Validation, rate limiting, reset-link behavior, authz, and CORS posture must be clearly understood and tested                 |
-| P0       | ~~Frontend failure handling~~                 | Completed on 2026-06-07. Mobile and web now have catch-all failure handling, shared screen states, and frontend error reporting | Done                                                                                                                          |
-| P0       | Logging, alerts, and rollback                 | Logging and alarms exist; human notification routing and rollback drills are not yet proven from repo evidence                  | We need to know how we detect breakage and how we recover fast                                                                |
-| P1       | Performance and indexing audit                | Many indexes already exist, but beta should still validate top queries with real explain plans                                  | Common discovery, RSVP, messages, and notifications queries must stay efficient                                               |
-| P1       | Product-signaling polish                      | Important surfaces need launch-level clarity and confidence, not extra feature depth                                            | Home, Explore, cards, and RSVP should clearly communicate value                                                               |
-| P1       | Measurement and analytics                     | No clear product analytics instrumentation was found in the app surfaces                                                        | We need onboarding and feature-usage tracking before launch traffic starts                                                    |
+| Priority | Workstream                                    | Current assessment                                                                                                                                  | Beta gate                                                                                                                     |
+| -------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| P0       | Realtime stability                            | WebSocket callback bug is fixed in code but still requires redeploy and beta verification                                                           | Realtime messaging and in-app notifications must work without refresh                                                         |
+| P0       | Authentication truthfulness and authorization | Auth flows are stronger than older docs suggest, but the supported matrix and object-level auth still need a release audit                          | We must be able to state exactly which auth methods are supported, and prove users cannot read or mutate data they do not own |
+| P0       | Launch dataset quality                        | Seeding exists, but launch quality depends on curated Gauteng data, not just populated tables                                                       | Discovery must feel alive on day one                                                                                          |
+| P0       | Critical smoke suite                          | Many pieces exist, but beta needs one reliable end-to-end smoke pass for core flows                                                                 | Sign up, login, browse, RSVP, follow, message, notify, logout must all pass                                                   |
+| P0       | Trust, safety, and abuse controls             | Strong baseline exists for GraphQL and WebSocket, but some answers still need explicit verification rather than assumption                          | Validation, rate limiting, reset-link behavior, authz, and CORS posture must be clearly understood and tested                 |
+| P0       | ~~Frontend failure handling~~                 | Completed on 2026-06-07. Mobile and web now have catch-all failure handling, shared screen states, and frontend error reporting                     | Done                                                                                                                          |
+| P0       | Logging, alerts, and rollback                 | Logging exists. Alarm routing now has a real SNS path and rollback now has a concrete runbook; subscription confirmation and one drill still remain | We need to know how we detect breakage and how we recover fast                                                                |
+| P1       | Performance and indexing audit                | Many indexes already exist, but beta should still validate top queries with real explain plans                                                      | Common discovery, RSVP, messages, and notifications queries must stay efficient                                               |
+| P1       | Product-signaling polish                      | Important surfaces need launch-level clarity and confidence, not extra feature depth                                                                | Home, Explore, cards, and RSVP should clearly communicate value                                                               |
+| P1       | Measurement and analytics                     | No clear product analytics instrumentation was found in the app surfaces                                                                            | We need onboarding and feature-usage tracking before launch traffic starts                                                    |
 
 ---
 
@@ -598,25 +599,26 @@ Launch decision:
 Direct answer:
 
 - The repo contains CloudWatch dashboards and alarms for GraphQL and WebSocket.
-- What is not yet proven from repo evidence is whether those alarms notify humans reliably.
+- Alarm routing is now implemented in the repo via the monitoring stack SNS topic.
+- What is still not fully proven is recipient confirmation and live notification rehearsal in the target environment.
 
 Current state:
 
 - GraphQL monitoring dashboards and alarms exist.
 - WebSocket monitoring dashboards and alarms exist.
 - Alarm coverage includes errors, throttles, spike conditions, and abuse-related signals.
+- `MonitoringDashboardStack` now creates a stage-scoped SNS topic for operational alerts.
+- Current monitoring alarms publish to that topic on `ALARM` state transitions.
+- Optional email subscriptions are configured through `ALERT_EMAIL_RECIPIENTS`.
 
 Required before beta:
 
-- Confirm where alarms go:
-  - SNS
-  - Slack
-  - email
-  - PagerDuty
-  - other on-call channel
-- Confirm who owns each alert.
+- Confirm the recipients in `ALERT_EMAIL_RECIPIENTS`.
+- Confirm every SNS email subscription from the inbox.
+- Record alert ownership by name.
 - Test at least one real notification path before launch.
 - Reduce low-value noise so urgent alerts are still trusted during beta.
+- Use `docs/runbooks/operational-alerts-and-rollback.md` as the operating runbook.
 
 Launch decision:
 
@@ -632,6 +634,7 @@ This section answers the rollback question directly.
 
 - We should have a rollback plan before beta.
 - We do not necessarily need full blue/green deployment before this beta.
+- The repo now has a concrete rollback runbook aligned to the current deploy model.
 
 ### What blue/green means
 
@@ -659,11 +662,7 @@ rehearsed rollback."
 
 Required before beta:
 
-- Write a concrete rollback runbook for:
-  - API/CDK deploy rollback
-  - WebSocket deploy rollback
-  - mobile app rollback or emergency mitigation path
-  - webapp rollback
+- Confirm the owners and expected recovery times in `docs/runbooks/operational-alerts-and-rollback.md`.
 - Define:
   - who can trigger rollback
   - what evidence triggers rollback
