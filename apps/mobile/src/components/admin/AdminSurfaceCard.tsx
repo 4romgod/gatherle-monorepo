@@ -10,13 +10,12 @@ type AdminSurfaceCardProps = PropsWithChildren<{
 export function AdminSurfaceCard({ children, tone = 'default' }: AdminSurfaceCardProps) {
   const { theme } = useAppTheme();
 
-  const backgroundColor = theme.dark
-    ? tone === 'muted'
-      ? 'rgba(122, 115, 255, 0.10)'
-      : theme.colors.surfaceMuted
-    : tone === 'muted'
-      ? theme.colors.surfaceMuted
-      : theme.colors.surface;
+  const backgroundColor =
+    tone === 'muted'
+      ? theme.dark
+        ? 'rgba(122, 115, 255, 0.12)'
+        : theme.colors.surfaceMuted
+      : theme.colors.surfaceRaised;
 
   const borderColor = theme.dark
     ? tone === 'muted'
@@ -31,6 +30,7 @@ export function AdminSurfaceCard({ children, tone = 'default' }: AdminSurfaceCar
         {
           backgroundColor,
           borderColor,
+          borderWidth: 2,
         },
       ]}
     >

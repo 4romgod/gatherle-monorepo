@@ -22,7 +22,12 @@ export class EventOccurrenceResolver {
     @Ctx() context: ServerContext,
   ): Promise<EventOccurrence[]> {
     logger.debug('[readEventOccurrences] GraphQL query options:', { options });
-    return EventOccurrenceService.readEventOccurrences(options, context.requestCache?.eventOccurrenceQuery);
+    return EventOccurrenceService.readEventOccurrences(
+      options,
+      context.requestCache?.eventOccurrenceQuery,
+      context.user?.userId,
+      context.user?.userRole,
+    );
   }
 
   @Query(() => Int, { description: RESOLVER_DESCRIPTIONS.EVENT.readEventOccurrencesCount })
@@ -31,16 +36,28 @@ export class EventOccurrenceResolver {
     @Ctx() context: ServerContext,
   ): Promise<number> {
     logger.debug('[readEventOccurrencesCount] GraphQL query options:', { options });
-    return EventOccurrenceService.countEventOccurrences(options, context.requestCache?.eventOccurrenceQuery);
+    return EventOccurrenceService.countEventOccurrences(
+      options,
+      context.requestCache?.eventOccurrenceQuery,
+      context.user?.userId,
+      context.user?.userRole,
+    );
   }
 
   @Query(() => [EventOccurrence], { description: 'Read event occurrences linked to a specific user participant' })
   async readUserEventOccurrences(
     @Arg('userId', () => String) userId: string,
     @Arg('options', () => QueryOptionsInput, { nullable: true }) options: QueryOptionsInput | undefined,
+    @Ctx() context: ServerContext,
   ): Promise<EventOccurrence[]> {
     validateMongodbId(userId);
-    return EventOccurrenceService.readUserEventOccurrences(userId, true, options);
+    return EventOccurrenceService.readUserEventOccurrences(
+      userId,
+      true,
+      options,
+      context.user?.userId,
+      context.user?.userRole,
+    );
   }
 
   @FieldResolver(() => EventSeries, {

@@ -227,7 +227,8 @@ export default function TeamMembersTab({
                 const joinedLabel = new Date(membership.joinedAt).toLocaleDateString();
                 const isCurrentUser = membership.userId === currentUserId;
                 const isOwnerMembership = membership.role === OrganizationRole.Owner;
-                const canEditMembership = !isCurrentUser && !isOwnerMembership;
+                const canChangeRole = !isCurrentUser && !isOwnerMembership;
+                const canLeaveMembership = isCurrentUser && !isOwnerMembership;
                 const isExpanded = expandedMembershipId === membership.membershipId;
                 const profileHref = membership.username ? ROUTES.USERS.USER(membership.username) : null;
 
@@ -335,11 +336,12 @@ export default function TeamMembersTab({
                           </Stack>
                         ) : isCurrentUser ? (
                           <Typography variant="caption" color="text.secondary" sx={{ mt: 2 }}>
-                            Your role is view-only here. Another organization admin must change it.
+                            Your role is view-only here. Another organization admin must change it, but you can leave
+                            the organization yourself.
                           </Typography>
                         ) : null}
 
-                        {canEditMembership ? (
+                        {canChangeRole ? (
                           <>
                             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 'auto', pt: 3 }}>
                               <Button
@@ -380,6 +382,18 @@ export default function TeamMembersTab({
                               </Stack>
                             ) : null}
                           </>
+                        ) : canLeaveMembership ? (
+                          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 'auto', pt: 3 }}>
+                            <Button
+                              variant="text"
+                              color="error"
+                              fullWidth
+                              onClick={() => promptRemoveMember(membership)}
+                              sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
+                            >
+                              Leave organization
+                            </Button>
+                          </Stack>
                         ) : null}
                       </Box>
                     </Card>

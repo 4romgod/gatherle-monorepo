@@ -183,7 +183,7 @@ class OrganizationMembershipService {
   }
 
   /**
-   * Remove a member from an organization
+   * Remove a member from an organization, or allow a member to leave it.
    * - Deletes the membership record
    * - Does not send notification (removal is final)
    *
@@ -200,15 +200,7 @@ class OrganizationMembershipService {
 
     // Get the existing membership to find the userId
     const existingMembership = await OrganizationMembershipDAO.readMembershipById(membershipId);
-
-    // Security: Prevent users from removing themselves
-    // Users should use a "leave organization" flow instead
-    if (existingMembership.userId === removedByUserId) {
-      throw CustomError(
-        'Users cannot remove themselves from an organization. Use the leave organization feature instead.',
-        ErrorTypes.UNAUTHORIZED,
-      );
-    }
+    const isSelfRemoval = existingMembership.userId === removedByUserId;
 
     if (existingMembership.role === OrganizationRole.Owner) {
       throw CustomError(
@@ -219,7 +211,7 @@ class OrganizationMembershipService {
 
     // Security: Re-verify authorization to prevent race conditions (TOCTOU)
     // Between authChecker and this point, the user's role could have changed
-    if (removedByUserId) {
+    if (removedByUserId && !isSelfRemoval) {
       const isStillAuthorized = await this.verifyOrganizationAdminAccess(existingMembership.orgId, removedByUserId);
       if (!isStillAuthorized) {
         throw CustomError(

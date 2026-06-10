@@ -1,12 +1,13 @@
 import type {
   CreateEventInput,
+  EventsQueryOptionsInput,
   EventSchedule,
   EventSeries,
   EventOrganizer,
+  PaginationInput,
   SplitEventSeriesInput,
   UpdateEventInput,
 } from '@gatherle/commons/server/types';
-import type { UserRole } from '@gatherle/commons/server/types';
 import {
   ActivityDAO,
   EventOccurrenceDAO,
@@ -14,13 +15,15 @@ import {
   EventSeriesDAO,
   FollowDAO,
   NotificationDAO,
+  OrganizationMembershipDAO,
   UserFeedDAO,
 } from '@/mongodb/dao';
 import AuditLogService from './auditLog';
 import { CustomError, ErrorTypes, KnownCommonError, areEventSchedulesEqual, getScheduleAnchorStartAt } from '@/utils';
-import { FollowTargetType, NotificationTargetType } from '@gatherle/commons/server/types';
+import { EventVisibility, FollowTargetType, NotificationTargetType, UserRole } from '@gatherle/commons/server/types';
 import { logger } from '@/utils/logger';
 import EventOccurrenceService from './eventOccurrence';
+import { validatePaginationInput } from '@/utils';
 
 /**
  * Service for event domain logic.
@@ -30,6 +33,67 @@ import EventOccurrenceService from './eventOccurrence';
  * not in the DAO.
  */
 class EventSeriesService {
+  private static isPrivateEvent(eventSeries: Pick<EventSeries, 'visibility'>): boolean {
+    return eventSeries.visibility === EventVisibility.Private;
+  }
+
+  private static isViewerOrganizer(eventSeries: Pick<EventSeries, 'organizers'>, viewerUserId?: string): boolean {
+    if (!viewerUserId) {
+      return false;
+    }
+
+    return (eventSeries.organizers ?? []).some((organizer) => {
+      try {
+        return this.normalizeOrganizerUserId(organizer) === viewerUserId;
+      } catch {
+        return false;
+      }
+    });
+  }
+
+  private static async buildViewerOrgMembershipSet(viewerUserId?: string): Promise<Set<string>> {
+    if (!viewerUserId) {
+      return new Set();
+    }
+
+    const memberships = await OrganizationMembershipDAO.readMembershipsByUserId(viewerUserId);
+    return new Set(memberships.map((membership) => membership.orgId));
+  }
+
+  private static canViewerAccessEventWithMemberships(
+    eventSeries: Pick<EventSeries, 'visibility' | 'orgId' | 'organizers'>,
+    viewerOrgMemberships: Set<string>,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): boolean {
+    if (!this.isPrivateEvent(eventSeries)) {
+      return true;
+    }
+
+    if (viewerUserRole === UserRole.Admin) {
+      return true;
+    }
+
+    if (this.isViewerOrganizer(eventSeries, viewerUserId)) {
+      return true;
+    }
+
+    if (!eventSeries.orgId) {
+      return false;
+    }
+
+    return viewerOrgMemberships.has(eventSeries.orgId);
+  }
+
+  private static paginateVisibleEvents<T>(events: T[], pagination?: PaginationInput): T[] {
+    if (!pagination) {
+      return events;
+    }
+
+    const { skip, limit } = validatePaginationInput(pagination);
+    return events.slice(skip ?? 0, (skip ?? 0) + limit);
+  }
+
   private static shouldDeleteFutureExceptionsOnScheduleChange(
     previousSchedule: EventSchedule,
     nextSchedule: EventSchedule,
@@ -75,6 +139,120 @@ class EventSeriesService {
       user: this.normalizeOrganizerUserId(organizer),
       role: organizer.role,
     }));
+  }
+
+  static async canViewerAccessEvent(
+    eventSeries: Pick<EventSeries, 'visibility' | 'orgId' | 'organizers'>,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<boolean> {
+    if (!this.isPrivateEvent(eventSeries)) {
+      return true;
+    }
+
+    const viewerOrgMemberships = await this.buildViewerOrgMembershipSet(viewerUserId);
+    return this.canViewerAccessEventWithMemberships(eventSeries, viewerOrgMemberships, viewerUserId, viewerUserRole);
+  }
+
+  static async assertViewerCanAccessEvent(
+    eventSeries: Pick<EventSeries, 'visibility' | 'orgId' | 'organizers'>,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<void> {
+    const canAccess = await this.canViewerAccessEvent(eventSeries, viewerUserId, viewerUserRole);
+    if (!canAccess) {
+      throw CustomError('EventSeries not found', ErrorTypes.NOT_FOUND);
+    }
+  }
+
+  static async filterVisibleEvents<T extends Pick<EventSeries, 'visibility' | 'orgId' | 'organizers'>>(
+    eventSeriesList: T[],
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<T[]> {
+    if (viewerUserRole === 'Admin') {
+      return eventSeriesList;
+    }
+
+    if (!eventSeriesList.some((eventSeries) => this.isPrivateEvent(eventSeries))) {
+      return eventSeriesList;
+    }
+
+    const viewerOrgMemberships = await this.buildViewerOrgMembershipSet(viewerUserId);
+    return eventSeriesList.filter((eventSeries) =>
+      this.canViewerAccessEventWithMemberships(eventSeries, viewerOrgMemberships, viewerUserId, viewerUserRole),
+    );
+  }
+
+  static async readVisibleEventById(
+    eventId: string,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<EventSeries> {
+    const eventSeries = await EventSeriesDAO.readEventById(eventId);
+    await this.assertViewerCanAccessEvent(eventSeries, viewerUserId, viewerUserRole);
+    return eventSeries;
+  }
+
+  static async readVisibleEventBySlug(
+    slug: string,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<EventSeries> {
+    const eventSeries = await EventSeriesDAO.readEventBySlug(slug);
+    await this.assertViewerCanAccessEvent(eventSeries, viewerUserId, viewerUserRole);
+    return eventSeries;
+  }
+
+  static async readVisibleEventsByIds(
+    eventIds: string[],
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<EventSeries[]> {
+    const events = await EventSeriesDAO.readEventsByIds(eventIds);
+    return this.filterVisibleEvents(events, viewerUserId, viewerUserRole);
+  }
+
+  static async readVisibleEvents(
+    options?: EventsQueryOptionsInput,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<EventSeries[]> {
+    if (viewerUserRole === UserRole.Admin) {
+      return EventSeriesDAO.readEvents(options);
+    }
+
+    const allMatchingEvents = await EventSeriesDAO.readEvents(
+      options
+        ? {
+            ...options,
+            pagination: undefined,
+          }
+        : undefined,
+    );
+    const visibleEvents = await this.filterVisibleEvents(allMatchingEvents, viewerUserId, viewerUserRole);
+    return this.paginateVisibleEvents(visibleEvents, options?.pagination);
+  }
+
+  static async countVisibleEvents(
+    options?: EventsQueryOptionsInput,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<number> {
+    if (viewerUserRole === UserRole.Admin) {
+      return EventSeriesDAO.countEvents(options);
+    }
+
+    const allMatchingEvents = await EventSeriesDAO.readEvents(
+      options
+        ? {
+            ...options,
+            pagination: undefined,
+          }
+        : undefined,
+    );
+    const visibleEvents = await this.filterVisibleEvents(allMatchingEvents, viewerUserId, viewerUserRole);
+    return visibleEvents.length;
   }
 
   private static async syncOccurrencesForSeries(

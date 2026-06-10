@@ -34,6 +34,7 @@ import { AdminModal } from '@/components/admin/AdminModal';
 import { AdminPill } from '@/components/admin/AdminPill';
 import { InlineButton } from '@/components/core/InlineButton';
 import { typography } from '@/app/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 
 type VenueFormState = {
   amenities: string;
@@ -131,6 +132,7 @@ function formatVenueLocation(venue: {
 }
 
 export function AdminVenuesScreen() {
+  const { theme } = useAppTheme();
   const { showToast } = useAppFeedback();
   const { authToken, isAdmin, isAuthenticated, loading: accessLoading, refetch: refetchAdminAccess } = useAdminAccess();
   const [searchQuery, setSearchQuery] = useState('');
@@ -451,7 +453,9 @@ export function AdminVenuesScreen() {
                 title={venue.name}
               >
                 {venue.amenities?.length ? (
-                  <Text style={styles.metaText}>Amenities: {venue.amenities.join(', ')}</Text>
+                  <Text style={[styles.metaText, { color: theme.colors.primaryContrast }]}>
+                    Amenities: {venue.amenities.join(', ')}
+                  </Text>
                 ) : null}
               </AdminEntityCard>
             ))}

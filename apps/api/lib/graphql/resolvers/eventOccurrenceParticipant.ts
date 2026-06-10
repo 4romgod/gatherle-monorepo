@@ -14,7 +14,7 @@ import { EventOccurrenceDAO, UserFeedDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import { EventOccurrenceParticipantService, RecommendationService } from '@/services';
 import { getAuthenticatedUser } from '@/utils/auth';
-import { buildMyEventOccurrenceParticipantLoadKey, CustomError, ErrorTypes } from '@/utils';
+import { CustomError, ErrorTypes } from '@/utils';
 import { logger } from '@/utils/logger';
 
 function validateOccurrenceId(occurrenceId: string): void {
@@ -35,7 +35,7 @@ export class EventOccurrenceParticipantResolver {
   ): Promise<EventOccurrenceParticipant> {
     validateOccurrenceId(input.occurrenceId);
     const user = getAuthenticatedUser(context);
-    const participant = await EventOccurrenceParticipantService.rsvp(input, user.userId);
+    const participant = await EventOccurrenceParticipantService.rsvp(input, user.userId, user.userRole);
     const occurrence = await EventOccurrenceDAO.readByOccurrenceId(input.occurrenceId);
 
     if (occurrence) {
@@ -66,7 +66,7 @@ export class EventOccurrenceParticipantResolver {
   ): Promise<EventOccurrenceParticipant> {
     validateOccurrenceId(input.occurrenceId);
     const user = getAuthenticatedUser(context);
-    const participant = await EventOccurrenceParticipantService.cancel(input.occurrenceId, user.userId);
+    const participant = await EventOccurrenceParticipantService.cancel(input.occurrenceId, user.userId, user.userRole);
 
     RecommendationService.computeFeedForUser(user.userId).catch((error) => {
       logger.warn('[EventOccurrenceParticipantResolver] Feed trigger failed after cancelEventOccurrenceParticipant', {
@@ -87,7 +87,7 @@ export class EventOccurrenceParticipantResolver {
   ): Promise<EventOccurrenceParticipant> {
     validateOccurrenceId(occurrenceId);
     const user = getAuthenticatedUser(context);
-    return EventOccurrenceParticipantService.checkIn(occurrenceId, user.userId);
+    return EventOccurrenceParticipantService.checkIn(occurrenceId, user.userId, user.userRole);
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
@@ -99,7 +99,11 @@ export class EventOccurrenceParticipantResolver {
     @Ctx() context: ServerContext,
   ): Promise<EventOccurrenceParticipant[]> {
     validateOccurrenceId(occurrenceId);
-    const participants = await context.loaders.eventOccurrenceParticipantsByOccurrence.load(occurrenceId);
+    const participants = await EventOccurrenceParticipantService.readByOccurrence(
+      occurrenceId,
+      context.user?.userId,
+      context.user?.userRole,
+    );
     const users = await Promise.all(participants.map((participant) => context.loaders.user.load(participant.userId)));
 
     return participants.map((participant, index) => ({
@@ -119,8 +123,11 @@ export class EventOccurrenceParticipantResolver {
   ): Promise<EventOccurrenceParticipant | null> {
     validateOccurrenceId(occurrenceId);
     const user = getAuthenticatedUser(context);
-    return context.loaders.myEventOccurrenceParticipant.load(
-      buildMyEventOccurrenceParticipantLoadKey(occurrenceId, user.userId),
+    return EventOccurrenceParticipantService.readByOccurrenceAndUser(
+      occurrenceId,
+      user.userId,
+      user.userId,
+      user.userRole,
     );
   }
 
@@ -134,7 +141,13 @@ export class EventOccurrenceParticipantResolver {
     @Ctx() context: ServerContext,
   ): Promise<EventOccurrenceParticipant[]> {
     const user = getAuthenticatedUser(context);
-    return EventOccurrenceParticipantService.readByUser(user.userId, !includeCancelled, options);
+    return EventOccurrenceParticipantService.readByUser(
+      user.userId,
+      !includeCancelled,
+      options,
+      user.userId,
+      user.userRole,
+    );
   }
 
   @FieldResolver(() => User, { nullable: true, description: EVENT_DESCRIPTIONS.PARTICIPANT.USER })

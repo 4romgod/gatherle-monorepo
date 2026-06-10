@@ -32,6 +32,7 @@ import { useHostedEventsByUser } from '@/hooks/events/useHostedEventsByUser';
 import { useUserEventOccurrences } from '@/hooks/events/useUserEventOccurrences';
 import { useFollowTarget } from '@/hooks/follow/useFollowTarget';
 import { useUserMoments } from '@/hooks/moments/useUserMoments';
+import { profileCompactTextProps, profileMetrics, profileTextProps } from '@/lib/account/profileMetrics';
 import { getApolloAuthContext } from '@/lib/auth';
 import { buildProfileBadges } from '@/lib/account/profileBadges';
 import { getDisplayName } from '@/lib/events/formatters';
@@ -409,7 +410,12 @@ export function UserProfileScreen() {
 
           <View style={styles.profileTopRail}>
             <View style={styles.profileIdentityRow}>
-              <Text numberOfLines={1} style={[styles.profileTopHandle, { color: theme.colors.textPrimary }]}>
+              <Text
+                ellipsizeMode="tail"
+                numberOfLines={1}
+                style={[styles.profileTopHandle, { color: theme.colors.textPrimary }]}
+                {...profileCompactTextProps}
+              >
                 @{profile.username ?? routeUsername ?? 'member'}
               </Text>
 
@@ -439,8 +445,10 @@ export function UserProfileScreen() {
         </View>
 
         <View style={styles.profileTextBlock}>
-          <Text style={[styles.profileName, { color: theme.colors.textPrimary }]}>{profileName}</Text>
-          <Text style={[styles.profileBio, { color: theme.colors.textPrimary }]}>
+          <Text style={[styles.profileName, { color: theme.colors.textPrimary }]} {...profileTextProps}>
+            {profileName}
+          </Text>
+          <Text style={[styles.profileBio, { color: theme.colors.textPrimary }]} {...profileTextProps}>
             {profile.bio || 'This member has not added a short intro yet.'}
           </Text>
         </View>
@@ -459,7 +467,7 @@ export function UserProfileScreen() {
               </View>
             ))}
           </View>
-          <Text style={[styles.followedCopy, { color: theme.colors.textSecondary }]}>
+          <Text style={[styles.followedCopy, { color: theme.colors.textSecondary }]} {...profileTextProps}>
             Followed by {getDisplayName(followerPreview[0]?.follower)}
             {followers.length > 1 ? ` + ${followers.length - 1} more` : ''}
           </Text>
@@ -503,7 +511,9 @@ export function UserProfileScreen() {
                   },
                 ]}
               >
-                <Text style={[styles.interestText, { color: theme.colors.textPrimary }]}>{interest.name}</Text>
+                <Text style={[styles.interestText, { color: theme.colors.textPrimary }]} {...profileTextProps}>
+                  {interest.name}
+                </Text>
               </View>
             ))}
           </View>
@@ -578,8 +588,8 @@ function PublicProfileTabPane({
 const styles = StyleSheet.create({
   followedCopy: {
     ...typography.bodyMedium,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: profileMetrics.followedCopySize,
+    lineHeight: profileMetrics.followedCopyLineHeight,
   },
   followedRow: {
     alignItems: 'center',
@@ -597,12 +607,12 @@ const styles = StyleSheet.create({
   interestPill: {
     borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: profileMetrics.interestPillPaddingHorizontal,
+    paddingVertical: profileMetrics.interestPillPaddingVertical,
   },
   interestText: {
     ...typography.bodyMedium,
-    fontSize: 12,
+    fontSize: profileMetrics.publicInterestTextSize,
   },
   interestWrap: {
     flexDirection: 'row',
@@ -618,25 +628,26 @@ const styles = StyleSheet.create({
   profileBadgesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: profileMetrics.badgeWrapGap,
   },
   profileBio: {
     ...typography.bodyRegular,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: profileMetrics.profileBioSize,
+    lineHeight: profileMetrics.profileBioLineHeight,
   },
   profileHeaderSection: {
-    gap: 14,
+    gap: profileMetrics.headerGap,
   },
   profileIdentityRow: {
     alignItems: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: profileMetrics.identityGap,
+    minWidth: 0,
   },
   profileName: {
     ...typography.displayBold,
-    fontSize: 18,
+    fontSize: profileMetrics.profileNameSize,
     letterSpacing: -0.5,
   },
   profileEventsSection: {
@@ -644,31 +655,33 @@ const styles = StyleSheet.create({
   },
   profileStatsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: profileMetrics.profileStatsGap,
     justifyContent: 'space-between',
   },
   profileTextBlock: {
-    gap: 4,
+    gap: profileMetrics.profileTextBlockGap,
   },
   profileTopHandle: {
     ...typography.bodyBold,
-    fontSize: 16,
+    flexShrink: 1,
+    fontSize: profileMetrics.profileTopHandleSize,
     letterSpacing: -0.2,
   },
   profileTopRail: {
     flex: 1,
-    gap: 12,
+    gap: profileMetrics.profileTopRailGap,
     justifyContent: 'center',
-    minHeight: 88,
+    minHeight: profileMetrics.profileTopRailMinHeight,
+    minWidth: 0,
   },
   profileTopRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 16,
+    gap: profileMetrics.profileTopRowGap,
   },
   profileActionsRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: -12,
+    gap: profileMetrics.profileActionsRowGap,
+    marginTop: profileMetrics.profileActionsRowMarginTop,
   },
 });

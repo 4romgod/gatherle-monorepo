@@ -5,6 +5,7 @@ import type {
   EventSeries,
   UpsertEventOccurrenceParticipantInput,
   User,
+  UserRole,
 } from '@gatherle/commons/server/types';
 import {
   EventOccurrenceStatus,
@@ -14,11 +15,12 @@ import {
   ParticipantStatus,
 } from '@gatherle/commons/server/types';
 import { PUBLIC_OCCURRENCE_QUERY_PARAM, getOccurrencePublicAnchor } from '@gatherle/commons/server/utils';
-import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO, UserDAO } from '@/mongodb/dao';
+import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, UserDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import { publishEventRsvpUpdated, type EventRsvpRealtimeSnapshot } from '@/websocket/publisher';
-import { CustomError, ErrorTypes, sumActiveOccurrenceRsvpCount } from '@/utils';
+import { CustomError, ErrorTypes, sumActiveOccurrenceRsvpCount, validatePaginationInput } from '@/utils';
 import NotificationService from './notification';
+import EventSeriesService from './eventSeries';
 
 type OrganizerUserReference =
   | string
@@ -105,19 +107,42 @@ function isNotifiableRsvpStatus(status: ParticipantStatus): boolean {
 }
 
 class EventOccurrenceParticipantService {
+  private static paginateParticipants(
+    participants: EventOccurrenceParticipant[],
+    pagination?: QueryOptionsInput['pagination'],
+  ): EventOccurrenceParticipant[] {
+    if (!pagination) {
+      return participants;
+    }
+
+    const { skip, limit } = validatePaginationInput(pagination);
+    return participants.slice(skip ?? 0, (skip ?? 0) + limit);
+  }
+
+  private static assertOccurrenceAllowsRsvpUpdates(
+    occurrence: Pick<EventOccurrence, 'status'>,
+    eventSeries: Pick<EventSeries, 'status'>,
+  ): void {
+    if (occurrence.status !== EventOccurrenceStatus.Scheduled || eventSeries.status === EventStatus.Cancelled) {
+      throw CustomError('This occurrence is not accepting RSVP updates.', ErrorTypes.BAD_REQUEST);
+    }
+  }
+
   private static async loadOccurrenceContext(
     occurrenceId: string,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
   ): Promise<{ occurrence: EventOccurrence; eventSeries: EventSeries }> {
     const occurrence = await EventOccurrenceDAO.readByOccurrenceId(occurrenceId);
     if (!occurrence) {
       throw CustomError(`Occurrence not found for id ${occurrenceId}`, ErrorTypes.NOT_FOUND);
     }
 
-    const eventSeries = await EventSeriesDAO.readEventById(occurrence.eventSeriesId);
-    if (occurrence.status !== EventOccurrenceStatus.Scheduled || eventSeries.status === EventStatus.Cancelled) {
-      throw CustomError('This occurrence is not accepting RSVP updates.', ErrorTypes.BAD_REQUEST);
-    }
-
+    const eventSeries = await EventSeriesService.readVisibleEventById(
+      occurrence.eventSeriesId,
+      viewerUserId,
+      viewerUserRole,
+    );
     return { occurrence, eventSeries };
   }
 
@@ -276,8 +301,13 @@ class EventOccurrenceParticipantService {
     }
   }
 
-  static async rsvp(input: UpsertEventOccurrenceParticipantInput, userId: string): Promise<EventOccurrenceParticipant> {
-    const { occurrence, eventSeries } = await this.loadOccurrenceContext(input.occurrenceId);
+  static async rsvp(
+    input: UpsertEventOccurrenceParticipantInput,
+    userId: string,
+    userRole?: UserRole,
+  ): Promise<EventOccurrenceParticipant> {
+    const { occurrence, eventSeries } = await this.loadOccurrenceContext(input.occurrenceId, userId, userRole);
+    this.assertOccurrenceAllowsRsvpUpdates(occurrence, eventSeries);
     assertOccurrenceRsvpOpen(occurrence);
     const requestedStatus: ParticipantStatus = input.status ?? ParticipantStatus.Going;
 
@@ -372,8 +402,9 @@ class EventOccurrenceParticipantService {
     return participant;
   }
 
-  static async cancel(occurrenceId: string, userId: string): Promise<EventOccurrenceParticipant> {
-    const { occurrence, eventSeries } = await this.loadOccurrenceContext(occurrenceId);
+  static async cancel(occurrenceId: string, userId: string, userRole?: UserRole): Promise<EventOccurrenceParticipant> {
+    const { occurrence, eventSeries } = await this.loadOccurrenceContext(occurrenceId, userId, userRole);
+    this.assertOccurrenceAllowsRsvpUpdates(occurrence, eventSeries);
     assertOccurrenceRsvpOpen(occurrence);
     const existingParticipant = await EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrenceId, userId);
     const participant = await EventOccurrenceParticipantDAO.cancel(occurrenceId, userId);
@@ -396,8 +427,9 @@ class EventOccurrenceParticipantService {
     return participant;
   }
 
-  static async checkIn(occurrenceId: string, userId: string): Promise<EventOccurrenceParticipant> {
-    const { occurrence, eventSeries } = await this.loadOccurrenceContext(occurrenceId);
+  static async checkIn(occurrenceId: string, userId: string, userRole?: UserRole): Promise<EventOccurrenceParticipant> {
+    const { occurrence, eventSeries } = await this.loadOccurrenceContext(occurrenceId, userId, userRole);
+    this.assertOccurrenceAllowsRsvpUpdates(occurrence, eventSeries);
     const existingParticipant = await EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrenceId, userId);
 
     if (!existingParticipant || !isReservedStatus(existingParticipant.status)) {
@@ -428,12 +460,72 @@ class EventOccurrenceParticipantService {
     return participant;
   }
 
+  static async readByOccurrence(
+    occurrenceId: string,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<EventOccurrenceParticipant[]> {
+    await this.loadOccurrenceContext(occurrenceId, viewerUserId, viewerUserRole);
+    return EventOccurrenceParticipantDAO.readByOccurrence(occurrenceId);
+  }
+
+  static async readByOccurrenceAndUser(
+    occurrenceId: string,
+    userId: string,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<EventOccurrenceParticipant | null> {
+    await this.loadOccurrenceContext(occurrenceId, viewerUserId, viewerUserRole);
+    return EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrenceId, userId);
+  }
+
   static async readByUser(
     userId: string,
     activeOnly = true,
     options?: QueryOptionsInput,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
   ): Promise<EventOccurrenceParticipant[]> {
-    return EventOccurrenceParticipantDAO.readByUser(userId, activeOnly, options);
+    const occurrenceParticipants = await EventOccurrenceParticipantDAO.readByUser(
+      userId,
+      activeOnly,
+      options
+        ? {
+            ...options,
+            pagination: undefined,
+          }
+        : undefined,
+    );
+    if (occurrenceParticipants.length === 0) {
+      return [];
+    }
+
+    const occurrences = await EventOccurrenceDAO.readByOccurrenceIds([
+      ...new Set(occurrenceParticipants.map((participant) => participant.occurrenceId)),
+    ]);
+    if (occurrences.length === 0) {
+      return [];
+    }
+
+    const visibleEventSeriesIds = new Set(
+      (
+        await EventSeriesService.readVisibleEventsByIds(
+          [...new Set(occurrences.map((occurrence) => occurrence.eventSeriesId))],
+          viewerUserId,
+          viewerUserRole,
+        )
+      ).map((eventSeries) => eventSeries.eventId),
+    );
+    const visibleOccurrenceIds = new Set(
+      occurrences
+        .filter((occurrence) => visibleEventSeriesIds.has(occurrence.eventSeriesId))
+        .map((occurrence) => occurrence.occurrenceId),
+    );
+    const visibleParticipants = occurrenceParticipants.filter((participant) =>
+      visibleOccurrenceIds.has(participant.occurrenceId),
+    );
+
+    return this.paginateParticipants(visibleParticipants, options?.pagination);
   }
 }
 

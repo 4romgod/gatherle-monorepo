@@ -218,35 +218,52 @@ export function OrganizationMembersScreen() {
   );
 
   const handleRemoveMember = useCallback(
-    (membershipId: string, username?: string | null) => {
+    (membershipId: string, options?: { username?: string | null; isSelf?: boolean }) => {
+      const isSelf = Boolean(options?.isSelf);
+      const username = options?.username;
       Alert.alert(
-        'Remove member',
-        username ? `Remove @${username} from this organization?` : 'Remove this member from the organization?',
+        isSelf ? 'Leave organization' : 'Remove member',
+        isSelf
+          ? `Leave ${organization?.name ?? 'this organization'}?`
+          : username
+            ? `Remove @${username} from this organization?`
+            : 'Remove this member from the organization?',
         [
           {
             text: 'Cancel',
             style: 'cancel',
           },
           {
-            text: 'Remove',
+            text: isSelf ? 'Leave' : 'Remove',
             style: 'destructive',
             onPress: () => {
               void (async () => {
                 try {
-                  await withBlockingLoader('Removing member…', async () => {
+                  await withBlockingLoader(isSelf ? 'Leaving organization…' : 'Removing member…', async () => {
                     await deleteMembership({
                       variables: {
                         input: { membershipId },
                       },
                     });
-                    await membershipsQuery.refetch();
+                    await Promise.all([membershipsQuery.refetch(), myOrganizationsQuery.refetch()]);
+                    if (!isSelf) {
+                      await organizationQuery.refetch();
+                    }
                   });
 
                   setExpandedMembershipId(null);
-                  showToast({ message: 'Member removed.', tone: 'success' });
+                  showToast({ message: isSelf ? 'You left the organization.' : 'Member removed.', tone: 'success' });
+                  if (isSelf) {
+                    navigation.goBack();
+                  }
                 } catch (error) {
                   showToast({
-                    message: error instanceof Error ? error.message : "We couldn't remove this member.",
+                    message:
+                      error instanceof Error
+                        ? error.message
+                        : isSelf
+                          ? "We couldn't leave this organization."
+                          : "We couldn't remove this member.",
                     tone: 'error',
                   });
                 }
@@ -256,7 +273,16 @@ export function OrganizationMembersScreen() {
         ],
       );
     },
-    [deleteMembership, membershipsQuery, showToast, withBlockingLoader],
+    [
+      deleteMembership,
+      membershipsQuery,
+      myOrganizationsQuery,
+      navigation,
+      organization?.name,
+      organizationQuery,
+      showToast,
+      withBlockingLoader,
+    ],
   );
 
   const canTransferOwnership = isAdmin || organization?.ownerId === userId;
@@ -432,7 +458,7 @@ export function OrganizationMembersScreen() {
           description={
             canTransferOwnership
               ? 'Tap “Make owner” on a member to transfer ownership. The current owner will be demoted to Admin.'
-              : 'Owners and your own membership are view-only here.'
+              : 'Owners are view-only here. You can leave the organization from your own membership card.'
           }
           title={`${memberships.length} team member${memberships.length === 1 ? '' : 's'}`}
         >
@@ -442,11 +468,13 @@ export function OrganizationMembersScreen() {
                 const isCurrentUser = membership.userId === userId;
                 const isOwnerMembership = membership.role === OrganizationRole.Owner;
                 const canEditMembership = !isCurrentUser && !isOwnerMembership;
+                const canLeaveMembership = isCurrentUser && !isOwnerMembership;
                 const isExpanded = expandedMembershipId === membership.membershipId;
 
                 return (
                   <OrganizationMemberRow
                     canEditMembership={canEditMembership}
+                    canLeaveMembership={canLeaveMembership}
                     canMakeOwner={canTransferOwnership && !isOwnerMembership && !isCurrentUser}
                     isCurrentUser={isCurrentUser}
                     isExpanded={isExpanded}
@@ -467,8 +495,14 @@ export function OrganizationMembersScreen() {
                         current === membership.membershipId ? null : membership.membershipId,
                       )
                     }
-                    onPressRemove={() => handleRemoveMember(membership.membershipId, membership.username)}
+                    onPressRemove={() =>
+                      handleRemoveMember(membership.membershipId, {
+                        username: membership.username,
+                        isSelf: isCurrentUser,
+                      })
+                    }
                     onSelectRole={(role) => void handleUpdateRole(membership.membershipId, role)}
+                    removeLabel="Remove member"
                     roleOptions={INVITABLE_ROLE_OPTIONS}
                   />
                 );

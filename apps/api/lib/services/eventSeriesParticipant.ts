@@ -5,9 +5,10 @@ import type {
   EventSeries,
   EventSeriesParticipant,
   UpsertEventParticipantInput,
+  UserRole,
 } from '@gatherle/commons/server/types';
 import { ParticipantStatus } from '@gatherle/commons/server/types';
-import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';
+import { EventOccurrenceDAO, EventOccurrenceParticipantDAO } from '@/mongodb/dao';
 import {
   CustomError,
   ErrorTypes,
@@ -17,11 +18,17 @@ import {
 } from '@/utils';
 import EventOccurrenceParticipantService from './eventOccurrenceParticipant';
 import EventOccurrenceService from './eventOccurrence';
+import EventSeriesService from './eventSeries';
 
 type EventSeriesWithMyRsvp = EventSeries & { myRsvp?: EventSeriesParticipant | null };
 
 class EventSeriesParticipantService {
-  private static async loadRepresentativeOccurrence(eventId: string): Promise<EventOccurrence> {
+  private static async loadRepresentativeOccurrence(
+    eventId: string,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<EventOccurrence> {
+    await EventSeriesService.readVisibleEventById(eventId, viewerUserId, viewerUserRole);
     const occurrence = await EventOccurrenceService.readRepresentativeOccurrenceForSeries(eventId);
     if (!occurrence) {
       throw CustomError(`Representative occurrence not found for event series ${eventId}`, ErrorTypes.NOT_FOUND);
@@ -98,8 +105,12 @@ class EventSeriesParticipantService {
     return eventSnapshot;
   }
 
-  static async rsvp(input: UpsertEventParticipantInput): Promise<EventSeriesParticipant> {
-    const occurrence = await this.loadRepresentativeOccurrence(input.eventId);
+  static async rsvp(
+    input: UpsertEventParticipantInput,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<EventSeriesParticipant> {
+    const occurrence = await this.loadRepresentativeOccurrence(input.eventId, viewerUserId, viewerUserRole);
     const participant = await EventOccurrenceParticipantService.rsvp(
       {
         occurrenceId: occurrence.occurrenceId,
@@ -109,36 +120,68 @@ class EventSeriesParticipantService {
         sharedVisibility: input.sharedVisibility,
       },
       input.userId,
+      viewerUserRole,
     );
 
     return this.toSeriesParticipant(input.eventId, participant);
   }
 
-  static async cancel(input: CancelEventParticipantInput): Promise<EventSeriesParticipant> {
-    const occurrence = await this.loadRepresentativeOccurrence(input.eventId);
-    const participant = await EventOccurrenceParticipantService.cancel(occurrence.occurrenceId, input.userId);
+  static async cancel(
+    input: CancelEventParticipantInput,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<EventSeriesParticipant> {
+    const occurrence = await this.loadRepresentativeOccurrence(input.eventId, viewerUserId, viewerUserRole);
+    const participant = await EventOccurrenceParticipantService.cancel(
+      occurrence.occurrenceId,
+      input.userId,
+      viewerUserRole,
+    );
     return this.toSeriesParticipant(input.eventId, participant);
   }
 
-  static async checkIn(eventId: string, userId: string): Promise<EventSeriesParticipant> {
-    const occurrence = await this.loadRepresentativeOccurrence(eventId);
-    const participant = await EventOccurrenceParticipantService.checkIn(occurrence.occurrenceId, userId);
+  static async checkIn(
+    eventId: string,
+    userId: string,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<EventSeriesParticipant> {
+    const occurrence = await this.loadRepresentativeOccurrence(eventId, viewerUserId, viewerUserRole);
+    const participant = await EventOccurrenceParticipantService.checkIn(
+      occurrence.occurrenceId,
+      userId,
+      viewerUserRole,
+    );
     return this.toSeriesParticipant(eventId, participant);
   }
 
-  static async readByEvent(eventId: string): Promise<EventSeriesParticipant[]> {
-    const occurrence = await this.loadRepresentativeOccurrence(eventId);
+  static async readByEvent(
+    eventId: string,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<EventSeriesParticipant[]> {
+    const occurrence = await this.loadRepresentativeOccurrence(eventId, viewerUserId, viewerUserRole);
     const participants = await EventOccurrenceParticipantDAO.readByOccurrence(occurrence.occurrenceId);
     return participants.map((participant) => this.toSeriesParticipant(eventId, participant));
   }
 
-  static async readByEventAndUser(eventId: string, userId: string): Promise<EventSeriesParticipant | null> {
-    const occurrence = await this.loadRepresentativeOccurrence(eventId);
+  static async readByEventAndUser(
+    eventId: string,
+    userId: string,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<EventSeriesParticipant | null> {
+    const occurrence = await this.loadRepresentativeOccurrence(eventId, viewerUserId, viewerUserRole);
     const participant = await EventOccurrenceParticipantDAO.readByOccurrenceAndUser(occurrence.occurrenceId, userId);
     return participant ? this.toSeriesParticipant(eventId, participant) : null;
   }
 
-  static async readByUser(userId: string, activeOnly = true): Promise<EventSeriesParticipant[]> {
+  static async readByUser(
+    userId: string,
+    activeOnly = true,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<EventSeriesParticipant[]> {
     const now = new Date();
     const occurrenceParticipants = await EventOccurrenceParticipantDAO.readByUser(userId, activeOnly);
     if (occurrenceParticipants.length === 0) {
@@ -154,8 +197,10 @@ class EventSeriesParticipantService {
 
     const occurrencesById = new Map(occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]));
     const uniqueEventSeriesIds = [...new Set(occurrences.map((occurrence) => occurrence.eventSeriesId))];
-    const eventSeriesList = await Promise.all(
-      uniqueEventSeriesIds.map(async (eventSeriesId) => EventSeriesDAO.readEventById(eventSeriesId)),
+    const eventSeriesList = await EventSeriesService.readVisibleEventsByIds(
+      uniqueEventSeriesIds,
+      viewerUserId,
+      viewerUserRole,
     );
     const eventSeriesById = new Map(eventSeriesList.map((eventSeries) => [eventSeries.eventId, eventSeries]));
     const participantsByEventSeriesId = new Map<string, EventOccurrenceParticipant[]>();

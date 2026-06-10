@@ -39,6 +39,7 @@ jest.mock('@/utils', () => ({
 jest.mock('@/mongodb/dao', () => ({
   EventSeriesDAO: {
     readEventById: jest.fn(),
+    readEventsByIds: jest.fn(),
   },
   EventOccurrenceDAO: {
     readByOccurrenceIds: jest.fn(),
@@ -72,7 +73,7 @@ import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO } fro
 import EventOccurrenceService from '@/services/eventOccurrence';
 import EventOccurrenceParticipantService from '@/services/eventOccurrenceParticipant';
 import type { EventOccurrence, EventOccurrenceParticipant, EventSeries } from '@gatherle/commons/server/types';
-import { ParticipantStatus } from '@gatherle/commons/server/types';
+import { EventVisibility, ParticipantStatus } from '@gatherle/commons/server/types';
 
 describe('EventSeriesParticipantService', () => {
   const singleEventSeries: EventSeries = {
@@ -144,6 +145,7 @@ describe('EventSeriesParticipantService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(singleEventSeries);
+    (EventSeriesDAO.readEventsByIds as jest.Mock).mockResolvedValue([singleEventSeries]);
     (EventOccurrenceService.readRepresentativeOccurrenceForSeries as jest.Mock).mockResolvedValue(singleOccurrence);
     (EventOccurrenceParticipantService.rsvp as jest.Mock).mockResolvedValue(occurrenceParticipant);
     (EventOccurrenceParticipantService.cancel as jest.Mock).mockResolvedValue({
@@ -179,8 +181,9 @@ describe('EventSeriesParticipantService', () => {
         sharedVisibility: undefined,
       },
       'user-1',
+      undefined,
     );
-    expect(EventSeriesDAO.readEventById).not.toHaveBeenCalled();
+    expect(EventSeriesDAO.readEventById).toHaveBeenCalledWith(singleEventSeries.eventId);
     expect(result).toEqual(
       expect.objectContaining({
         participantId: occurrenceParticipant.participantId,
@@ -205,8 +208,9 @@ describe('EventSeriesParticipantService', () => {
     expect(EventOccurrenceParticipantService.rsvp).toHaveBeenCalledWith(
       expect.objectContaining({ occurrenceId: recurringOccurrence.occurrenceId }),
       'user-1',
+      undefined,
     );
-    expect(EventSeriesDAO.readEventById).not.toHaveBeenCalled();
+    expect(EventSeriesDAO.readEventById).toHaveBeenCalledWith(recurringEventSeries.eventId);
     expect(result.eventId).toBe(recurringEventSeries.eventId);
   });
 
@@ -216,16 +220,24 @@ describe('EventSeriesParticipantService', () => {
       userId: 'user-1',
     });
 
-    expect(EventOccurrenceParticipantService.cancel).toHaveBeenCalledWith(singleOccurrence.occurrenceId, 'user-1');
-    expect(EventSeriesDAO.readEventById).not.toHaveBeenCalled();
+    expect(EventOccurrenceParticipantService.cancel).toHaveBeenCalledWith(
+      singleOccurrence.occurrenceId,
+      'user-1',
+      undefined,
+    );
+    expect(EventSeriesDAO.readEventById).toHaveBeenCalledWith(singleEventSeries.eventId);
     expect(result.status).toBe(ParticipantStatus.Cancelled);
   });
 
   it('delegates check-in to the single occurrence', async () => {
     const result = await EventSeriesParticipantService.checkIn(singleEventSeries.eventId, 'user-1');
 
-    expect(EventOccurrenceParticipantService.checkIn).toHaveBeenCalledWith(singleOccurrence.occurrenceId, 'user-1');
-    expect(EventSeriesDAO.readEventById).not.toHaveBeenCalled();
+    expect(EventOccurrenceParticipantService.checkIn).toHaveBeenCalledWith(
+      singleOccurrence.occurrenceId,
+      'user-1',
+      undefined,
+    );
+    expect(EventSeriesDAO.readEventById).toHaveBeenCalledWith(singleEventSeries.eventId);
     expect(result.status).toBe(ParticipantStatus.CheckedIn);
   });
 
@@ -233,7 +245,7 @@ describe('EventSeriesParticipantService', () => {
     const result = await EventSeriesParticipantService.readByEvent(singleEventSeries.eventId);
 
     expect(EventOccurrenceParticipantDAO.readByOccurrence).toHaveBeenCalledWith(singleOccurrence.occurrenceId);
-    expect(EventSeriesDAO.readEventById).not.toHaveBeenCalled();
+    expect(EventSeriesDAO.readEventById).toHaveBeenCalledWith(singleEventSeries.eventId);
     expect(result).toEqual([
       expect.objectContaining({
         participantId: occurrenceParticipant.participantId,
@@ -250,7 +262,7 @@ describe('EventSeriesParticipantService', () => {
       singleOccurrence.occurrenceId,
       'user-1',
     );
-    expect(EventSeriesDAO.readEventById).not.toHaveBeenCalled();
+    expect(EventSeriesDAO.readEventById).toHaveBeenCalledWith(singleEventSeries.eventId);
     expect(result).toEqual(
       expect.objectContaining({
         participantId: occurrenceParticipant.participantId,
@@ -278,9 +290,7 @@ describe('EventSeriesParticipantService', () => {
       occurrenceParticipant,
       recurringOccurrenceParticipant,
     ]);
-    (EventSeriesDAO.readEventById as jest.Mock)
-      .mockResolvedValueOnce(singleEventSeries)
-      .mockResolvedValueOnce(recurringEventSeries);
+    (EventSeriesDAO.readEventsByIds as jest.Mock).mockResolvedValue([singleEventSeries, recurringEventSeries]);
 
     const result = await EventSeriesParticipantService.readByUser('user-1');
 
@@ -338,7 +348,7 @@ describe('EventSeriesParticipantService', () => {
       cancelledSoonerParticipant,
       activeLaterParticipant,
     ]);
-    (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(recurringEventSeries);
+    (EventSeriesDAO.readEventsByIds as jest.Mock).mockResolvedValue([recurringEventSeries]);
 
     const result = await EventSeriesParticipantService.readByUser('user-1');
 
@@ -350,5 +360,32 @@ describe('EventSeriesParticipantService', () => {
         status: ParticipantStatus.Going,
       }),
     );
+  });
+
+  it('filters hidden private series out of readByUser results', async () => {
+    const hiddenEventSeries: EventSeries = {
+      ...singleEventSeries,
+      eventId: 'event-hidden',
+      visibility: EventVisibility.Private,
+    };
+    const hiddenOccurrence: EventOccurrence = {
+      ...singleOccurrence,
+      occurrenceId: 'event-hidden#2026-05-10T10:00:00.000Z',
+      eventSeriesId: hiddenEventSeries.eventId,
+      occurrenceKey: 'event-hidden#2026-05-10T10:00:00.000Z',
+    };
+    const hiddenParticipant: EventOccurrenceParticipant = {
+      ...occurrenceParticipant,
+      occurrenceId: hiddenOccurrence.occurrenceId,
+    };
+
+    (EventOccurrenceParticipantDAO.readByUser as jest.Mock).mockResolvedValue([hiddenParticipant]);
+    (EventOccurrenceDAO.readByOccurrenceIds as jest.Mock).mockResolvedValue([hiddenOccurrence]);
+    (EventSeriesDAO.readEventsByIds as jest.Mock).mockResolvedValue([hiddenEventSeries]);
+
+    const result = await EventSeriesParticipantService.readByUser('user-1');
+
+    expect(result).toEqual([]);
+    expect(EventOccurrenceParticipantDAO.readByOccurrences).not.toHaveBeenCalled();
   });
 });

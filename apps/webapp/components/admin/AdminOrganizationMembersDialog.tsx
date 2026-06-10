@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useLazyQuery, useMutation, useQuery } from '@apollo/client';
+import { useSession } from 'next-auth/react';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import PersonAddAlt1RoundedIcon from '@mui/icons-material/PersonAddAlt1Rounded';
@@ -70,6 +71,7 @@ export default function AdminOrganizationMembersDialog({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { setToastProps } = useAppContext();
+  const { data: session } = useSession();
   const [searchQuery, setSearchQuery] = useState('');
   const [candidateRole, setCandidateRole] = useState<OrganizationRole>(DEFAULT_ROLE);
   const [membershipRoleState, setMembershipRoleState] = useState<Record<string, OrganizationRole>>({});
@@ -78,6 +80,7 @@ export default function AdminOrganizationMembersDialog({
   const [pendingDeleteMembership, setPendingDeleteMembership] = useState<{
     membershipId: string;
     username: string;
+    isSelf: boolean;
   } | null>(null);
   const [pendingTransfer, setPendingTransfer] = useState<{ userId: string; username: string } | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -269,10 +272,13 @@ export default function AdminOrganizationMembersDialog({
         },
       });
       await refreshMemberships();
-      notify('Membership removed.');
+      notify(pendingDeleteMembership.isSelf ? 'You left the organization.' : 'Membership removed.');
       setPendingDeleteMembership(null);
     } catch {
-      notify('Unable to remove this member.', 'error');
+      notify(
+        pendingDeleteMembership.isSelf ? 'Unable to leave this organization.' : 'Unable to remove this member.',
+        'error',
+      );
     } finally {
       setConfirmLoading(false);
     }
@@ -428,109 +434,139 @@ export default function AdminOrganizationMembersDialog({
                 />
               ) : (
                 <Stack spacing={1.25}>
-                  {memberships.map((membership) => (
-                    <Card key={membership.membershipId} elevation={0} sx={ADMIN_SURFACE_SX}>
-                      <CardContent sx={{ p: { xs: 2, md: 2.25 } }}>
-                        <Stack spacing={1.5}>
-                          <Stack
-                            direction={{ xs: 'column', sm: 'row' }}
-                            justifyContent="space-between"
-                            alignItems={{ xs: 'flex-start', sm: 'center' }}
-                            spacing={1}
-                          >
-                            <Stack spacing={0.35}>
-                              <Typography variant="subtitle2" fontWeight={800}>
-                                {membership.username ? `@${membership.username}` : membership.userId}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {membership.userId}
-                              </Typography>
+                  {memberships.map((membership) => {
+                    const isCurrentUser = membership.userId === session?.user?.userId;
+                    const canChangeRole = membership.role !== OrganizationRole.Owner && !isCurrentUser;
+                    const canLeaveOrganization = membership.role !== OrganizationRole.Owner && isCurrentUser;
+
+                    return (
+                      <Card key={membership.membershipId} elevation={0} sx={ADMIN_SURFACE_SX}>
+                        <CardContent sx={{ p: { xs: 2, md: 2.25 } }}>
+                          <Stack spacing={1.5}>
+                            <Stack
+                              direction={{ xs: 'column', sm: 'row' }}
+                              justifyContent="space-between"
+                              alignItems={{ xs: 'flex-start', sm: 'center' }}
+                              spacing={1}
+                            >
+                              <Stack spacing={0.35}>
+                                <Typography variant="subtitle2" fontWeight={800}>
+                                  {membership.username ? `@${membership.username}` : membership.userId}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {membership.userId}
+                                </Typography>
+                              </Stack>
+
+                              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                <Chip size="small" variant="outlined" label={membership.role} />
+                                {membership.role === OrganizationRole.Owner ? (
+                                  <Chip size="small" color="primary" label="Owner" />
+                                ) : null}
+                                {isCurrentUser ? <Chip size="small" color="success" label="You" /> : null}
+                              </Stack>
                             </Stack>
 
-                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                              <Chip size="small" variant="outlined" label={membership.role} />
-                              {membership.role === OrganizationRole.Owner ? (
-                                <Chip size="small" color="primary" label="Owner" />
-                              ) : null}
+                            <Stack
+                              direction={{ xs: 'column', sm: 'row' }}
+                              spacing={1}
+                              alignItems={{ xs: 'stretch', sm: 'center' }}
+                            >
+                              {canChangeRole ? (
+                                <>
+                                  <Select
+                                    value={membershipRoleState[membership.membershipId] ?? membership.role}
+                                    onChange={(event) =>
+                                      setMembershipRoleState((prev) => ({
+                                        ...prev,
+                                        [membership.membershipId]: event.target.value as OrganizationRole,
+                                      }))
+                                    }
+                                    size="small"
+                                    sx={{ minWidth: { xs: '100%', sm: 180 } }}
+                                  >
+                                    {Object.values(OrganizationRole)
+                                      .filter((role) => role !== OrganizationRole.Owner)
+                                      .map((role) => (
+                                        <MenuItem key={role} value={role}>
+                                          {role}
+                                        </MenuItem>
+                                      ))}
+                                  </Select>
+                                  <Button
+                                    startIcon={<SaveRoundedIcon />}
+                                    variant="outlined"
+                                    size="small"
+                                    disabled={savingMembershipId === membership.membershipId}
+                                    onClick={() => void handleSaveMembership(membership.membershipId)}
+                                    sx={{ width: { xs: '100%', sm: 'auto' } }}
+                                  >
+                                    {savingMembershipId === membership.membershipId ? 'Saving…' : 'Save role'}
+                                  </Button>
+                                  <Button
+                                    variant="text"
+                                    size="small"
+                                    onClick={() =>
+                                      setPendingTransfer({
+                                        userId: membership.userId,
+                                        username: membership.username ?? membership.userId,
+                                      })
+                                    }
+                                    sx={{ width: { xs: '100%', sm: 'auto' } }}
+                                  >
+                                    Make owner
+                                  </Button>
+                                  <Button
+                                    startIcon={<DeleteOutlineRoundedIcon />}
+                                    variant="text"
+                                    color="error"
+                                    size="small"
+                                    onClick={() =>
+                                      setPendingDeleteMembership({
+                                        membershipId: membership.membershipId,
+                                        username: membership.username ?? membership.userId,
+                                        isSelf: false,
+                                      })
+                                    }
+                                    sx={{ width: { xs: '100%', sm: 'auto' } }}
+                                  >
+                                    Remove
+                                  </Button>
+                                </>
+                              ) : canLeaveOrganization ? (
+                                <>
+                                  <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
+                                    Your role is view-only here. Use leave to remove yourself from this organization.
+                                  </Typography>
+                                  <Button
+                                    startIcon={<DeleteOutlineRoundedIcon />}
+                                    variant="text"
+                                    color="error"
+                                    size="small"
+                                    onClick={() =>
+                                      setPendingDeleteMembership({
+                                        membershipId: membership.membershipId,
+                                        username: membership.username ?? membership.userId,
+                                        isSelf: true,
+                                      })
+                                    }
+                                    sx={{ width: { xs: '100%', sm: 'auto' } }}
+                                  >
+                                    Leave organization
+                                  </Button>
+                                </>
+                              ) : (
+                                <Typography variant="caption" color="text.secondary">
+                                  Owner role cannot be edited or removed directly. Use “Make owner” on another member to
+                                  transfer ownership.
+                                </Typography>
+                              )}
                             </Stack>
                           </Stack>
-
-                          <Stack
-                            direction={{ xs: 'column', sm: 'row' }}
-                            spacing={1}
-                            alignItems={{ xs: 'stretch', sm: 'center' }}
-                          >
-                            {membership.role !== OrganizationRole.Owner ? (
-                              <>
-                                <Select
-                                  value={membershipRoleState[membership.membershipId] ?? membership.role}
-                                  onChange={(event) =>
-                                    setMembershipRoleState((prev) => ({
-                                      ...prev,
-                                      [membership.membershipId]: event.target.value as OrganizationRole,
-                                    }))
-                                  }
-                                  size="small"
-                                  sx={{ minWidth: { xs: '100%', sm: 180 } }}
-                                >
-                                  {Object.values(OrganizationRole)
-                                    .filter((role) => role !== OrganizationRole.Owner)
-                                    .map((role) => (
-                                      <MenuItem key={role} value={role}>
-                                        {role}
-                                      </MenuItem>
-                                    ))}
-                                </Select>
-                                <Button
-                                  startIcon={<SaveRoundedIcon />}
-                                  variant="outlined"
-                                  size="small"
-                                  disabled={savingMembershipId === membership.membershipId}
-                                  onClick={() => void handleSaveMembership(membership.membershipId)}
-                                  sx={{ width: { xs: '100%', sm: 'auto' } }}
-                                >
-                                  {savingMembershipId === membership.membershipId ? 'Saving…' : 'Save role'}
-                                </Button>
-                                <Button
-                                  variant="text"
-                                  size="small"
-                                  onClick={() =>
-                                    setPendingTransfer({
-                                      userId: membership.userId,
-                                      username: membership.username ?? membership.userId,
-                                    })
-                                  }
-                                  sx={{ width: { xs: '100%', sm: 'auto' } }}
-                                >
-                                  Make owner
-                                </Button>
-                                <Button
-                                  startIcon={<DeleteOutlineRoundedIcon />}
-                                  variant="text"
-                                  color="error"
-                                  size="small"
-                                  onClick={() =>
-                                    setPendingDeleteMembership({
-                                      membershipId: membership.membershipId,
-                                      username: membership.username ?? membership.userId,
-                                    })
-                                  }
-                                  sx={{ width: { xs: '100%', sm: 'auto' } }}
-                                >
-                                  Remove
-                                </Button>
-                              </>
-                            ) : (
-                              <Typography variant="caption" color="text.secondary">
-                                Owner role cannot be edited or removed directly. Use “Make owner” on another member to
-                                transfer ownership.
-                              </Typography>
-                            )}
-                          </Stack>
-                        </Stack>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </Stack>
               )}
             </Stack>
@@ -540,9 +576,17 @@ export default function AdminOrganizationMembersDialog({
 
       <ConfirmDialog
         open={Boolean(pendingDeleteMembership)}
-        title={`Remove ${pendingDeleteMembership?.username ?? 'this member'}?`}
-        description="This removes the user from the organization access list."
-        confirmLabel="Remove member"
+        title={
+          pendingDeleteMembership?.isSelf
+            ? `Leave ${organization?.name ?? 'this organization'}?`
+            : `Remove ${pendingDeleteMembership?.username ?? 'this member'}?`
+        }
+        description={
+          pendingDeleteMembership?.isSelf
+            ? 'You will lose access to this organization immediately.'
+            : 'This removes the user from the organization access list.'
+        }
+        confirmLabel={pendingDeleteMembership?.isSelf ? 'Leave organization' : 'Remove member'}
         onConfirm={handleConfirmDelete}
         onCancel={() => setPendingDeleteMembership(null)}
         loading={confirmLoading}

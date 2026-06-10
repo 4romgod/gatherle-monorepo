@@ -17,18 +17,10 @@ export function AdminMetricCard({ helper, label, tone = 'default', value }: Admi
   const backgroundColor = isAccent
     ? theme.dark
       ? 'rgba(122, 115, 255, 0.18)'
-      : theme.colors.primarySoft
+      : theme.colors.surfaceRaised
     : theme.dark
-      ? theme.colors.surfaceMuted
-      : theme.colors.surface;
-
-  const borderColor = isAccent
-    ? theme.dark
-      ? 'rgba(122, 115, 255, 0.45)'
-      : theme.colors.primary
-    : theme.dark
-      ? 'rgba(255, 255, 255, 0.10)'
-      : theme.colors.border;
+      ? theme.colors.surfaceRaised
+      : theme.colors.surfaceRaised;
 
   const labelColor = isAccent ? (theme.dark ? '#c7c4ff' : theme.colors.primary) : theme.colors.textSecondary;
 
@@ -38,7 +30,7 @@ export function AdminMetricCard({ helper, label, tone = 'default', value }: Admi
         styles.card,
         {
           backgroundColor,
-          borderColor,
+          borderWidth: 0,
         },
       ]}
     >

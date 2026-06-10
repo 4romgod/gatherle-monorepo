@@ -10,6 +10,7 @@ import { ProfileAvatar } from '@/components/core/ProfileAvatar';
 
 type OrganizationMemberRowProps = {
   canEditMembership: boolean;
+  canLeaveMembership?: boolean;
   canMakeOwner?: boolean;
   isCurrentUser: boolean;
   isExpanded: boolean;
@@ -20,6 +21,7 @@ type OrganizationMemberRowProps = {
   onPressManage: () => void;
   onPressRemove: () => void;
   onSelectRole: (role: OrganizationRole) => void;
+  removeLabel?: string;
   roleOptions: OrganizationRole[];
 };
 
@@ -29,6 +31,7 @@ function formatRoleLabel(role: OrganizationRole) {
 
 export function OrganizationMemberRow({
   canEditMembership,
+  canLeaveMembership,
   canMakeOwner,
   isCurrentUser,
   isExpanded,
@@ -39,6 +42,7 @@ export function OrganizationMemberRow({
   onPressManage,
   onPressRemove,
   onSelectRole,
+  removeLabel,
   roleOptions,
 }: OrganizationMemberRowProps) {
   const { theme } = useAppTheme();
@@ -82,6 +86,8 @@ export function OrganizationMemberRow({
 
           {canEditMembership ? (
             <InlineButton compact label={isExpanded ? 'Close' : 'Manage'} onPress={onPressManage} tone="neutral" />
+          ) : canLeaveMembership ? (
+            <InlineButton compact label="Leave" onPress={onPressRemove} tone="neutral" />
           ) : isCurrentUser ? (
             <View style={[styles.youBadge, { backgroundColor: theme.colors.surface }]}>
               <Text style={[styles.youBadgeText, { color: theme.colors.textPrimary }]}>You</Text>
@@ -103,7 +109,7 @@ export function OrganizationMemberRow({
             ))}
           </View>
 
-          <InlineButton compact label="Remove member" onPress={onPressRemove} tone="neutral" />
+          <InlineButton compact label={removeLabel ?? 'Remove member'} onPress={onPressRemove} tone="neutral" />
         </View>
       ) : null}
 

@@ -20,7 +20,7 @@ const getDialogTitle = (pending: PendingMembershipConfirmation | null) => {
     case 'role':
       return 'Confirm role change';
     case 'remove':
-      return 'Confirm removal';
+      return pending.isSelf ? 'Leave organization' : 'Confirm removal';
   }
 };
 
@@ -53,7 +53,14 @@ const getDialogContent = (pending: PendingMembershipConfirmation | null) => {
         </Box>
       );
     case 'remove':
-      return (
+      return pending.isSelf ? (
+        <Box>
+          <Typography variant="body2">You are about to leave this organization.</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            You will lose access to its member management tools immediately.
+          </Typography>
+        </Box>
+      ) : (
         <Box>
           <Typography variant="body2">
             You are about to remove{' '}
@@ -67,15 +74,22 @@ const getDialogContent = (pending: PendingMembershipConfirmation | null) => {
   }
 };
 
-const getConfirmLabel = (membershipAction: MembershipAction | null) => {
-  if (!membershipAction) return 'Confirm';
+const getConfirmLabel = (
+  pendingMembershipConfirmation: PendingMembershipConfirmation | null,
+  membershipAction: MembershipAction | null,
+) => {
+  if (!membershipAction) {
+    return pendingMembershipConfirmation?.type === 'remove' && pendingMembershipConfirmation.isSelf
+      ? 'Leave organization'
+      : 'Confirm';
+  }
   switch (membershipAction.type) {
     case 'add':
       return 'Inviting...';
     case 'update':
       return 'Updating...';
     case 'remove':
-      return 'Removing...';
+      return membershipAction.isSelf ? 'Leaving...' : 'Removing...';
   }
 };
 
@@ -96,7 +110,7 @@ export default function MembershipConfirmationDialog({
           Cancel
         </Button>
         <Button onClick={onConfirm} variant="contained" disabled={isProcessing}>
-          {getConfirmLabel(membershipAction)}
+          {getConfirmLabel(pendingMembershipConfirmation, membershipAction)}
         </Button>
       </DialogActions>
     </Dialog>

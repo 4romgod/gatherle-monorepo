@@ -7,6 +7,7 @@ import type {
 } from '@gatherle/commons/server/types';
 import {
   EventOccurrenceStatus,
+  EventVisibility,
   EventStatus,
   FollowTargetType,
   NotificationTargetType,
@@ -16,7 +17,11 @@ jest.mock('@/mongodb/dao', () => ({
   EventSeriesDAO: {
     create: jest.fn(),
     createSplitSuccessor: jest.fn(),
+    countEvents: jest.fn(),
     readEventById: jest.fn(),
+    readEventBySlug: jest.fn(),
+    readEvents: jest.fn(),
+    readEventsByIds: jest.fn(),
     updateEvent: jest.fn(),
     applySeriesSplit: jest.fn(),
     deleteEventById: jest.fn(),
@@ -41,6 +46,9 @@ jest.mock('@/mongodb/dao', () => ({
   NotificationDAO: {
     deleteByTargetReference: jest.fn(),
     deleteByOccurrenceIds: jest.fn(),
+  },
+  OrganizationMembershipDAO: {
+    readMembershipsByUserId: jest.fn(),
   },
 }));
 
@@ -78,6 +86,7 @@ import {
   EventSeriesDAO,
   FollowDAO,
   NotificationDAO,
+  OrganizationMembershipDAO,
   UserFeedDAO,
 } from '@/mongodb/dao';
 import EventOccurrenceService from '@/services/eventOccurrence';
@@ -102,6 +111,9 @@ const makeEvent = (overrides: Partial<EventSeries> = {}): EventSeries =>
     title: 'Test EventSeries',
     rsvpCount: 5,
     savedByCount: 2,
+    visibility: EventVisibility.Public,
+    organizers: [],
+    slug: 'test-event-series',
     ...overrides,
   }) as EventSeries;
 
@@ -136,6 +148,7 @@ describe('EventSeriesService', () => {
     (UserFeedDAO.deleteByEventId as jest.Mock).mockResolvedValue(undefined);
     (NotificationDAO.deleteByTargetReference as jest.Mock).mockResolvedValue(undefined);
     (NotificationDAO.deleteByOccurrenceIds as jest.Mock).mockResolvedValue(undefined);
+    (OrganizationMembershipDAO.readMembershipsByUserId as jest.Mock).mockResolvedValue([]);
     (EventOccurrenceService.syncEventSeriesOccurrences as jest.Mock).mockResolvedValue(undefined);
     (EventOccurrenceService.deleteOccurrencesForSeries as jest.Mock).mockResolvedValue(undefined);
     (EventOccurrenceService.deleteFutureExceptionOccurrences as jest.Mock).mockResolvedValue(undefined);
@@ -361,6 +374,95 @@ describe('EventSeriesService', () => {
           error: expect.any(Error),
         }),
       );
+    });
+  });
+
+  describe('visibility-aware reads', () => {
+    it('allows org members to read a private org event by id', async () => {
+      const event = makeEvent({
+        visibility: EventVisibility.Private,
+        orgId: 'org-1',
+      });
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(event);
+      (OrganizationMembershipDAO.readMembershipsByUserId as jest.Mock).mockResolvedValue([{ orgId: 'org-1' }]);
+
+      const result = await EventSeriesService.readVisibleEventById('event-1', 'user-1', UserRole.User);
+
+      expect(EventSeriesDAO.readEventById).toHaveBeenCalledWith('event-1');
+      expect(OrganizationMembershipDAO.readMembershipsByUserId).toHaveBeenCalledWith('user-1');
+      expect(result).toBe(event);
+    });
+
+    it('hides a private org event from non-members', async () => {
+      const event = makeEvent({
+        visibility: EventVisibility.Private,
+        orgId: 'org-1',
+      });
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(event);
+
+      await expect(EventSeriesService.readVisibleEventById('event-1', 'user-2', UserRole.User)).rejects.toMatchObject({
+        extensions: { code: 'NOT_FOUND' },
+      });
+    });
+
+    it('paginates after filtering out hidden private events', async () => {
+      (EventSeriesDAO.readEvents as jest.Mock).mockResolvedValue([
+        makeEvent({ eventId: 'event-1', title: 'Public 1' }),
+        makeEvent({ eventId: 'event-2', title: 'Private 1', visibility: EventVisibility.Private, orgId: 'org-1' }),
+        makeEvent({ eventId: 'event-3', title: 'Public 2' }),
+      ]);
+
+      const result = await EventSeriesService.readVisibleEvents({
+        pagination: {
+          skip: 0,
+          limit: 2,
+        },
+      } as any);
+
+      expect(EventSeriesDAO.readEvents).toHaveBeenCalledWith({ pagination: undefined });
+      expect(result.map((event) => event.eventId)).toEqual(['event-1', 'event-3']);
+    });
+
+    it('counts only visible events for the current viewer', async () => {
+      (EventSeriesDAO.readEvents as jest.Mock).mockResolvedValue([
+        makeEvent({ eventId: 'event-1', title: 'Public 1' }),
+        makeEvent({ eventId: 'event-2', title: 'Private 1', visibility: EventVisibility.Private, orgId: 'org-1' }),
+      ]);
+
+      const count = await EventSeriesService.countVisibleEvents(undefined, 'user-2', UserRole.User);
+
+      expect(count).toBe(1);
+    });
+
+    it('keeps DAO pagination intact for admin viewers', async () => {
+      const options = {
+        pagination: {
+          skip: 4,
+          limit: 2,
+        },
+      } as any;
+      const events = [makeEvent({ eventId: 'event-9', title: 'Admin visible event' })];
+      (EventSeriesDAO.readEvents as jest.Mock).mockResolvedValue(events);
+
+      const result = await EventSeriesService.readVisibleEvents(options, 'admin-1', UserRole.Admin);
+
+      expect(EventSeriesDAO.readEvents).toHaveBeenCalledWith(options);
+      expect(OrganizationMembershipDAO.readMembershipsByUserId).not.toHaveBeenCalled();
+      expect(result).toEqual(events);
+    });
+
+    it('delegates visible event counts to the DAO for admin viewers', async () => {
+      const options = {
+        filters: [{ field: 'status', value: EventStatus.Upcoming }],
+      } as any;
+      (EventSeriesDAO.countEvents as jest.Mock).mockResolvedValue(42);
+
+      const count = await EventSeriesService.countVisibleEvents(options, 'admin-1', UserRole.Admin);
+
+      expect(EventSeriesDAO.countEvents).toHaveBeenCalledWith(options);
+      expect(EventSeriesDAO.readEvents).not.toHaveBeenCalled();
+      expect(OrganizationMembershipDAO.readMembershipsByUserId).not.toHaveBeenCalled();
+      expect(count).toBe(42);
     });
   });
 

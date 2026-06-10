@@ -280,8 +280,9 @@ export const isAuthorizedByOperation = async (
     case OPERATIONS.ORGANIZATION_MEMBERSHIP.CREATE_ORGANIZATION_MEMBERSHIP:
       return await isAuthorizedToManageOrganization(args.input?.orgId, user);
     case OPERATIONS.ORGANIZATION_MEMBERSHIP.UPDATE_ORGANIZATION_MEMBERSHIP:
-    case OPERATIONS.ORGANIZATION_MEMBERSHIP.DELETE_ORGANIZATION_MEMBERSHIP:
       return await isAuthorizedToManageMembership(args.input?.membershipId, user);
+    case OPERATIONS.ORGANIZATION_MEMBERSHIP.DELETE_ORGANIZATION_MEMBERSHIP:
+      return await isAuthorizedToDeleteMembership(args.input?.membershipId, user);
     // Venue operations
     case OPERATIONS.VENUE.CREATE_VENUE:
       return await isAuthorizedToManageOrganization(args.input?.orgId, user);
@@ -474,6 +475,35 @@ const isAuthorizedToManageMembership = async (membershipId: string | undefined, 
     logger.debug(`Error checking membership authorization for user ${user.userId} on membership ${membershipId}`, {
       error,
     });
+    return false;
+  }
+};
+
+/**
+ * Check if a user is authorized to delete a membership.
+ * Users may always delete their own membership to leave an organization.
+ * Otherwise, the caller must be allowed to manage the organization.
+ */
+const isAuthorizedToDeleteMembership = async (membershipId: string | undefined, user: AuthClaims): Promise<boolean> => {
+  if (!membershipId) {
+    return false;
+  }
+
+  try {
+    const membership = await OrganizationMembershipDAO.readMembershipById(membershipId);
+
+    if (membership.userId === user.userId) {
+      return true;
+    }
+
+    return await isAuthorizedToManageOrganization(membership.orgId, user);
+  } catch (error) {
+    logger.debug(
+      `Error checking membership delete authorization for user ${user.userId} on membership ${membershipId}`,
+      {
+        error,
+      },
+    );
     return false;
   }
 };

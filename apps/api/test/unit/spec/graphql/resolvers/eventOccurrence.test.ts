@@ -11,6 +11,7 @@ jest.mock('@/services/eventOccurrence', () => ({
   default: {
     readEventOccurrences: jest.fn(),
     countEventOccurrences: jest.fn(),
+    readUserEventOccurrences: jest.fn(),
   },
 }));
 
@@ -159,6 +160,8 @@ describe('EventOccurrenceResolver field resolvers', () => {
     expect(EventOccurrenceService.readEventOccurrences).toHaveBeenCalledWith(
       options,
       context.requestCache?.eventOccurrenceQuery,
+      context.user?.userId,
+      context.user?.userRole,
     );
     expect(result).toEqual([occurrence]);
   });
@@ -177,6 +180,8 @@ describe('EventOccurrenceResolver field resolvers', () => {
     expect(EventOccurrenceService.countEventOccurrences).toHaveBeenCalledWith(
       options,
       context.requestCache?.eventOccurrenceQuery,
+      context.user?.userId,
+      context.user?.userRole,
     );
     expect(result).toBe(6);
   });

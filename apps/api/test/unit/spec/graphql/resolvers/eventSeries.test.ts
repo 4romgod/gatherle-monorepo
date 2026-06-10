@@ -15,6 +15,10 @@ jest.mock('@/services/eventSeries', () => ({
     deleteById: jest.fn(),
     deleteBySlug: jest.fn(),
     splitAtOccurrence: jest.fn(),
+    readVisibleEventById: jest.fn(),
+    readVisibleEventBySlug: jest.fn(),
+    readVisibleEvents: jest.fn(),
+    countVisibleEvents: jest.fn(),
     readTrending: jest.fn(),
   },
 }));
@@ -125,6 +129,47 @@ describe('EventSeriesResolver delete mutations', () => {
       expect(EventSeriesDAO.readEventBySlug).toHaveBeenCalledWith('test-event');
       expect(EventSeriesService.deleteBySlug).toHaveBeenCalledWith('test-event', 'user-001', UserRole.Admin, undefined);
       expect(result).toEqual(mockEvent);
+    });
+  });
+
+  describe('public read queries', () => {
+    it('delegates readEventById through the visibility-aware service', async () => {
+      (EventSeriesService.readVisibleEventById as jest.Mock).mockResolvedValue(mockEvent);
+
+      const result = await resolver.readEventById('event-001', mockContext);
+
+      expect(validation.validateMongodbId).toHaveBeenCalledWith('event-001', expect.any(String));
+      expect(EventSeriesService.readVisibleEventById).toHaveBeenCalledWith('event-001', 'user-001', UserRole.Admin);
+      expect(result).toEqual(mockEvent);
+    });
+
+    it('delegates readEventBySlug through the visibility-aware service', async () => {
+      (EventSeriesService.readVisibleEventBySlug as jest.Mock).mockResolvedValue(mockEvent);
+
+      const result = await resolver.readEventBySlug('test-event', mockContext);
+
+      expect(EventSeriesService.readVisibleEventBySlug).toHaveBeenCalledWith('test-event', 'user-001', UserRole.Admin);
+      expect(result).toEqual(mockEvent);
+    });
+
+    it('filters readEvents through the visibility-aware service', async () => {
+      const options = { pagination: { skip: 0, limit: 10 } } as any;
+      (EventSeriesService.readVisibleEvents as jest.Mock).mockResolvedValue([mockEvent]);
+
+      const result = await resolver.readEvents(options, mockContext);
+
+      expect(EventSeriesService.readVisibleEvents).toHaveBeenCalledWith(options, 'user-001', UserRole.Admin);
+      expect(result).toEqual([mockEvent]);
+    });
+
+    it('counts only visible events for the current viewer', async () => {
+      const options = { pagination: { skip: 0, limit: 10 } } as any;
+      (EventSeriesService.countVisibleEvents as jest.Mock).mockResolvedValue(3);
+
+      const result = await resolver.readEventsCount(options, mockContext);
+
+      expect(EventSeriesService.countVisibleEvents).toHaveBeenCalledWith(options, 'user-001', UserRole.Admin);
+      expect(result).toBe(3);
     });
   });
 });

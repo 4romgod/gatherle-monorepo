@@ -16,9 +16,13 @@ import {
 import { useVideoPlayer, VideoView } from 'expo-video';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { EventMomentImageDisplayMode } from '@data/graphql/types/graphql';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { fontSize, typography } from '@/app/theme/typography';
+import { useCreateEventMoment } from '@/hooks/moments/useCreateEventMoment';
+import { MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET } from '@/lib/constants/layout';
+import { MOBILE_MEDIA_ASPECT_RATIOS } from '@/lib/media/constants';
 import {
   MOMENT_BACKGROUND_SWATCHES,
   MOMENT_DEFAULT_BACKGROUND,
@@ -28,16 +32,16 @@ import {
   MOMENT_MAX_VIDEO_BYTES,
   MOMENT_MAX_VIDEO_DURATION_MS,
   MOMENT_VIDEO_EXTENSIONS,
+  type MomentBackgroundToken,
 } from '@/lib/moments/constants';
-import { MOBILE_MEDIA_ASPECT_RATIOS } from '@/lib/media/constants';
-import type { MomentBackgroundToken } from '@/lib/moments/constants';
 import { getMomentAssetExtension } from '@/lib/moments/upload';
-import { useCreateEventMoment } from '@/hooks/moments/useCreateEventMoment';
-import { useAppFeedback } from '@/app/providers/AppFeedbackProvider';
-import { EventMomentImageDisplayMode } from '@data/graphql/types/graphql';
-import { MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET } from '@/lib/constants/layout';
 
 type ComposerTab = 'text' | 'image' | 'video';
+
+type ComposerNotice = {
+  message: string;
+  title: string;
+};
 
 export function MomentComposerModal({
   authToken,
@@ -54,7 +58,6 @@ export function MomentComposerModal({
   onCreated: () => void;
   open: boolean;
 }) {
-  const { showToast, withBlockingLoader } = useAppFeedback();
   const { theme } = useAppTheme();
   const insets = useSafeAreaInsets();
   const { createMoment, loading } = useCreateEventMoment(authToken);
@@ -65,6 +68,8 @@ export function MomentComposerModal({
   const [imageDisplayMode, setImageDisplayMode] = useState<EventMomentImageDisplayMode>(
     EventMomentImageDisplayMode.Fit,
   );
+  const [composerNotice, setComposerNotice] = useState<ComposerNotice | null>(null);
+  const [submissionMessage, setSubmissionMessage] = useState<string | null>(null);
   const remainingCaption = useMemo(() => MOMENT_MAX_CAPTION_LENGTH - caption.length, [caption.length]);
   const videoPreviewSource = useMemo(
     () => (activeTab === 'video' && selectedAsset?.uri ? { uri: selectedAsset.uri } : null),
@@ -93,16 +98,28 @@ export function MomentComposerModal({
     setSelectedBackground(MOMENT_DEFAULT_BACKGROUND);
     setSelectedAsset(null);
     setImageDisplayMode(EventMomentImageDisplayMode.Fit);
+    setComposerNotice(null);
+    setSubmissionMessage(null);
   };
 
-  const handleClose = () => {
+  const closeComposer = (force = false) => {
+    if (loading && !force) {
+      return;
+    }
+
     resetState();
     onClose();
   };
 
+  const handleClose = () => {
+    closeComposer();
+  };
+
+  const showComposerError = (title: string, message: string) => {
+    setComposerNotice({ message, title });
+  };
+
   const handlePickImage = async () => {
-    // Intentionally keep the original asset intact. Moments now use a 9:16
-    // frame with Fit/Fill display modes instead of destructive picker cropping.
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 0.85,
@@ -117,11 +134,7 @@ export function MomentComposerModal({
     const extension = getMomentAssetExtension(asset);
 
     if (!MOMENT_IMAGE_EXTENSIONS.includes(extension as (typeof MOMENT_IMAGE_EXTENSIONS)[number])) {
-      showToast({
-        message: 'Please choose a JPEG, PNG, or WEBP image. GIFs are not supported for moments.',
-        title: 'Unsupported image',
-        tone: 'error',
-      });
+      showComposerError('Unsupported image', 'Please choose a JPEG, PNG, or WEBP image. GIFs are not supported.');
       return;
     }
 
@@ -136,10 +149,11 @@ export function MomentComposerModal({
     }
 
     if (effectiveImageSize != null && effectiveImageSize > MOMENT_MAX_IMAGE_BYTES) {
-      showToast({ message: 'Images must be 15 MB or smaller.', title: 'Image too large', tone: 'error' });
+      showComposerError('Image too large', 'Images must be 15 MB or smaller.');
       return;
     }
 
+    setComposerNotice(null);
     setSelectedAsset(asset);
     setActiveTab('image');
   };
@@ -159,88 +173,95 @@ export function MomentComposerModal({
     const extension = getMomentAssetExtension(asset);
 
     if (!MOMENT_VIDEO_EXTENSIONS.includes(extension as (typeof MOMENT_VIDEO_EXTENSIONS)[number])) {
-      showToast({ message: 'Please choose an MP4, MOV, or WEBM video.', title: 'Unsupported video', tone: 'error' });
+      showComposerError('Unsupported video', 'Please choose an MP4, MOV, or WEBM video.');
       return;
     }
 
     if (asset.fileSize && asset.fileSize > MOMENT_MAX_VIDEO_BYTES) {
-      showToast({ message: 'Videos must be 75 MB or smaller.', title: 'Video too large', tone: 'error' });
+      showComposerError('Video too large', 'Videos must be 75 MB or smaller.');
       return;
     }
 
     if (asset.duration && asset.duration > MOMENT_MAX_VIDEO_DURATION_MS) {
-      showToast({ message: 'Videos must be 30 seconds or shorter.', title: 'Video too long', tone: 'error' });
+      showComposerError('Video too long', 'Videos must be 30 seconds or shorter.');
       return;
     }
 
+    setComposerNotice(null);
     setSelectedAsset(asset);
     setActiveTab('video');
   };
 
   const handleSubmit = async () => {
+    if (activeTab === 'text' && !caption.trim()) {
+      showComposerError('Caption required', 'Write a caption before posting this text moment.');
+      return;
+    }
+
     try {
-      await withBlockingLoader('Sharing your moment…', async () => {
-        if (activeTab === 'text') {
-          await createMoment({
-            background: selectedBackground,
-            caption,
-            eventId,
-            occurrenceId,
-            type: 'text',
-          });
-        } else if (activeTab === 'image') {
-          if (!selectedAsset) {
-            showToast({
-              message: 'Choose an image before posting this moment.',
-              title: 'Image required',
-              tone: 'error',
-            });
-            return;
-          }
+      setComposerNotice(null);
+      setSubmissionMessage(activeTab === 'text' ? 'Publishing your moment…' : 'Preparing your media…');
 
-          await createMoment({
-            asset: selectedAsset,
-            caption,
-            eventId,
-            imageDisplayMode,
-            occurrenceId,
-            type: 'image',
-          });
-        } else {
-          if (!selectedAsset) {
-            showToast({
-              message: 'Choose a video before posting this moment.',
-              title: 'Video required',
-              tone: 'error',
-            });
-            return;
-          }
-
-          await createMoment({
-            asset: selectedAsset,
-            caption,
-            eventId,
-            occurrenceId,
-            type: 'video',
-          });
+      if (activeTab === 'text') {
+        await createMoment({
+          background: selectedBackground,
+          caption,
+          eventId,
+          occurrenceId,
+          onProgressMessage: setSubmissionMessage,
+          type: 'text',
+        });
+      } else if (activeTab === 'image') {
+        if (!selectedAsset) {
+          showComposerError('Image required', 'Choose an image before posting this moment.');
+          setSubmissionMessage(null);
+          return;
         }
 
-        handleClose();
-        onCreated();
-        showToast({ message: 'Your moment is live.', tone: 'success' });
-      });
+        await createMoment({
+          asset: selectedAsset,
+          caption,
+          eventId,
+          imageDisplayMode,
+          occurrenceId,
+          onProgressMessage: setSubmissionMessage,
+          type: 'image',
+        });
+      } else {
+        if (!selectedAsset) {
+          showComposerError('Video required', 'Choose a video before posting this moment.');
+          setSubmissionMessage(null);
+          return;
+        }
+
+        await createMoment({
+          asset: selectedAsset,
+          caption,
+          eventId,
+          occurrenceId,
+          onProgressMessage: setSubmissionMessage,
+          type: 'video',
+        });
+      }
+
+      setSubmissionMessage(null);
+      onCreated();
+      closeComposer(true);
     } catch (error) {
-      showToast({
-        message: error instanceof Error ? error.message : 'We could not post this moment.',
-        title: 'Moment failed',
-        tone: 'error',
-      });
+      setSubmissionMessage(null);
+      showComposerError(
+        'Moment failed',
+        error instanceof Error ? error.message : 'We could not post this moment right now.',
+      );
     }
   };
 
   if (!open) {
     return null;
   }
+
+  const submitLabel = loading ? 'Posting moment' : 'Post moment';
+  const submissionOverlayMessage = submissionMessage ?? 'We’re getting this moment ready for the event feed.';
 
   return (
     <Modal animationType="slide" onRequestClose={handleClose} statusBarTranslucent visible={open}>
@@ -266,11 +287,14 @@ export function MomentComposerModal({
                 accessibilityHint="Dismisses the moment composer without posting"
                 accessibilityLabel="Close moment composer"
                 accessibilityRole="button"
+                disabled={loading}
                 hitSlop={12}
                 onPress={handleClose}
                 style={styles.closeButton}
               >
-                <Text style={[styles.closeText, { color: theme.colors.textSecondary }]}>×</Text>
+                <Text style={[styles.closeText, { color: theme.colors.textSecondary, opacity: loading ? 0.45 : 1 }]}>
+                  ×
+                </Text>
               </Pressable>
             </View>
 
@@ -279,10 +303,12 @@ export function MomentComposerModal({
                 const active = tab === activeTab;
                 return (
                   <Pressable
+                    disabled={loading}
                     key={tab}
                     onPress={() => {
                       if (tab !== activeTab) {
                         setSelectedAsset(null);
+                        setComposerNotice(null);
                       }
                       setActiveTab(tab);
                     }}
@@ -291,6 +317,7 @@ export function MomentComposerModal({
                       {
                         backgroundColor: active ? theme.colors.primarySoft : theme.colors.surface,
                         borderColor: active ? theme.colors.primary : theme.colors.border,
+                        opacity: loading ? 0.55 : 1,
                       },
                     ]}
                   >
@@ -330,6 +357,7 @@ export function MomentComposerModal({
                     const selected = swatch.token === selectedBackground;
                     return (
                       <Pressable
+                        disabled={loading}
                         key={swatch.token}
                         onPress={() => setSelectedBackground(swatch.token)}
                         style={[
@@ -337,6 +365,7 @@ export function MomentComposerModal({
                           {
                             backgroundColor: swatch.color,
                             borderColor: selected ? theme.colors.textPrimary : 'transparent',
+                            opacity: loading ? 0.55 : 1,
                           },
                         ]}
                       />
@@ -375,12 +404,14 @@ export function MomentComposerModal({
                   </View>
                 ) : (
                   <Pressable
+                    disabled={loading}
                     onPress={() => void handlePickImage()}
                     style={[
                       styles.imagePickerButton,
                       {
                         backgroundColor: theme.colors.surface,
                         borderColor: theme.colors.border,
+                        opacity: loading ? 0.55 : 1,
                       },
                     ]}
                   >
@@ -399,6 +430,7 @@ export function MomentComposerModal({
                       const selected = imageDisplayMode === option.value;
                       return (
                         <Pressable
+                          disabled={loading}
                           key={option.value}
                           onPress={() => setImageDisplayMode(option.value)}
                           style={[
@@ -406,6 +438,7 @@ export function MomentComposerModal({
                             {
                               backgroundColor: selected ? theme.colors.primarySoft : theme.colors.surface,
                               borderColor: selected ? theme.colors.primary : theme.colors.border,
+                              opacity: loading ? 0.55 : 1,
                             },
                           ]}
                         >
@@ -426,8 +459,12 @@ export function MomentComposerModal({
                 ) : null}
 
                 {selectedAsset ? (
-                  <Pressable onPress={() => void handlePickImage()}>
-                    <Text style={[styles.changeImageText, { color: theme.colors.primary }]}>Change image</Text>
+                  <Pressable disabled={loading} onPress={() => void handlePickImage()}>
+                    <Text
+                      style={[styles.changeImageText, { color: theme.colors.primary, opacity: loading ? 0.55 : 1 }]}
+                    >
+                      Change image
+                    </Text>
                   </Pressable>
                 ) : null}
                 <Text style={[styles.mediaHintText, { color: theme.colors.textMuted }]}>
@@ -447,12 +484,14 @@ export function MomentComposerModal({
                   </View>
                 ) : (
                   <Pressable
+                    disabled={loading}
                     onPress={() => void handlePickVideo()}
                     style={[
                       styles.imagePickerButton,
                       {
                         backgroundColor: theme.colors.surface,
                         borderColor: theme.colors.border,
+                        opacity: loading ? 0.55 : 1,
                       },
                     ]}
                   >
@@ -461,8 +500,12 @@ export function MomentComposerModal({
                 )}
 
                 {selectedAsset ? (
-                  <Pressable onPress={() => void handlePickVideo()}>
-                    <Text style={[styles.changeImageText, { color: theme.colors.primary }]}>Change video</Text>
+                  <Pressable disabled={loading} onPress={() => void handlePickVideo()}>
+                    <Text
+                      style={[styles.changeImageText, { color: theme.colors.primary, opacity: loading ? 0.55 : 1 }]}
+                    >
+                      Change video
+                    </Text>
                   </Pressable>
                 ) : null}
                 <Text style={[styles.mediaHintText, { color: theme.colors.textMuted }]}>
@@ -473,9 +516,15 @@ export function MomentComposerModal({
 
             <View style={styles.inputWrap}>
               <TextInput
+                editable={!loading}
                 maxLength={MOMENT_MAX_CAPTION_LENGTH}
                 multiline
-                onChangeText={setCaption}
+                onChangeText={(nextCaption) => {
+                  if (composerNotice) {
+                    setComposerNotice(null);
+                  }
+                  setCaption(nextCaption);
+                }}
                 placeholder={activeTab === 'text' ? 'What’s happening?' : 'Add a caption (optional)'}
                 placeholderTextColor={theme.colors.textMuted}
                 style={[
@@ -484,6 +533,7 @@ export function MomentComposerModal({
                     backgroundColor: theme.colors.surface,
                     borderColor: theme.colors.border,
                     color: theme.colors.textPrimary,
+                    opacity: loading ? 0.7 : 1,
                   },
                 ]}
                 textAlignVertical="top"
@@ -503,6 +553,23 @@ export function MomentComposerModal({
               },
             ]}
           >
+            {composerNotice ? (
+              <View
+                style={[
+                  styles.noticeCard,
+                  {
+                    backgroundColor: theme.colors.errorSoft,
+                    borderColor: theme.colors.error,
+                  },
+                ]}
+              >
+                <Text style={[styles.noticeTitle, { color: theme.colors.textPrimary }]}>{composerNotice.title}</Text>
+                <Text style={[styles.noticeMessage, { color: theme.colors.textSecondary }]}>
+                  {composerNotice.message}
+                </Text>
+              </View>
+            ) : null}
+
             <Pressable
               disabled={loading}
               onPress={() => void handleSubmit()}
@@ -510,17 +577,40 @@ export function MomentComposerModal({
                 styles.submitButton,
                 {
                   backgroundColor: theme.colors.secondary,
-                  opacity: loading ? 0.7 : 1,
+                  opacity: loading ? 0.82 : 1,
                 },
               ]}
             >
               {loading ? (
-                <ActivityIndicator color={theme.colors.primaryContrast} />
+                <View style={styles.submitLoadingRow}>
+                  <ActivityIndicator color={theme.colors.primaryContrast} />
+                  <Text style={[styles.submitLabel, { color: theme.colors.primaryContrast }]}>{submitLabel}</Text>
+                </View>
               ) : (
-                <Text style={[styles.submitLabel, { color: theme.colors.primaryContrast }]}>Post moment</Text>
+                <Text style={[styles.submitLabel, { color: theme.colors.primaryContrast }]}>{submitLabel}</Text>
               )}
             </Pressable>
           </View>
+
+          {loading ? (
+            <View pointerEvents="auto" style={styles.submissionOverlay}>
+              <View
+                style={[
+                  styles.submissionCard,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.border,
+                  },
+                ]}
+              >
+                <ActivityIndicator color={theme.colors.primary} size="large" />
+                <Text style={[styles.submissionTitle, { color: theme.colors.textPrimary }]}>Posting moment</Text>
+                <Text style={[styles.submissionMessage, { color: theme.colors.textSecondary }]}>
+                  {submissionOverlayMessage}
+                </Text>
+              </View>
+            </View>
+          ) : null}
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -541,11 +631,6 @@ const styles = StyleSheet.create({
     ...typography.bodyBold,
     fontSize: fontSize.base,
   },
-  closeText: {
-    ...typography.displayBold,
-    fontSize: 36,
-    lineHeight: 36,
-  },
   closeButton: {
     alignItems: 'center',
     height: 44,
@@ -554,6 +639,11 @@ const styles = StyleSheet.create({
     right: 20,
     top: 4,
     width: 44,
+  },
+  closeText: {
+    ...typography.displayBold,
+    fontSize: 36,
+    lineHeight: 36,
   },
   content: {
     gap: 18,
@@ -580,6 +670,13 @@ const styles = StyleSheet.create({
   displayModeRow: {
     flexDirection: 'row',
     gap: 10,
+  },
+  footerWrap: {
+    borderTopWidth: 1,
+    gap: 12,
+    paddingBottom: 12,
+    paddingHorizontal: 20,
+    paddingTop: 14,
   },
   headerRow: {
     alignItems: 'center',
@@ -639,6 +736,22 @@ const styles = StyleSheet.create({
   modalRoot: {
     flex: 1,
   },
+  noticeCard: {
+    borderRadius: MOBILE_RADIUS.card,
+    borderWidth: 1,
+    gap: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  noticeMessage: {
+    ...typography.bodyMedium,
+    fontSize: fontSize.base,
+    lineHeight: 19,
+  },
+  noticeTitle: {
+    ...typography.bodyBold,
+    fontSize: fontSize.base,
+  },
   remainingText: {
     ...typography.bodyMedium,
     alignSelf: 'flex-end',
@@ -647,12 +760,6 @@ const styles = StyleSheet.create({
   },
   scrollArea: {
     flex: 1,
-  },
-  footerWrap: {
-    borderTopWidth: 1,
-    paddingBottom: 12,
-    paddingHorizontal: 20,
-    paddingTop: 14,
   },
   submitButton: {
     alignItems: 'center',
@@ -663,6 +770,45 @@ const styles = StyleSheet.create({
   submitLabel: {
     ...typography.bodyBold,
     fontSize: fontSize.xl,
+  },
+  submitLoadingRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  submissionCard: {
+    alignItems: 'center',
+    borderRadius: 26,
+    borderWidth: 1,
+    gap: 10,
+    maxWidth: 300,
+    paddingHorizontal: 24,
+    paddingVertical: 26,
+    shadowColor: '#081120',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.24,
+    shadowRadius: 30,
+  },
+  submissionMessage: {
+    ...typography.bodyMedium,
+    fontSize: fontSize.sm,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  submissionOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(8, 17, 32, 0.42)',
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  submissionTitle: {
+    ...typography.displayBold,
+    fontSize: fontSize.lg,
+    letterSpacing: -0.4,
   },
   swatch: {
     borderRadius: 999,
@@ -711,7 +857,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xl3,
   },
   videoPreviewWrap: {
-    overflow: 'hidden',
     borderRadius: 24,
+    overflow: 'hidden',
   },
 });

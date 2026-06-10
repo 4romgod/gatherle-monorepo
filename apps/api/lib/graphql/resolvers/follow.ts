@@ -63,7 +63,7 @@ export class FollowResolver {
     validateInput(CreateFollowInputSchema, input);
     const user = getAuthenticatedUser(context);
 
-    return FollowService.follow({ ...input, followerUserId: user.userId });
+    return FollowService.follow({ ...input, followerUserId: user.userId, followerUserRole: user.userRole });
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
@@ -232,13 +232,13 @@ export class FollowResolver {
     @Ctx() context: ServerContext,
   ): Promise<Follow[]> {
     const user = getAuthenticatedUser(context);
-    return FollowDAO.readSavedEventsForUser(user.userId, options);
+    return FollowService.readSavedEvents(user.userId, options, user.userId, user.userRole);
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Query(() => Boolean, { description: 'Check if the authenticated user has saved a specific event' })
   async isEventSaved(@Arg('eventId', () => ID) eventId: string, @Ctx() context: ServerContext): Promise<boolean> {
     const user = getAuthenticatedUser(context);
-    return FollowDAO.isEventSavedByUser(eventId, user.userId);
+    return FollowService.isEventSaved(eventId, user.userId, user.userId, user.userRole);
   }
 }

@@ -1,4 +1,4 @@
-import type { Follow, CreateFollowInput, User } from '@gatherle/commons/server/types';
+import type { Follow, CreateFollowInput, QueryOptionsInput, User, UserRole } from '@gatherle/commons/server/types';
 import {
   FollowTargetType,
   FollowApprovalStatus,
@@ -6,8 +6,8 @@ import {
   NotificationType,
   NotificationTargetType,
 } from '@gatherle/commons/server/types';
-import { FollowDAO, UserDAO, OrganizationDAO, EventSeriesDAO } from '@/mongodb/dao';
-import { CustomError, ErrorTypes } from '@/utils';
+import { FollowDAO, UserDAO, OrganizationDAO } from '@/mongodb/dao';
+import { CustomError, ErrorTypes, validatePaginationInput } from '@/utils';
 import { logger } from '@/utils/logger';
 import NotificationService from './notification';
 import RecommendationService from './recommendation';
@@ -17,9 +17,11 @@ import {
   publishFollowRequestUpdated,
   type FollowRequestRealtimeSnapshot,
 } from '@/websocket/publisher';
+import EventSeriesService from './eventSeries';
 
 export interface FollowParams extends CreateFollowInput {
   followerUserId: string;
+  followerUserRole?: UserRole;
 }
 
 export interface UnfollowParams {
@@ -32,6 +34,15 @@ export interface UnfollowParams {
  * Service for managing follow relationships with notification integration
  */
 class FollowService {
+  private static paginateFollows(follows: Follow[], pagination?: QueryOptionsInput['pagination']): Follow[] {
+    if (!pagination) {
+      return follows;
+    }
+
+    const { skip, limit } = validatePaginationInput(pagination);
+    return follows.slice(skip ?? 0, (skip ?? 0) + limit);
+  }
+
   private static toFollowRealtimeSnapshot(
     follow: Follow,
     follower: Pick<User, 'userId' | 'username' | 'email' | 'given_name' | 'family_name' | 'profile_picture' | 'bio'>,
@@ -61,7 +72,7 @@ class FollowService {
    * Sends appropriate notifications based on follow type and approval status
    */
   static async follow(params: FollowParams): Promise<Follow> {
-    const { followerUserId, targetType, targetId, ...rest } = params;
+    const { followerUserId, followerUserRole, targetType, targetId, ...rest } = params;
 
     let approvalStatus = FollowApprovalStatus.Pending;
     let followerUserForRealtime: Pick<
@@ -95,7 +106,7 @@ class FollowService {
           ? FollowApprovalStatus.Accepted
           : FollowApprovalStatus.Pending;
     } else if (targetType === FollowTargetType.EventSeries) {
-      await EventSeriesDAO.readEventById(targetId);
+      await EventSeriesService.readVisibleEventById(targetId, followerUserId, followerUserRole);
       // Events are always publicly saveable - no approval needed
       approvalStatus = FollowApprovalStatus.Accepted;
     }
@@ -257,6 +268,64 @@ class FollowService {
     targetType: FollowTargetType,
   ): Promise<boolean> {
     return FollowDAO.removeFollower(targetUserId, followerUserId, targetType);
+  }
+
+  static async readSavedEvents(
+    userId: string,
+    options?: QueryOptionsInput,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<Follow[]> {
+    const savedEvents = await FollowDAO.readSavedEventsForUser(
+      userId,
+      options
+        ? {
+            ...options,
+            pagination: undefined,
+          }
+        : undefined,
+    );
+
+    if (savedEvents.length === 0) {
+      return [];
+    }
+
+    const visibleEventIds = new Set(
+      (
+        await EventSeriesService.readVisibleEventsByIds(
+          [...new Set(savedEvents.map((savedEvent) => savedEvent.targetId))],
+          viewerUserId,
+          viewerUserRole,
+        )
+      ).map((eventSeries) => eventSeries.eventId),
+    );
+
+    const visibleSavedEvents = savedEvents.filter((savedEvent) => visibleEventIds.has(savedEvent.targetId));
+    return this.paginateFollows(visibleSavedEvents, options?.pagination);
+  }
+
+  static async isEventSaved(
+    eventId: string,
+    userId: string,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): Promise<boolean> {
+    try {
+      await EventSeriesService.readVisibleEventById(eventId, viewerUserId, viewerUserRole);
+    } catch (error) {
+      const errorCode =
+        error && typeof error === 'object' && 'extensions' in error
+          ? (error.extensions as { code?: string } | undefined)?.code
+          : undefined;
+
+      if (errorCode === ErrorTypes.NOT_FOUND.errorCode) {
+        return false;
+      }
+
+      throw error;
+    }
+
+    return FollowDAO.isEventSavedByUser(eventId, userId);
   }
 
   /**
