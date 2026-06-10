@@ -11,6 +11,7 @@ export type ApiE2ERuntimeContext = {
   seededUsersByEmail: Record<string, UserWithToken>;
   firstEventCategory: CachedEventCategoryRef;
   jwtSecret?: string;
+  mongoDbUrl?: string;
   e2eUserNamespace?: string;
 };
 

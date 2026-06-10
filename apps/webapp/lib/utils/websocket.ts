@@ -1,6 +1,10 @@
 /**
  * WebSocket utility functions for realtime connections
  */
+import {
+  normalizeWebSocketBaseUrl as normalizeSharedWebSocketBaseUrl,
+  resolveRealtimeWebsocketBaseUrl,
+} from '@gatherle/commons/client/utils';
 import { APP_NAMESPACE } from '@/lib/constants/app';
 
 export const RECONNECT_BASE_MS = 1000;
@@ -11,22 +15,21 @@ export const WEBSOCKET_AUTH_PROTOCOL_PREFIX = `${APP_NAMESPACE}.jwt.`;
 /**
  * Normalizes a WebSocket URL by converting http(s) protocols to ws(s)
  */
-export const normalizeWebSocketBaseUrl = (value: string): string | null => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
+export const normalizeWebSocketBaseUrl = normalizeSharedWebSocketBaseUrl;
 
-  if (trimmed.startsWith('https://')) {
-    return `wss://${trimmed.slice('https://'.length)}`;
-  }
-
-  if (trimmed.startsWith('http://')) {
-    return `ws://${trimmed.slice('http://'.length)}`;
-  }
-
-  return trimmed;
-};
+export function resolveWebappWebsocketBaseUrl(
+  explicitValue?: string | null,
+  graphQlUrl?: string | null,
+): {
+  websocketBaseUrl: string | null;
+  websocketSource: 'explicit' | 'derived-local' | 'derived-remote' | 'missing';
+} {
+  return resolveRealtimeWebsocketBaseUrl({
+    explicitValue,
+    graphQlUrl,
+    upgradeInsecureRemoteExplicitUrls: true,
+  });
+}
 
 export const buildWebSocketAuthProtocols = (token: string): string[] => {
   return [`${WEBSOCKET_AUTH_PROTOCOL_PREFIX}${token}`];

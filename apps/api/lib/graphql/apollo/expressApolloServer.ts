@@ -28,6 +28,7 @@ import { createEventOccurrenceQueryRequestCache } from '@/services/eventOccurren
 import { logger } from '@/utils/logger';
 import { verifyToken } from '@/utils/auth';
 import type { AuthClaims } from '@/utils/auth';
+import { resolveMobileRequestAccessContext } from '@/utils/mobileDeviceAccess';
 import { createCorsMiddleware } from './cors';
 
 const DEV_PORT = 9000;
@@ -81,7 +82,10 @@ export const startExpressApolloServer = async (
           }
         }
 
+        const mobileDeviceAccess = await resolveMobileRequestAccessContext(req.headers);
+
         return {
+          mobileDeviceAccess,
           token: tokenValue,
           user,
           req,

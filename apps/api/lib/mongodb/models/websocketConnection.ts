@@ -20,6 +20,9 @@ class WebSocketConnectionModel {
   @prop({ type: () => String, required: true, trim: true })
   userId!: string;
 
+  @prop({ type: () => String, trim: true })
+  deviceInstallationId?: string;
+
   @prop({ type: () => String, required: true, trim: true })
   domainName!: string;
 

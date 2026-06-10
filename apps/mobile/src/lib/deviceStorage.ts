@@ -2,12 +2,15 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 const APP_STORAGE_PREFIX = 'gatherle.mobile';
+const APP_INSTALLATION_STORAGE_KEY = `${APP_STORAGE_PREFIX}.push-installation-id`;
 
 export const DEVICE_STORAGE_KEYS = {
+  appInstallationId: APP_INSTALLATION_STORAGE_KEY,
+  appInstallationRegistrationSecret: `${APP_STORAGE_PREFIX}.app-installation-registration-secret`,
   chatEmojiRecents: `${APP_STORAGE_PREFIX}.chat-emoji-recents`,
   eventsFilters: `${APP_STORAGE_PREFIX}.events-filters`,
   lastOpenChatUsername: `${APP_STORAGE_PREFIX}.last-open-chat-username`,
-  pushInstallationId: `${APP_STORAGE_PREFIX}.push-installation-id`,
+  pushInstallationId: APP_INSTALLATION_STORAGE_KEY,
   tabSelection: `${APP_STORAGE_PREFIX}.tab-selection`,
   themePreference: `${APP_STORAGE_PREFIX}.theme-preference`,
 } as const;

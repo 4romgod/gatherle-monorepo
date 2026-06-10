@@ -175,6 +175,52 @@ export const UpdateUserDocument = graphql(`
   }
 `);
 
+export const AdminUpdateUserDocument = graphql(`
+  mutation AdminUpdateUser($input: UpdateUserInput!) {
+    updateUser(input: $input) {
+      userId
+      email
+      emailVerified
+      hasLocalPassword
+      username
+      bio
+      birthdate
+      given_name
+      family_name
+      gender
+      phone_number
+      profile_picture
+      userRole
+      appAccessBlocked
+      location {
+        city
+        state
+        country
+      }
+      followPolicy
+      followersListVisibility
+      followingListVisibility
+      defaultVisibility
+      shareRSVPByDefault
+      shareCheckinsByDefault
+      preferences {
+        communicationPrefs {
+          emailEnabled
+          pushEnabled
+        }
+      }
+      interests {
+        eventCategoryId
+        slug
+        name
+        iconName
+        description
+        color
+      }
+    }
+  }
+`);
+
 export const DeleteUserByIdDocument = graphql(`
   mutation DeleteUserById($userId: String!) {
     deleteUserById(userId: $userId) {

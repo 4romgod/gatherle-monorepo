@@ -2,7 +2,7 @@ import type { APIGatewayProxyResultV2, Context, Handler } from 'aws-lambda';
 import { GraphQLError } from 'graphql';
 import { logger } from '@/utils/logger';
 import { WEBSOCKET_ROUTES } from '@/websocket/constants';
-import { response } from '@/websocket/response';
+import { graphQlErrorToResponse, response } from '@/websocket/response';
 import {
   handleChatRead,
   handleChatSend,
@@ -14,19 +14,6 @@ import {
 } from '@/websocket/routes';
 import type { WebSocketRequestEvent } from '@/websocket/types';
 import { HttpStatusCode } from '@/constants';
-
-const buildClientErrorResponse = (error: GraphQLError): APIGatewayProxyResultV2 => {
-  const httpExtension = error.extensions?.http as { status?: number } | undefined;
-  const statusCode =
-    typeof httpExtension?.status === 'number' ? httpExtension.status : HttpStatusCode.INTERNAL_SERVER_ERROR;
-  const retryAfterSeconds =
-    typeof error.extensions?.retryAfterSeconds === 'number' ? error.extensions.retryAfterSeconds : undefined;
-
-  return response(statusCode, {
-    message: error.message,
-    ...(retryAfterSeconds ? { retryAfterSeconds } : {}),
-  });
-};
 
 export const websocketLambdaHandler: Handler<WebSocketRequestEvent> = async (
   event: WebSocketRequestEvent,
@@ -79,7 +66,7 @@ export const websocketLambdaHandler: Handler<WebSocketRequestEvent> = async (
         code: error.extensions?.code,
         status: (error.extensions?.http as { status?: number } | undefined)?.status,
       });
-      return buildClientErrorResponse(error);
+      return graphQlErrorToResponse(error);
     }
 
     logger.error('Error handling WebSocket request', { ...requestLogContext, error });

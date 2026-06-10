@@ -738,6 +738,55 @@ describe('UserDAO', () => {
       expect(mockUpdatedUser.save).toHaveBeenCalled();
     });
 
+    it('should strip admin-only fields when allowAdminFields is false', async () => {
+      const mockExistingUser = {
+        userId: 'mockUserId',
+        email: 'before@example.com',
+        username: 'beforeUser',
+        appAccessBlocked: false,
+        emailVerified: true,
+        userRole: 'User',
+        isTestUser: false,
+        save: jest.fn().mockResolvedValue(undefined),
+        toObject: jest.fn().mockReturnValue({
+          userId: 'mockUserId',
+          email: 'updated@example.com',
+          username: 'updatedUser',
+          appAccessBlocked: false,
+          emailVerified: false,
+          userRole: 'User',
+          isTestUser: false,
+        }),
+      };
+
+      (User.findById as jest.Mock).mockReturnValue(createMockSuccessMongooseQuery(mockExistingUser));
+      (User.findOne as jest.Mock).mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+        lean: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+      });
+
+      await UserDAO.updateUser(
+        {
+          userId: 'mockUserId',
+          email: 'updated@example.com',
+          username: 'updatedUser',
+          appAccessBlocked: true,
+          emailVerified: true,
+          isTestUser: true,
+          userRole: 'Admin' as any,
+        },
+        { allowAdminFields: false },
+      );
+
+      expect(mockExistingUser.appAccessBlocked).toBe(false);
+      expect(mockExistingUser.isTestUser).toBe(false);
+      expect(mockExistingUser.userRole).toBe('User');
+      expect(mockExistingUser.emailVerified).toBe(false);
+      expect(User.findOne).toHaveBeenCalledWith({ email: 'updated@example.com' });
+      expect(mockExistingUser.save).toHaveBeenCalled();
+    });
+
     it('should throw NOT_FOUND error when user not found', async () => {
       const mockUpdateUserInputNotFound: UpdateUserInput = {
         userId: 'nonExistingUserId',

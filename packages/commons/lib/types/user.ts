@@ -307,6 +307,14 @@ export class User {
   @Field(() => Boolean, { nullable: true, description: 'Whether the user has verified their email address' })
   emailVerified?: boolean;
 
+  @prop({ default: false, index: true, type: () => Boolean })
+  @Authorized([UserRole.Admin])
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Whether this account is blocked from using Gatherle while signed in.',
+  })
+  appAccessBlocked?: boolean;
+
   @prop({ enum: FollowPolicy, default: FollowPolicy.Public, type: () => String })
   @Field(() => FollowPolicy, { nullable: true, description: USER_DESCRIPTIONS.FOLLOW_POLICY })
   followPolicy?: FollowPolicy;
@@ -470,6 +478,13 @@ export class UpdateUserInput {
   @Authorized([UserRole.Admin])
   @Field(() => Boolean, { nullable: true, description: 'Marks whether the user email has been verified' })
   emailVerified?: boolean;
+
+  @Authorized([UserRole.Admin])
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Blocks this account from using Gatherle while signed in.',
+  })
+  appAccessBlocked?: boolean;
 
   @Field(() => [String], { nullable: true, description: EVENT_DESCRIPTIONS.EVENT.EVENT_CATEGORY_LIST })
   interests?: string[];

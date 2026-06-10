@@ -1,8 +1,9 @@
 import type { APIGatewayProxyResultV2 } from 'aws-lambda';
+import { GraphQLError } from 'graphql';
 import { logger } from '@/utils/logger';
 import { WEBSOCKET_ROUTES } from '@/websocket/constants';
 import { ensureDatabaseConnection } from '@/websocket/database';
-import { parseBody, response } from '@/websocket/response';
+import { graphQlErrorToResponse, parseBody, response } from '@/websocket/response';
 import type { WebSocketRequestEvent } from '@/websocket/types';
 import { handleChatRead } from '@/websocket/routes/chatRead';
 import { handleChatSend } from '@/websocket/routes/chatSend';
@@ -10,6 +11,7 @@ import { handleNotificationSubscribe } from '@/websocket/routes/notificationSubs
 import { handlePing } from '@/websocket/routes/ping';
 import { touchConnection } from '@/websocket/routes/touch';
 import { HttpStatusCode } from '@/constants';
+import { readAuthorizedWebSocketConnection } from '@/websocket/access';
 
 export const handleDefault = async (event: WebSocketRequestEvent): Promise<APIGatewayProxyResultV2> => {
   const payload = parseBody<{ action?: unknown }>(event.body);
@@ -36,7 +38,17 @@ export const handleDefault = async (event: WebSocketRequestEvent): Promise<APIGa
   }
 
   await ensureDatabaseConnection();
-  const connectionId = await touchConnection(event);
+  let connectionId: string;
+  try {
+    const connection = await readAuthorizedWebSocketConnection(event.requestContext.connectionId);
+    connectionId = connection.connectionId;
+  } catch (error) {
+    if (error instanceof GraphQLError) {
+      return graphQlErrorToResponse(error);
+    }
+    throw error;
+  }
+  await touchConnection(event);
 
   logger.warn('Unhandled websocket action', { connectionId, action });
 

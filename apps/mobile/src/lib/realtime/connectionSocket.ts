@@ -3,6 +3,7 @@ import type { RealtimeCloseEvent, RealtimeWebsocketSource } from './types';
 import type { SharedRealtimeSubscriberStore } from './subscriberStore';
 
 export interface RealtimeConnectionRuntime {
+  deviceInstallationId: string | null;
   pingInterval: ReturnType<typeof setInterval> | null;
   reconnectAttempts: number;
   reconnectTimeout: ReturnType<typeof setTimeout> | null;
@@ -15,6 +16,7 @@ export interface RealtimeConnectionRuntime {
 }
 
 export const createRealtimeConnectionRuntime = (): RealtimeConnectionRuntime => ({
+  deviceInstallationId: null,
   pingInterval: null,
   reconnectAttempts: 0,
   reconnectTimeout: null,
@@ -93,7 +95,10 @@ export const connectSocket = (runtime: RealtimeConnectionRuntime, subscriberStor
   clearReconnectTimeout(runtime);
   clearPing(runtime);
 
-  const socket = new WebSocket(runtime.websocketBaseUrl, buildWebSocketAuthProtocols(runtime.token));
+  const socket = new WebSocket(
+    runtime.websocketBaseUrl,
+    buildWebSocketAuthProtocols(runtime.token, runtime.deviceInstallationId),
+  );
   runtime.socket = socket;
 
   socket.onopen = () => {

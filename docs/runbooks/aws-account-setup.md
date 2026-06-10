@@ -584,11 +584,14 @@ STAGE=<Stage> AWS_REGION=<region> MONGO_DB_URL='<mongo-url-with-db-name>' JWT_SE
 9. After first `SesStack` deploy, add the 5 DNS verification records to the `gatherle.com` hosted zone (see section
    6B–6D above).
 
-10. Set `WEBAPP_URL` (and optionally `EMAIL_FROM`) in the new GitHub Environment:
+10. Set `WEBAPP_URL`, `ALERT_EMAIL_RECIPIENTS`, and optionally `EMAIL_FROM` in the new GitHub Environment:
 
 ```bash
 gh variable set WEBAPP_URL --body "https://<stage>.gatherle.com" --env <stage-lower>-<region>
+gh variable set ALERT_EMAIL_RECIPIENTS --body "alerts@gatherle.com,founder@gatherle.com" --env <stage-lower>-<region>
 ```
+
+11. After the first `MonitoringDashboardStack` deploy, confirm the SNS email subscription messages from each inbox.
 
 ## 9. Troubleshooting
 

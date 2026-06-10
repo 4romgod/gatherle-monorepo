@@ -17,6 +17,7 @@ export interface SharedRealtimeSubscriber {
 export type SharedRealtimeSubscriberUpdates = Partial<Omit<SharedRealtimeSubscriber, 'setConnected'>>;
 
 export interface RefreshSharedRealtimeConnectionParams {
+  deviceInstallationId?: string | null;
   token: string | null | undefined;
   userId: string | null | undefined;
   websocketBaseUrl: string | null;

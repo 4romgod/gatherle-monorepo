@@ -1,15 +1,17 @@
 import type { APIGatewayProxyResultV2 } from 'aws-lambda';
+import { GraphQLError } from 'graphql';
 import { logger } from '@/utils/logger';
 import { validateInput } from '@/validation';
 import { NotificationSubscribePayloadSchema } from '@/validation/zod';
 import { assertWebSocketRateLimit } from '@/websocket/abuseControl';
 import { ensureDatabaseConnection } from '@/websocket/database';
 import { getConnectionMetadata } from '@/websocket/event';
-import { parseBody, response } from '@/websocket/response';
+import { graphQlErrorToResponse, parseBody, response } from '@/websocket/response';
 import type { WebSocketRequestEvent } from '@/websocket/types';
 import { touchConnection } from '@/websocket/routes/touch';
 import { WEBSOCKET_ROUTES } from '@/websocket/constants';
 import { HttpStatusCode } from '@/constants';
+import { readAuthorizedWebSocketConnection } from '@/websocket/access';
 
 export const handleNotificationSubscribe = async (event: WebSocketRequestEvent): Promise<APIGatewayProxyResultV2> => {
   await ensureDatabaseConnection();
@@ -18,7 +20,18 @@ export const handleNotificationSubscribe = async (event: WebSocketRequestEvent):
   validateInput(NotificationSubscribePayloadSchema, payload ?? {});
   const parsedPayload = NotificationSubscribePayloadSchema.parse(payload ?? {});
   const topics = parsedPayload.topics ?? [];
-  await assertWebSocketRateLimit(WEBSOCKET_ROUTES.NOTIFICATION_SUBSCRIBE, { connectionId });
+  try {
+    const connection = await readAuthorizedWebSocketConnection(connectionId);
+    await assertWebSocketRateLimit(WEBSOCKET_ROUTES.NOTIFICATION_SUBSCRIBE, {
+      connectionId,
+      userId: connection.userId,
+    });
+  } catch (error) {
+    if (error instanceof GraphQLError) {
+      return graphQlErrorToResponse(error);
+    }
+    throw error;
+  }
   await touchConnection(event);
 
   if (topics.some((topic) => topic !== 'bell')) {

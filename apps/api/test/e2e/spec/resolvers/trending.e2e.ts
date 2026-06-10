@@ -63,8 +63,9 @@ describe('readTrendingEvents e2e', () => {
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
+    adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
+
     const setup = await Promise.all([
-      loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password),
       createUserOnServer(
         url,
         buildCreateUserInput(usersMockData.at(0)! as CreateUserInput, 'trending-actor-password', uniqueSuffix()),
@@ -82,8 +83,7 @@ describe('readTrendingEvents e2e', () => {
       ),
       readFirstEventCategory(url),
     ]);
-    const [seededAdmin, createdActorUser, createdRankingParticipantUser, createdCountParticipantUser, category] = setup;
-    adminUser = seededAdmin;
+    const [createdActorUser, createdRankingParticipantUser, createdCountParticipantUser, category] = setup;
     actorUser = createdActorUser;
     rankingParticipantUser = createdRankingParticipantUser;
     countParticipantUser = createdCountParticipantUser;

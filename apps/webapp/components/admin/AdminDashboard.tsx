@@ -7,6 +7,7 @@ import { Box, Button, Container, Stack, Tab, Tabs, Typography } from '@mui/mater
 import { alpha } from '@mui/material/styles';
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
 import EventRoundedIcon from '@mui/icons-material/EventRounded';
+import SmartphoneRoundedIcon from '@mui/icons-material/SmartphoneRounded';
 import CategoryRoundedIcon from '@mui/icons-material/CategoryRounded';
 import LayersRoundedIcon from '@mui/icons-material/LayersRounded';
 import PeopleAltRoundedIcon from '@mui/icons-material/PeopleAltRounded';
@@ -17,6 +18,7 @@ import StorageRoundedIcon from '@mui/icons-material/StorageRounded';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { ROUTES } from '@/lib/constants';
 import AdminStatsPanel from '@/components/admin/AdminStatsPanel';
+import AdminDevicesSection from '@/components/admin/AdminDevicesSection';
 import AdminEventsSection from '@/components/admin/AdminEventsSection';
 import AdminCategorySection from '@/components/admin/AdminCategorySection';
 import AdminCategoryGroupSection from '@/components/admin/AdminCategoryGroupSection';
@@ -64,6 +66,13 @@ export default function AdminDashboard({ token, currentUserId }: AdminDashboardP
         description: 'Platform totals and event mix.',
         icon: <DashboardRoundedIcon fontSize="small" />,
         content: <AdminStatsPanel token={token} />,
+      },
+      {
+        id: 'devices',
+        name: 'Devices',
+        description: 'Inspect native app installs and block them when needed.',
+        icon: <SmartphoneRoundedIcon fontSize="small" />,
+        content: <AdminDevicesSection token={token} />,
       },
       {
         id: 'events',

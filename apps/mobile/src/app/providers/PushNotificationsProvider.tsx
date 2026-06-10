@@ -1,5 +1,4 @@
 import { useApolloClient } from '@apollo/client';
-import * as Crypto from 'expo-crypto';
 import * as Notifications from 'expo-notifications';
 import { PropsWithChildren, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
@@ -13,7 +12,7 @@ import { navigationRef } from '@/app/navigation/navigationRef';
 import { useAppShell } from './AppShellProvider';
 import { getApolloAuthContext } from '@/lib/auth';
 import { isInvalidSessionError } from '@/lib/auth/sessionValidation';
-import { DEVICE_STORAGE_KEYS, readStoredString, writeStoredString } from '@/lib/deviceStorage';
+import { getOrCreateDeviceInstallationId } from '@/lib/deviceInstallation';
 import { navigateFromNotificationActionUrl } from '@/lib/notifications/actionUrl';
 
 const EAS_PROJECT_ID = process.env.EXPO_PUBLIC_EAS_PROJECT_ID?.trim() || '7eee58bf-18f8-4b6d-a0a4-128a5d1f037b';
@@ -65,17 +64,6 @@ function readNotificationActionUrl(data: unknown): string | null {
     typeof payload.actionUrl === 'string' ? payload.actionUrl : typeof payload.url === 'string' ? payload.url : null;
 
   return typeof maybeActionUrl === 'string' && maybeActionUrl.trim().length > 0 ? maybeActionUrl : null;
-}
-
-async function getOrCreateDeviceInstallationId(): Promise<string> {
-  const existingInstallationId = await readStoredString(DEVICE_STORAGE_KEYS.pushInstallationId);
-  if (existingInstallationId) {
-    return existingInstallationId;
-  }
-
-  const nextInstallationId = Crypto.randomUUID();
-  await writeStoredString(DEVICE_STORAGE_KEYS.pushInstallationId, nextInstallationId);
-  return nextInstallationId;
 }
 
 async function ensureAndroidNotificationChannel(): Promise<void> {

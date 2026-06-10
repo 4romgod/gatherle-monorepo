@@ -7,6 +7,7 @@ export * from './userFeed';
 export * from './chat';
 export * from './follow';
 export * from './notification';
+export * from './mobileDeviceAccess';
 export * from './pushSubscription';
 export * from './eventSeries';
 export * from './eventCategory';

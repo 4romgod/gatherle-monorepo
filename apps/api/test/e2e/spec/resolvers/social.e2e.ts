@@ -217,8 +217,9 @@ describe('Social resolver e2e', () => {
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
-    const [seededAdmin, createdActor, createdTarget, category] = await Promise.all([
-      loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password),
+    adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
+
+    const [createdActor, createdTarget, category] = await Promise.all([
       createUserOnServer(
         url,
         buildCreateUserInput(usersMockData.at(0)! as CreateUserInput, 'social-actor-password', uniqueSuffix()),
@@ -231,7 +232,6 @@ describe('Social resolver e2e', () => {
       ),
       readFirstEventCategory(url),
     ]);
-    adminUser = seededAdmin;
     actorUser = createdActor;
     targetUser = createdTarget;
 

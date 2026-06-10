@@ -20,6 +20,7 @@ import {
   NotificationResolver,
   PushSubscriptionResolver,
   MediaResolver,
+  MobileDeviceAccessResolver,
   FeedResolver,
   EventMomentResolver,
 } from '@/graphql/resolvers';
@@ -45,6 +46,7 @@ const createSchema = () => {
       OrganizationMembershipResolver,
       VenueResolver,
       NotificationResolver,
+      MobileDeviceAccessResolver,
       PushSubscriptionResolver,
       MediaResolver,
       FeedResolver,

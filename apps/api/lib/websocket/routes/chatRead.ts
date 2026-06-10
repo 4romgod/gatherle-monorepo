@@ -1,8 +1,6 @@
 import type { APIGatewayProxyResultV2 } from 'aws-lambda';
 import { GraphQLError } from 'graphql';
-import { WebSocketConnectionDAO } from '@/mongodb/dao';
 import { HttpStatusCode } from '@/constants';
-import { logger } from '@/utils/logger';
 import { chatMessagingService } from '@/services';
 import { validateInput } from '@/validation';
 import { ChatReadPayloadSchema } from '@/validation/zod';
@@ -10,9 +8,10 @@ import { getConnectionMetadata } from '@/websocket/event';
 import { assertWebSocketRateLimit } from '@/websocket/abuseControl';
 import { WEBSOCKET_ROUTES } from '@/websocket/constants';
 import { ensureDatabaseConnection } from '@/websocket/database';
-import { parseBody, response } from '@/websocket/response';
+import { graphQlErrorToResponse, parseBody, response } from '@/websocket/response';
 import { touchConnection } from '@/websocket/routes/touch';
 import type { WebSocketRequestEvent } from '@/websocket/types';
+import { readAuthorizedWebSocketConnection } from '@/websocket/access';
 
 interface ChatReadPayload {
   withUserId?: unknown;
@@ -44,13 +43,14 @@ export const handleChatRead = async (event: WebSocketRequestEvent): Promise<APIG
     throw error;
   }
 
-  // Get reader user ID from connection
-  const readerConnection = await WebSocketConnectionDAO.readConnectionByConnectionId(connectionId);
-  if (!readerConnection) {
-    logger.warn('Chat read rejected because connection metadata was not found', { connectionId });
-    return response(HttpStatusCode.UNAUTHENTICATED, {
-      message: 'Connection is not registered. Reconnect and try again.',
-    });
+  let readerConnection;
+  try {
+    readerConnection = await readAuthorizedWebSocketConnection(connectionId);
+  } catch (error) {
+    if (error instanceof GraphQLError) {
+      return graphQlErrorToResponse(error);
+    }
+    throw error;
   }
 
   const readerUserId = readerConnection.userId;

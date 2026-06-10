@@ -14,6 +14,7 @@ export * from './Follow/query';
 export * from './Follow/types';
 export * from './Health/query';
 export * from './Media/query';
+export * from './MobileDeviceAccess/query';
 export * from './Notification/query';
 export * from './Notification/types';
 export * from './Organization/query';

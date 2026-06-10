@@ -22,6 +22,7 @@ import {
 import { createEventOccurrenceQueryRequestCache } from '@/services/eventOccurrence';
 import { verifyToken } from '@/utils/auth';
 import type { AuthClaims } from '@/utils/auth';
+import { resolveMobileRequestAccessContext } from '@/utils/mobileDeviceAccess';
 import { createCorsHeaders, isOriginAllowed } from '@/graphql/apollo';
 
 // Module-level variables for connection reuse across Lambda invocations
@@ -75,7 +76,10 @@ async function initializeResources() {
             }
           }
 
+          const mobileDeviceAccess = await resolveMobileRequestAccessContext(event.headers);
+
           return {
+            mobileDeviceAccess,
             token,
             user,
             lambdaEvent: event,

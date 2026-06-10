@@ -356,8 +356,7 @@ fields @timestamp, context.durationMs, context.operation
 
 ### Log retention
 
-- production: 30 days
-- non-production: 7 days
+- current deployed log groups: 30 days in both Beta and Prod
 
 Retention is managed by CDK.
 
@@ -374,6 +373,14 @@ Occurrence maintenance alarms already exist for:
 GraphQL and WebSocket monitoring also surfaces traffic, throttle, error, and abuse-related metrics through the shared
 monitoring dashboards.
 
+The monitoring stack now also provisions a stage-scoped SNS topic for alarm delivery:
+
+- `gatherle-operational-alerts-<stage>-<region>`
+
+Current CloudWatch alarms in the monitoring stack publish to that topic on `ALARM` state transitions. Optional email
+subscriptions are configured by setting `ALERT_EMAIL_RECIPIENTS` in the target GitHub Environment before deploy. Email
+subscriptions require one-time confirmation by each recipient after the stack update completes.
+
 ### Recommended next alarms
 
 - WAF blocked-request spikes
@@ -389,9 +396,10 @@ monitoring dashboards.
 ### Daily or release-time checks
 
 1. Check the dashboard after each deploy.
-2. Review recent `ERROR` and `WARN` logs for new patterns.
-3. Watch query guard reject rates after GraphQL client changes.
-4. Review occurrence maintenance health after schema or recurrence changes.
+2. Confirm the operational-alerts SNS topic still has the expected confirmed subscriptions.
+3. Review recent `ERROR` and `WARN` logs for new patterns.
+4. Watch query guard reject rates after GraphQL client changes.
+5. Review occurrence maintenance health after schema or recurrence changes.
 
 ### Cost controls
 

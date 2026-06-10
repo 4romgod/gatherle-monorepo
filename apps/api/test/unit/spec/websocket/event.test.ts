@@ -1,5 +1,5 @@
 import type { WebSocketRequestEvent } from '@/websocket/types';
-import { extractToken, getHeader } from '@/websocket/event';
+import { extractDeviceInstallationId, extractToken, findProtocolByPrefix, getHeader } from '@/websocket/event';
 
 const createWebSocketEvent = (
   overrides: Partial<WebSocketRequestEvent> = {},
@@ -79,6 +79,24 @@ describe('websocket event token extraction', () => {
     const event = createWebSocketEvent({}, { 'sec-websocket-protocol': 'gatherle.jwt.   ' });
 
     expect(extractToken(event)).toBeUndefined();
+  });
+
+  it('extracts the device installation id from Sec-WebSocket-Protocol header', () => {
+    const event = createWebSocketEvent(
+      {},
+      { 'sec-websocket-protocol': 'graphql-ws, gatherle.installation.device-installation-id, gatherle.jwt.abc' },
+    );
+
+    expect(extractDeviceInstallationId(event)).toBe('device-installation-id');
+  });
+
+  it('finds the raw matching websocket protocol entry by prefix', () => {
+    const event = createWebSocketEvent(
+      {},
+      { 'sec-websocket-protocol': 'graphql-ws, gatherle.installation.device-installation-id, gatherle.jwt.abc' },
+    );
+
+    expect(findProtocolByPrefix(event, 'gatherle.installation.')).toBe('gatherle.installation.device-installation-id');
   });
 });
 

@@ -5,6 +5,18 @@ import { Gender, FollowPolicy, OAuthProvider, SocialVisibility } from '@gatherle
 import { ERROR_MESSAGES, validateDate } from '@/validation/common';
 import mongoose from 'mongoose';
 
+const UserLocationSchema = z.object({
+  city: z.string().optional(),
+  state: z.string().optional(),
+  country: z.string().optional(),
+  coordinates: z
+    .object({
+      latitude: z.number(),
+      longitude: z.number(),
+    })
+    .optional(),
+});
+
 export const UserSchema = z.object({
   userId: z
     .string()
@@ -23,19 +35,7 @@ export const UserSchema = z.object({
 
   given_name: z.string().min(1, { message: `First name ${ERROR_MESSAGES.REQUIRED}` }),
 
-  location: z
-    .object({
-      city: z.string().optional(),
-      state: z.string().optional(),
-      country: z.string().optional(),
-      coordinates: z
-        .object({
-          latitude: z.number(),
-          longitude: z.number(),
-        })
-        .optional(),
-    })
-    .optional(),
+  location: UserLocationSchema.optional(),
 
   gender: z.nativeEnum(Gender, { message: ERROR_MESSAGES.INVALID_GENDER }).optional(),
 
@@ -66,6 +66,7 @@ export const UserSchema = z.object({
     })
     .optional(),
   emailVerified: z.boolean().optional(),
+  appAccessBlocked: z.boolean().optional(),
 });
 
 export const CreateUserInputSchema = UserSchema.extend({
@@ -80,6 +81,7 @@ export const UpdateUserInputSchema = UserSchema.partial().extend({
   userId: z
     .string()
     .refine(mongoose.Types.ObjectId.isValid, { message: `User with UserId ${ERROR_MESSAGES.DOES_NOT_EXIST}` }),
+  location: UserLocationSchema.nullish(),
   password: z.string().min(8, { message: ERROR_MESSAGES.INVALID_PASSWORD }).optional(),
 });
 

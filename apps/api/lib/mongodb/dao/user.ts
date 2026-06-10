@@ -1,5 +1,6 @@
 import { User as UserModel, Organization as OrganizationModel } from '@/mongodb/models';
 import { randomUUID } from 'crypto';
+import { ERROR_MESSAGES as COMMON_ERROR_MESSAGES } from '@gatherle/commons/server/constants';
 import { FilterOperatorInput, OAuthProvider, UserRole } from '@gatherle/commons/server/types';
 import type {
   User,
@@ -30,6 +31,12 @@ const getProviderSubjectField = (provider: SupportedOAuthProvider): 'googleSubje
 };
 
 const buildOAuthPlaceholderPassword = (): string => randomUUID();
+
+const assertUserCanAccessApp = (user: Pick<User, 'appAccessBlocked' | 'userId'>): void => {
+  if (user.appAccessBlocked) {
+    throw CustomError(COMMON_ERROR_MESSAGES.APP_ACCESS_BLOCKED, ErrorTypes.APP_ACCESS_BLOCKED);
+  }
+};
 
 const normalizeEmail = (email?: string): string | undefined => {
   return typeof email === 'string' && email.trim() ? email.trim().toLowerCase() : undefined;
@@ -101,6 +108,8 @@ class UserDAO {
       throw CustomError(ERROR_MESSAGES.EMAIL_NOT_VERIFIED, ErrorTypes.UNAUTHENTICATED);
     }
 
+    assertUserCanAccessApp(user.toObject());
+
     const jwtToken = await generateToken(user.toObject());
     return { token: jwtToken, ...user.toObject() };
   }
@@ -132,6 +141,7 @@ class UserDAO {
           await existingProviderUser.save();
         }
 
+        assertUserCanAccessApp(existingProviderUser.toObject());
         return toUserWithToken(existingProviderUser);
       }
 
@@ -161,6 +171,7 @@ class UserDAO {
           }
 
           await existingEmailUser.save();
+          assertUserCanAccessApp(existingEmailUser.toObject());
           return toUserWithToken(existingEmailUser);
         }
       }
@@ -284,8 +295,9 @@ class UserDAO {
     }
   }
 
-  static async updateUser(user: UpdateUserInput) {
+  static async updateUser(user: UpdateUserInput, options: { allowAdminFields?: boolean } = {}) {
     const { userId, ...updatableFields } = user;
+    const allowAdminFields = options.allowAdminFields ?? true;
     let existingUser;
     try {
       existingUser = await UserModel.findById(userId).exec();
@@ -302,6 +314,13 @@ class UserDAO {
       const fieldsToUpdate = Object.fromEntries(
         Object.entries(updatableFields).filter(([_, value]) => value !== undefined),
       );
+
+      if (!allowAdminFields) {
+        delete fieldsToUpdate.userRole;
+        delete fieldsToUpdate.isTestUser;
+        delete fieldsToUpdate.emailVerified;
+        delete fieldsToUpdate.appAccessBlocked;
+      }
 
       const requestedEmail =
         typeof fieldsToUpdate.email === 'string' ? fieldsToUpdate.email.trim().toLowerCase() : undefined;

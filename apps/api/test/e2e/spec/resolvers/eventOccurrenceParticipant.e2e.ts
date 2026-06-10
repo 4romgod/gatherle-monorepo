@@ -164,8 +164,9 @@ describe('EventOccurrenceParticipant Resolver', () => {
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
-    const [seededAdmin, user, user2, category] = await Promise.all([
-      loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password),
+    adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
+
+    const [user, user2, category] = await Promise.all([
       createUserOnServer(
         url,
         buildCreateUserInput(usersMockData.at(0)! as CreateUserInput, 'occurrence-user-password', uniqueSuffix()),
@@ -178,7 +179,6 @@ describe('EventOccurrenceParticipant Resolver', () => {
       ),
       readFirstEventCategory(url),
     ]);
-    adminUser = seededAdmin;
     participantUser = user;
     participantUser2 = user2;
     eventCategoryId = category.eventCategoryId;

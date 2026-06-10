@@ -10,6 +10,7 @@ import { buildPageMetadata } from '@/lib/metadata';
 import { redirect } from 'next/navigation';
 import { ROUTES } from '@/lib/constants';
 import { getAuthHeader } from '@/lib/utils/auth';
+import { redirectIfAppAccessBlocked } from '@/lib/utils/app-access-block-server';
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Account',
@@ -60,7 +61,10 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         },
         fetchPolicy: 'no-cache',
       })
-      .catch(() => null),
+      .catch((error) => {
+        redirectIfAppAccessBlocked(error);
+        return null;
+      }),
   ]);
 
   const user = omit(session.user, ['token', '__typename']) as User;

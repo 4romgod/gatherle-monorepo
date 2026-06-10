@@ -3,15 +3,15 @@ import { holdForDebug } from './helpers';
 
 async function waitForEventsSurface(page: Page) {
   const eventsSearchField = page.getByPlaceholder('Search events by title, location, or category...');
-  const loadError = page.getByText('Unable to load events right now. Please try again shortly.');
+  const loadError = page
+    .getByText("You're offline")
+    .or(page.getByText('Gatherle is unavailable'))
+    .or(page.getByText("We couldn't load the event map"));
 
-  try {
-    await expect(eventsSearchField).toBeVisible({ timeout: 20_000 });
-    return { eventsSearchField, loadError, loadedWithError: false };
-  } catch {
-    await expect(loadError).toBeVisible({ timeout: 20_000 });
-    return { eventsSearchField, loadError, loadedWithError: true };
-  }
+  await expect(eventsSearchField.or(loadError)).toBeVisible({ timeout: 20_000 });
+  const loadedWithError = await loadError.isVisible();
+
+  return { eventsSearchField, loadError, loadedWithError };
 }
 
 test.describe('Events Page', () => {

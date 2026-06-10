@@ -1,7 +1,7 @@
 import type { ApolloError } from '@apollo/client';
 import { getApolloAuthContext, getAuthHeader } from '@/lib/auth';
 import { getApolloErrorCode, getApolloErrorMessage } from '@/lib/auth/apolloErrors';
-import { isInvalidSessionError, validateStoredSession } from '@/lib/auth/sessionValidation';
+import { isBlockedSessionError, isInvalidSessionError, validateStoredSession } from '@/lib/auth/sessionValidation';
 import {
   forgotPasswordSchema,
   loginSchema,
@@ -245,6 +245,17 @@ describe('mobile auth helpers', () => {
     expect(isInvalidSessionError(notFoundError)).toBe(true);
     expect(isInvalidSessionError(unauthenticatedError)).toBe(true);
     expect(isInvalidSessionError(forbiddenError)).toBe(false);
+    expect(isBlockedSessionError(forbiddenError)).toBe(false);
+  });
+
+  it('recognizes blocked-session GraphQL errors', () => {
+    const blockedError = {
+      graphQLErrors: [{ message: 'Blocked by admin', extensions: { code: 'APP_ACCESS_BLOCKED' } }],
+      message: 'GraphQL error',
+    } as unknown as ApolloError;
+
+    expect(isBlockedSessionError(blockedError)).toBe(true);
+    expect(isInvalidSessionError(blockedError)).toBe(false);
   });
 
   it('invalidates restored sessions when the API user is missing or mismatched', async () => {
@@ -326,6 +337,27 @@ describe('mobile auth helpers', () => {
         userId: 'user-123',
         username: 'person',
       },
+    });
+  });
+
+  it('returns a blocked result when the API explicitly blocks the stored session', async () => {
+    const apolloClient = {
+      query: jest.fn().mockRejectedValue({
+        graphQLErrors: [{ message: 'Blocked by admin', extensions: { code: 'APP_ACCESS_BLOCKED' } }],
+        message: 'GraphQL error',
+      }),
+    };
+
+    await expect(
+      validateStoredSession(apolloClient as never, {
+        email: 'person@example.com',
+        token: 'token-123',
+        userId: 'user-123',
+        username: 'person',
+      }),
+    ).resolves.toEqual({
+      kind: 'blocked',
+      message: 'Blocked by admin',
     });
   });
 

@@ -1,7 +1,9 @@
 'use client';
 
+import { APP_ACCESS_BLOCKED_ERROR_CODE } from '@gatherle/commons/client/constants';
 import { GRAPHQL_URL } from '@/lib/constants';
 import { logger } from '@/lib/utils';
+import { notifyAppAccessBlocked } from '@/lib/utils/app-access-block';
 import { HttpLink, from } from '@apollo/client';
 import { ApolloNextAppProvider, InMemoryCache, ApolloClient } from '@apollo/client-integration-nextjs';
 import { onError } from '@apollo/client/link/error';
@@ -9,13 +11,47 @@ import { onError } from '@apollo/client/link/error';
 // Inspired by https://github.com/apollographql/apollo-client-integrations/tree/main/packages/nextjs
 
 const makeClient = () => {
+  const extractGraphQLErrors = (
+    graphQLErrors:
+      | ReadonlyArray<{
+          extensions?: { code?: string };
+          message?: string;
+        }>
+      | undefined,
+    networkError: unknown,
+  ) => {
+    if (graphQLErrors?.length) {
+      return graphQLErrors;
+    }
+
+    const resolvedNetworkError = networkError as {
+      result?: {
+        errors?: Array<{
+          extensions?: { code?: string };
+          message?: string;
+        }>;
+      };
+    } | null;
+
+    return resolvedNetworkError?.result?.errors ?? [];
+  };
+
   const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
-    if (!graphQLErrors?.length && !networkError) {
+    const resolvedErrors = extractGraphQLErrors(graphQLErrors, networkError);
+
+    if (resolvedErrors.length === 0 && !networkError) {
       return;
     }
 
+    const blockedAccountError = resolvedErrors.find(
+      (error) => error.extensions?.code === APP_ACCESS_BLOCKED_ERROR_CODE,
+    );
+    if (blockedAccountError) {
+      notifyAppAccessBlocked(blockedAccountError.message);
+    }
+
     logger.error('Apollo operation failed', {
-      graphQLErrors,
+      graphQLErrors: resolvedErrors,
       networkError,
       operationName: operation.operationName,
     });

@@ -89,6 +89,19 @@ describe('User Resolver', () => {
     buildCreateUserInput(usersMockData.at(0)! as CreateUserInput, testPassword, suffix);
 
   const sendUserGraphQL = (payload: object, token?: string) => postGraphQLWithRetry(url, payload, token);
+  const getAttemptUpdateAppAccessBlockedMutation = (userId: string) => ({
+    query: `mutation AttemptUpdateUserBlock($input: UpdateUserInput!) {
+      updateUser(input: $input) {
+        userId
+      }
+    }`,
+    variables: {
+      input: {
+        userId,
+        appAccessBlocked: true,
+      },
+    },
+  });
 
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
@@ -344,6 +357,20 @@ describe('User Resolver', () => {
         );
         expect(response.status).toBe(401);
         expect(response.body.errors[0].message).toBe(ERROR_MESSAGES.PASSWORD_MISMATCH);
+      });
+    });
+
+    describe('updateUser Mutation', () => {
+      it('rejects non-admin attempts to toggle appAccessBlocked on their own account', async () => {
+        const createdUser = await createUserOnServer(url, newUserInput(), createdUserIds);
+
+        const response = await sendUserGraphQL(
+          getAttemptUpdateAppAccessBlockedMutation(createdUser.userId),
+          createdUser.token,
+        );
+
+        expect(response.status).toBe(403);
+        expect(response.body.errors[0].extensions.code).toBe('UNAUTHORIZED');
       });
     });
 

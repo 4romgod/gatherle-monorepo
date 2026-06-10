@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppShell } from '@/app/providers/AppShellProvider';
+import { useMobileDeviceAccess } from '@/app/providers/MobileDeviceAccessProvider';
 import {
   isChatConversationUpdatedPayload,
   isChatMessagePayload,
@@ -39,6 +40,7 @@ const GRAPHQL_URL = process.env.EXPO_PUBLIC_GRAPHQL_URL ?? '';
 export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
   const { enabled = true, onChatConversationUpdated, onChatMessage, onChatRead } = options;
   const { authToken, userId } = useAppShell();
+  const { deviceInstallationId } = useMobileDeviceAccess();
   const { websocketBaseUrl, websocketSource } = useMemo(
     () => resolveMobileWebsocketBaseUrl(EXPLICIT_WEBSOCKET_URL, GRAPHQL_URL),
     [],
@@ -96,6 +98,7 @@ export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
 
     setIsConnected(getSharedRealtimeConnectionState());
     refreshSharedRealtimeConnection({
+      deviceInstallationId,
       token: authToken,
       userId,
       websocketBaseUrl,
@@ -105,7 +108,7 @@ export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
     return () => {
       removeSharedRealtimeSubscriber(subscriberId);
     };
-  }, [authToken, enabled, handleRealtimeMessage, userId, websocketBaseUrl, websocketSource]);
+  }, [authToken, deviceInstallationId, enabled, handleRealtimeMessage, userId, websocketBaseUrl, websocketSource]);
 
   useEffect(() => {
     if (!subscriberIdRef.current) {
@@ -114,12 +117,13 @@ export function useChatRealtime(options: UseChatRealtimeOptions = {}) {
 
     updateSharedRealtimeSubscriber(subscriberIdRef.current, { enabled });
     refreshSharedRealtimeConnection({
+      deviceInstallationId,
       token: authToken,
       userId,
       websocketBaseUrl,
       websocketSource: websocketSource as RealtimeWebsocketSource,
     });
-  }, [authToken, enabled, userId, websocketBaseUrl, websocketSource]);
+  }, [authToken, deviceInstallationId, enabled, userId, websocketBaseUrl, websocketSource]);
 
   const sendChatMessage = useCallback((recipientUserId: string, message: string, replyContext?: ChatReplyContext) => {
     return sendSharedRealtimeAction({

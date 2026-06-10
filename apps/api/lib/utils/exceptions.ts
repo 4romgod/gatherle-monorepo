@@ -36,6 +36,14 @@ export const ErrorTypes = {
     errorCode: 'UNAUTHORIZED',
     errorStatus: HttpStatusCode.UNAUTHORIZED,
   },
+  DEVICE_ACCESS_DENIED: {
+    errorCode: 'DEVICE_ACCESS_DENIED',
+    errorStatus: HttpStatusCode.UNAUTHORIZED,
+  },
+  APP_ACCESS_BLOCKED: {
+    errorCode: 'APP_ACCESS_BLOCKED',
+    errorStatus: HttpStatusCode.UNAUTHORIZED,
+  },
   INTERNAL_SERVER_ERROR: {
     errorCode: ApolloServerErrorCode.INTERNAL_SERVER_ERROR,
     errorStatus: HttpStatusCode.INTERNAL_SERVER_ERROR,
@@ -172,6 +180,8 @@ const CLIENT_ERROR_CODES = new Set([
   ApolloServerErrorCode.BAD_USER_INPUT,
   ApolloServerErrorCode.BAD_REQUEST,
   'CONFLICT',
+  'DEVICE_ACCESS_DENIED',
+  'APP_ACCESS_BLOCKED',
   'UNAUTHENTICATED',
   'UNAUTHORIZED',
 ]);

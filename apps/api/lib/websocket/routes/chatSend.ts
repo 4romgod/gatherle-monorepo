@@ -1,7 +1,6 @@
 import type { APIGatewayProxyResultV2 } from 'aws-lambda';
 import { GraphQLError } from 'graphql';
 import { EventMomentType } from '@gatherle/commons/server/types';
-import { WebSocketConnectionDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import { chatMessagingService } from '@/services';
 import { CHAT_MESSAGE_MAX_LENGTH, WEBSOCKET_ROUTES } from '@/websocket/constants';
@@ -13,10 +12,11 @@ import { assertWebSocketRateLimit } from '@/websocket/abuseControl';
 const MOMENT_CAPTION_MAX_LENGTH = 280;
 const VALID_MOMENT_TYPES = new Set<string>(Object.values(EventMomentType));
 import { ensureDatabaseConnection } from '@/websocket/database';
-import { parseBody, response } from '@/websocket/response';
+import { graphQlErrorToResponse, parseBody, response } from '@/websocket/response';
 import type { WebSocketRequestEvent } from '@/websocket/types';
 import { touchConnection } from '@/websocket/routes/touch';
 import { HttpStatusCode } from '@/constants';
+import { readAuthorizedWebSocketConnection } from '@/websocket/access';
 
 interface ChatSendPayload {
   recipientUserId?: unknown;
@@ -83,13 +83,14 @@ export const handleChatSend = async (event: WebSocketRequestEvent): Promise<APIG
     });
   }
 
-  // Get sender user ID from connection
-  const senderConnection = await WebSocketConnectionDAO.readConnectionByConnectionId(connectionId);
-  if (!senderConnection) {
-    logger.warn('Chat send rejected because connection metadata was not found', { connectionId });
-    return response(HttpStatusCode.UNAUTHENTICATED, {
-      message: 'Connection is not registered. Reconnect and try again.',
-    });
+  let senderConnection;
+  try {
+    senderConnection = await readAuthorizedWebSocketConnection(connectionId);
+  } catch (error) {
+    if (error instanceof GraphQLError) {
+      return graphQlErrorToResponse(error);
+    }
+    throw error;
   }
 
   const senderUserId = senderConnection.userId;

@@ -90,6 +90,7 @@ export function MomentFeedPage({
   const targetUserId = authorUserId && authorUserId !== viewerUserId ? authorUserId : undefined;
   const isOwnedByViewer = Boolean(viewerUserId && moment.authorId === viewerUserId);
   const paused = isHolding || isComposerFocused || isMenuOpen;
+  const showBottomGradient = moment.type !== EventMomentType.Text;
 
   useEventListener(videoPlayer, 'statusChange', (payload) => {
     if (payload.status === 'readyToPlay') {
@@ -330,7 +331,7 @@ export function MomentFeedPage({
       {isMenuOpen ? <Pressable onPress={() => setMenuOpen(false)} style={styles.menuBackdrop} /> : null}
 
       <LinearGradient colors={['rgba(3,7,18,0.18)', 'rgba(3,7,18,0)']} pointerEvents="none" style={styles.topFade} />
-      <View style={styles.bottomGradient} pointerEvents="none" />
+      {showBottomGradient ? <View style={styles.bottomGradient} pointerEvents="none" /> : null}
 
       <View style={styles.progressRow} pointerEvents="none">
         <View style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.28)' }]}>

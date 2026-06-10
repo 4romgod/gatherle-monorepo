@@ -20,6 +20,7 @@ const runtime = createRealtimeConnectionRuntime();
 const resetSharedConnectionState = () => {
   clearReconnectTimeout(runtime);
   clearPing(runtime);
+  runtime.deviceInstallationId = null;
   runtime.reconnectAttempts = 0;
   runtime.shouldReconnect = false;
   runtime.token = null;
@@ -38,6 +39,7 @@ export const getSharedRealtimeConnectionState = (): boolean => {
 };
 
 export const refreshSharedRealtimeConnection = ({
+  deviceInstallationId,
   token,
   userId,
   websocketBaseUrl,
@@ -61,8 +63,12 @@ export const refreshSharedRealtimeConnection = ({
     return;
   }
 
-  const connectionIdentityChanged = userId !== runtime.userId || websocketBaseUrl !== runtime.websocketBaseUrl;
+  const connectionIdentityChanged =
+    deviceInstallationId !== runtime.deviceInstallationId ||
+    userId !== runtime.userId ||
+    websocketBaseUrl !== runtime.websocketBaseUrl;
 
+  runtime.deviceInstallationId = deviceInstallationId ?? null;
   runtime.token = token;
   runtime.userId = userId;
   runtime.websocketBaseUrl = websocketBaseUrl;

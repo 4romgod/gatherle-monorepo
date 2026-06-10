@@ -11,8 +11,10 @@ import {
   TextWidget,
   TreatMissingData,
 } from 'aws-cdk-lib/aws-cloudwatch';
+import { SnsAction } from 'aws-cdk-lib/aws-cloudwatch-actions';
 import { IFunction } from 'aws-cdk-lib/aws-lambda';
 import { ILogGroup } from 'aws-cdk-lib/aws-logs';
+import { ITopic } from 'aws-cdk-lib/aws-sns';
 import { Duration } from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
 import {
@@ -37,11 +39,13 @@ export interface GraphqlMonitoringDashboardConstructProps {
   graphqlApiAccessLogGroup: ILogGroup;
   occurrenceMaintenanceLambdaFunction: IFunction;
   occurrenceMaintenanceLambdaLogGroup: ILogGroup;
+  alertTopic?: ITopic;
 }
 
 const OCCURRENCE_MAINTENANCE_METRIC_NAMESPACE = 'Gatherle/EventOccurrenceMaintenance';
 const GRAPHQL_QUERY_GUARD_METRIC_NAMESPACE = 'Gatherle/GraphQLQueryGuards';
 const AUTH_ABUSE_METRIC_NAMESPACE = 'Gatherle/AuthAbuse';
+const MOBILE_DEVICE_ACCESS_METRIC_NAMESPACE = 'Gatherle/MobileAccess';
 const SYNTHETIC_OPERATION_PREFIX = 'Synthetic';
 
 function scopedAlarmName(baseName: string, targetSuffix: string): string {
@@ -64,7 +68,19 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
       graphqlApiAccessLogGroup,
       occurrenceMaintenanceLambdaFunction,
       occurrenceMaintenanceLambdaLogGroup,
+      alertTopic,
     } = props;
+
+    const alertAction = alertTopic ? new SnsAction(alertTopic) : undefined;
+    const attachAlarmAction = (...alarms: Alarm[]) => {
+      if (!alertAction) {
+        return;
+      }
+
+      alarms.forEach((alarm) => {
+        alarm.addAlarmAction(alertAction);
+      });
+    };
 
     const occurrenceMaintenanceMetric = (
       metricName: string,
@@ -114,6 +130,32 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
     ) =>
       new Metric({
         namespace: AUTH_ABUSE_METRIC_NAMESPACE,
+        metricName,
+        label,
+        color,
+        statistic: 'Sum',
+        period,
+        dimensionsMap: {
+          Stage: stageName,
+          Region: awsRegion,
+        },
+      });
+
+    const mobileAccessMetric = (
+      metricName:
+        | 'InstallationRegistration'
+        | 'InstallationHeartbeat'
+        | 'ApprovedInstallationRequest'
+        | 'PendingInstallationRequest'
+        | 'BlockedInstallationRequest'
+        | 'AuthenticatedInstallationRequest'
+        | 'BlockedUserRequest',
+      label: string,
+      color?: string,
+      period: Duration = Duration.minutes(5),
+    ) =>
+      new Metric({
+        namespace: MOBILE_DEVICE_ACCESS_METRIC_NAMESPACE,
         metricName,
         label,
         color,
@@ -374,6 +416,78 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
 
     this.dashboard.addWidgets(
       new TextWidget({
+        markdown: '## Mobile Access & Usage',
+        width: 24,
+        height: 1,
+      }),
+    );
+
+    this.dashboard.addWidgets(
+      new GraphWidget({
+        title: 'Mobile Install Registrations',
+        left: [
+          mobileAccessMetric('InstallationRegistration', 'First-seen installs', '#2ca02c'),
+          mobileAccessMetric('InstallationHeartbeat', 'Install heartbeats', '#1f77b4'),
+        ],
+        width: 12,
+        height: 6,
+      }),
+      new GraphWidget({
+        title: 'Mobile Access Gate Outcomes',
+        left: [
+          mobileAccessMetric('ApprovedInstallationRequest', 'Approved requests', '#2ca02c'),
+          mobileAccessMetric('PendingInstallationRequest', 'Pending requests', '#ff7f0e'),
+          mobileAccessMetric('BlockedInstallationRequest', 'Blocked installs', '#d62728'),
+        ],
+        width: 12,
+        height: 6,
+      }),
+    );
+
+    this.dashboard.addWidgets(
+      new GraphWidget({
+        title: 'Authenticated Mobile Usage',
+        left: [
+          mobileAccessMetric('AuthenticatedInstallationRequest', 'Authenticated mobile requests', '#17becf'),
+          mobileAccessMetric('BlockedUserRequest', 'Blocked account requests', '#d62728'),
+        ],
+        width: 12,
+        height: 6,
+      }),
+      new LogQueryWidget({
+        title: 'Mobile Install Versions',
+        logGroupNames: [graphqlLambdaLogGroup.logGroupName],
+        view: LogQueryVisualizationType.TABLE,
+        queryLines: [
+          'fields AppVersion, BuildVersion, ClientPlatform, InstallationRegistration',
+          'filter ispresent(InstallationRegistration) and InstallationRegistration > 0',
+          'stats sum(InstallationRegistration) as installs by AppVersion, BuildVersion, ClientPlatform',
+          'sort installs desc',
+          'limit 20',
+        ],
+        width: 12,
+        height: 6,
+      }),
+    );
+
+    this.dashboard.addWidgets(
+      new LogQueryWidget({
+        title: 'Recent Blocked Mobile Access',
+        logGroupNames: [graphqlLambdaLogGroup.logGroupName],
+        view: LogQueryVisualizationType.TABLE,
+        queryLines: [
+          'fields @timestamp, Operation, DeviceInstallationId, InstallationStatus, UserId, AppVersion, BuildVersion',
+          'filter (ispresent(BlockedInstallationRequest) and BlockedInstallationRequest > 0) or (ispresent(BlockedUserRequest) and BlockedUserRequest > 0)',
+          'sort @timestamp desc',
+          'limit 50',
+        ],
+        width: 24,
+        height: 6,
+      }),
+    );
+
+    this.dashboard.addWidgets(
+      new TextWidget({
         markdown:
           '## Error Patterns\n\nThis breakdown mixes GraphQL application error families and raw runtime exception classes.\n\n- `GraphQLError`: typed API responses such as auth failures, not-found, conflicts, bad input, and query-guard rejections.\n- `MongoServerError`: database execution or duplicate-key failures that escaped translation.\n- `ValidationError`: model/schema validation failures before persistence.\n- `AccessDeniedException`: AWS permission or integration configuration issue.\n- `OperationResolutionError` / `SyntaxError`: malformed GraphQL documents sent by a client or synthetic probe.\n- `Error`: uncategorized runtime failure that needs investigation.',
         width: 24,
@@ -529,6 +643,20 @@ export class GraphqlMonitoringDashboardConstruct extends Construct {
       alarmDescription:
         'Triggers when no successful occurrence maintenance run is recorded in the last 24 hours, indicating the scheduled worker may be failing to run at all.',
     });
+
+    attachAlarmAction(
+      maintenanceFailureAlarm,
+      graphqlApiClientErrorAlarm,
+      graphqlApiServerErrorAlarm,
+      graphqlApiThrottleAlarm,
+      graphqlQueryGuardRejectionAlarm,
+      authFailureAlarm,
+      authLockoutAlarm,
+      missingOccurrencesAlarm,
+      lowHorizonAlarm,
+      driftAlarm,
+      maintenanceSuccessMissingAlarm,
+    );
 
     this.dashboard.addWidgets(
       new TextWidget({

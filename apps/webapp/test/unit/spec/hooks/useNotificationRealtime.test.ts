@@ -8,6 +8,7 @@ jest.mock('next-auth/react', () => ({
 }));
 
 jest.mock('@/lib/constants', () => ({
+  GRAPHQL_URL: 'https://api.beta.af-south-1.gatherle.com/graphql',
   WEBSOCKET_URL: 'ws://localhost:3001',
 }));
 
@@ -18,7 +19,10 @@ jest.mock('@/lib/utils', () => ({
     warn: jest.fn(),
     error: jest.fn(),
   },
-  normalizeWebSocketBaseUrl: jest.fn((url: string) => url || null),
+  resolveWebappWebsocketBaseUrl: jest.fn((explicitUrl: string) => ({
+    websocketBaseUrl: explicitUrl || null,
+    websocketSource: explicitUrl ? 'explicit' : 'missing',
+  })),
   isRecord: (v: unknown) => v !== null && typeof v === 'object' && !Array.isArray(v),
 }));
 
@@ -430,8 +434,11 @@ describe('useNotificationRealtime', () => {
   });
 
   it('logs error when websocket URL is not configured', () => {
-    const { normalizeWebSocketBaseUrl, logger } = require('@/lib/utils');
-    (normalizeWebSocketBaseUrl as jest.Mock).mockReturnValueOnce(null);
+    const { resolveWebappWebsocketBaseUrl, logger } = require('@/lib/utils');
+    (resolveWebappWebsocketBaseUrl as jest.Mock).mockReturnValueOnce({
+      websocketBaseUrl: null,
+      websocketSource: 'missing',
+    });
 
     renderHook(() => useNotificationRealtime(true));
 

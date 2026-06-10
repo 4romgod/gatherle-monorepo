@@ -32,8 +32,10 @@ jest.mock('@/lib/auth/googleSignIn', () => ({
 }));
 
 function PreviewSessionProbe() {
-  const { isAuthenticated, isSessionReady } = usePreviewSession();
-  return <Text>{`ready:${String(isSessionReady)} auth:${String(isAuthenticated)}`}</Text>;
+  const { blockedSessionMessage, isAuthenticated, isSessionReady } = usePreviewSession();
+  return (
+    <Text>{`ready:${String(isSessionReady)} auth:${String(isAuthenticated)} blocked:${blockedSessionMessage ?? 'none'}`}</Text>
+  );
 }
 
 function PreviewSessionControls() {
@@ -84,7 +86,7 @@ describe('PreviewSessionProvider', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('ready:true auth:false')).toBeTruthy();
+        expect(screen.getByText('ready:true auth:false blocked:none')).toBeTruthy();
       });
 
       expect(mockValidateStoredSession).not.toHaveBeenCalled();
@@ -120,5 +122,31 @@ describe('PreviewSessionProvider', () => {
     });
 
     expect(mockClearMobileGoogleSignInSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears a blocked restored session and exposes the block message', async () => {
+    mockReadStoredSession.mockResolvedValueOnce({
+      email: 'person@example.com',
+      token: 'token-123',
+      userId: 'user-123',
+      username: 'person',
+    });
+    mockValidateStoredSession.mockResolvedValueOnce({
+      kind: 'blocked',
+      message: 'Blocked by admin',
+    });
+
+    render(
+      <PreviewSessionProvider>
+        <PreviewSessionProbe />
+      </PreviewSessionProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('ready:true auth:false blocked:Blocked by admin')).toBeTruthy();
+    });
+
+    expect(mockClearStoredSession).toHaveBeenCalledTimes(1);
+    expect(mockApolloClient.clearStore).toHaveBeenCalledTimes(1);
   });
 });

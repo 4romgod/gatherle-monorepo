@@ -80,7 +80,7 @@ export default function EventBoxSm({
         : 'RSVP';
   const rsvpButtonSx = {
     minHeight: 34,
-    borderRadius: 2,
+    borderRadius: 1,
     px: 1,
     fontSize: '0.74rem',
     boxShadow: 'none',
@@ -97,24 +97,24 @@ export default function EventBoxSm({
         }
       : rsvpStatus === ParticipantStatus.Going
         ? {
-            bgcolor: 'success.lighter',
+            bgcolor: 'success.main',
             borderColor: 'success.main',
-            color: 'success.main',
+            color: 'common.white',
             '&:hover': {
-              bgcolor: 'success.light',
-              borderColor: 'success.main',
-              color: 'success.dark',
+              bgcolor: 'success.dark',
+              borderColor: 'success.dark',
+              color: 'common.white',
             },
           }
         : rsvpStatus === ParticipantStatus.Interested
           ? {
-              bgcolor: 'primary.lighter',
+              bgcolor: 'primary.main',
               borderColor: 'primary.main',
-              color: 'primary.main',
+              color: 'common.white',
               '&:hover': {
-                bgcolor: 'primary.light',
-                borderColor: 'primary.main',
-                color: 'primary.dark',
+                bgcolor: 'primary.dark',
+                borderColor: 'primary.dark',
+                color: 'common.white',
               },
             }
           : {

@@ -125,8 +125,11 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 - Keys:
   - `NEXTAUTH_SECRET` (server-side NextAuth session signing secret; must be distinct from API `JWT_SECRET`).
   - `NEXT_PUBLIC_GRAPHQL_URL` (e.g., `http://localhost:9000/v1/graphql`).
-  - `NEXT_PUBLIC_WEBSOCKET_URL` (e.g., `ws://localhost:3001` or deployed `wss://.../<stage>` endpoint for realtime
-    notifications).
+  - `NEXT_PUBLIC_WEBSOCKET_URL` (optional override for realtime notifications/chat. When omitted, the webapp only
+    auto-derives a websocket base URL in two supported cases: local `http://localhost:9000/v1/graphql` ->
+    `ws://localhost:9000/local`, and canonical Gatherle deployed GraphQL hosts shaped like `https://api.../graphql` ->
+    `wss://ws...`. If your deployed GraphQL URL uses any other remote host, including an `execute-api` hostname, set
+    `NEXT_PUBLIC_WEBSOCKET_URL` explicitly.)
   - `NEXT_PUBLIC_ENABLE_PRIVATE_USERS` (optional feature flag; set to `true` to expose private-user privacy controls and
     follow-request review flows. Defaults to disabled, so frontend users are treated as public).
   - `GOOGLE_OAUTH_CLIENT_ID_WEB` / `GOOGLE_OAUTH_CLIENT_SECRET_WEB` (required for Google OAuth in NextAuth).
@@ -136,27 +139,30 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
     `npm run apple:oauth:client-secret -w @gatherle/webapp -- --key-file /secure/path/AuthKey_XXXXXXXXXX.p8 --team-id <APPLE_TEAM_ID> --key-id <APPLE_KEY_ID>`.
   - `NEXT_DEV_ALLOWED_ORIGINS` (optional; comma-separated hostnames/IPs to allow cross-origin `/_next/*` requests in dev
     mode, e.g. `192.168.0.7` for LAN testing from a phone). Not needed for standard `localhost` development.
-  - `NEXT_PUBLIC_S3_MEDIA_URL` — required when testing media uploads locally. Point at the Beta bucket:
+  - `MEDIA_UPLOAD_S3_URL` — required when testing media uploads locally. Point at the Beta bucket:
     `https://gatherle-media-beta-af-south-1.s3.af-south-1.amazonaws.com`. Also set `S3_BUCKET_NAME` and
     `CORS_ALLOWED_ORIGINS=http://localhost:3000` in `apps/api/.env.local`. See
-    `docs/frontend/media-upload-architecture.md` for full local setup. In CI/CD this is derived automatically from the
-    `S3BucketStack` CloudFormation output.
+    `docs/frontend/media-upload-architecture.md` for full local setup. This is build-time only and is used by
+    `apps/webapp/next.config.mjs` to allow presigned browser `PUT` uploads in the CSP. In CI/CD it is derived
+    automatically from the `S3BucketStack` CloudFormation output.
   - `NEXT_PUBLIC_MEDIA_CDN_URL` — optional in local development and preview/beta paths. When omitted, the webapp CSP
-    falls back to `NEXT_PUBLIC_S3_MEDIA_URL` for `connect-src` / `media-src` so remote media previews still load.
+    falls back to `MEDIA_UPLOAD_S3_URL` for `connect-src` / `media-src` so remote media previews still load.
 - These values stay local and are never checked in (respect `.gitignore` for `.env*`).
 
 ### Production & Staging
 
 - Host or CI (e.g., Vercel) should inject `NEXTAUTH_SECRET` and `NEXT_PUBLIC_GRAPHQL_URL`.
-- Also inject `NEXT_PUBLIC_WEBSOCKET_URL` when realtime notification updates are enabled.
+- `NEXT_PUBLIC_WEBSOCKET_URL` is optional in deployed environments only when `NEXT_PUBLIC_GRAPHQL_URL` uses the
+  canonical Gatherle `api.*` host pattern. If the deployed GraphQL URL uses any other remote host, inject
+  `NEXT_PUBLIC_WEBSOCKET_URL` explicitly.
 - Set `NEXT_PUBLIC_ENABLE_PRIVATE_USERS=true` only when the private-user product surface is ready for users.
 - Inject `GOOGLE_OAUTH_CLIENT_ID_WEB` / `GOOGLE_OAUTH_CLIENT_SECRET_WEB` when Google sign-in is enabled.
 - Inject `APPLE_OAUTH_CLIENT_SECRET_WEB` when Apple sign-in is enabled.
 - `NEXT_PUBLIC_GRAPHQL_URL` can come from the API deploy job output (`GRAPHQL_URL`).
-- `NEXT_PUBLIC_S3_MEDIA_URL` is still only needed for direct browser uploads and local upload testing; persisted media
-  reads come back from the API as stable CloudFront URLs in deployed environments.
+- `MEDIA_UPLOAD_S3_URL` is only needed at build time for direct browser uploads and local upload testing; persisted
+  media reads come back from the API as stable CloudFront URLs in deployed environments.
 - `NEXT_PUBLIC_MEDIA_CDN_URL` should be set for deployed environments that serve media from CloudFront; if it is
-  temporarily absent, the webapp now falls back to `NEXT_PUBLIC_S3_MEDIA_URL` instead of blocking remote media.
+  temporarily absent, the webapp now falls back to `MEDIA_UPLOAD_S3_URL` instead of blocking remote media.
 - `NEXTAUTH_SECRET` should come from a secure vault and must not reuse the API signing secret (`JWT_SECRET`).
 
 - Custom domain attachment for webapp hostnames (for example `beta.gatherle.com`, `www.beta.gatherle.com`) is managed in
@@ -285,12 +291,17 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 
 ### GitHub Environment Variables (non-sensitive, per-environment)
 
+- `ALERT_EMAIL_RECIPIENTS` (recommended for beta/prod; comma-separated email addresses that should receive
+  CloudWatch-alarm notifications via the monitoring stack SNS topic. Example:
+  `alerts@gatherle.com,founder@gatherle.com`. Each subscription requires a one-time confirmation from the recipient
+  inbox after deploy.)
 - `EMAIL_FROM` (optional; defaults to `noreply@gatherle.com`; must match a verified SES identity in the deployment
   account/region).
 - `WEBAPP_URL` (required for email links to work; set to the public webapp URL for the environment, e.g.
   `https://beta.gatherle.com`). If not set, CDK synth/deploy will still succeed, but email verification and similar
-  links generated by the API will be broken (they will contain an empty or invalid base URL). These two variables are
-  read by CDK at synth time and injected into the GraphQL Lambda environment.
+  links generated by the API will be broken (they will contain an empty or invalid base URL). These variables are read
+  by CDK at synth time. `ALERT_EMAIL_RECIPIENTS` configures the monitoring stack, while `EMAIL_FROM` and `WEBAPP_URL`
+  are injected into the GraphQL Lambda environment.
 
 ### GitHub Repository Variables (non-sensitive)
 
@@ -318,6 +329,8 @@ E2E tests use the `STAGE` environment variable to determine which endpoint to te
 
 - Capture `GRAPHQL_URL` from `gatherle-graphql-<stage-lower>-<region>` stack output `apiPath`.
 - Capture `WEBSOCKET_URL` from `gatherle-websocket-api-<stage-lower>-<region>` output `websocketApiUrl`.
+- Capture `OPERATIONAL_ALERTS_TOPIC_ARN` from `gatherle-monitoring-dashboard-<stage-lower>-<region>` output
+  `OperationalAlertsTopicArn`.
 - Capture `STAGE_HOSTED_ZONE_NAME_SERVERS` from `gatherle-graphql-<stage-lower>-<region>` output
   `stageHostedZoneNameServers` when preparing DNS delegation.
 - Run API e2e tests with `STAGE`, `AWS_REGION`, `GRAPHQL_URL`, and `SECRET_ARN`.

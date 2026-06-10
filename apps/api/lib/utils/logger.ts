@@ -26,6 +26,11 @@ export const LOG_LEVEL_MAP: Record<string, LogLevel> = {
   none: LogLevel.NONE,
 };
 
+const getConfiguredLogLevel = (): LogLevel => {
+  const envLevel = process.env.LOG_LEVEL?.toLowerCase();
+  return envLevel ? (LOG_LEVEL_MAP[envLevel] ?? LogLevel.INFO) : LogLevel.INFO;
+};
+
 interface LogContext {
   [key: string]: any;
 }
@@ -209,7 +214,7 @@ export const initLogger = (level: LogLevel, useJson: boolean = true): void => {
 
 export const getLogger = (): Logger => {
   if (!loggerInstance) {
-    loggerInstance = new Logger(LogLevel.INFO, true);
+    loggerInstance = new Logger(getConfiguredLogLevel(), true);
   }
   return loggerInstance;
 };

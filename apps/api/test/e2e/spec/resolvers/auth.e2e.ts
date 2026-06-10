@@ -1,9 +1,11 @@
 import request from 'supertest';
+import { ERROR_MESSAGES as COMMON_ERROR_MESSAGES } from '@gatherle/commons/server/constants';
 import { usersMockData } from '@/mongodb/data/mock';
 import {
   getForgotPasswordMutation,
   getLoginUserMutation,
   getRequestEmailVerificationMutation,
+  getReadUserByIdQuery,
   getResetPasswordMutation,
   getUpdateUserMutation,
   getVerifyEmailMutation,
@@ -254,6 +256,65 @@ describe('Auth Resolver', () => {
       expect(finalSuccessResponse.status).toBe(429);
       expect(finalSuccessResponse.body.errors[0].extensions.code).toBe('BAD_REQUEST');
       expect(finalSuccessResponse.body.errors[0].message).toContain('Too many login attempts');
+    });
+  });
+
+  describe('blocked app access', () => {
+    it('rejects both active sessions and fresh logins after an admin blocks the account', async () => {
+      const input = newUserInput();
+      const createdUser = await createUserOnServer(url, input, createdUserIds);
+
+      const verifyUserResponse = await postGraphQLWithRetry(
+        url,
+        getUpdateUserMutation({
+          emailVerified: true,
+          userId: createdUser.userId,
+        }),
+        adminToken,
+      );
+
+      expect(verifyUserResponse.status).toBe(200);
+      expect(verifyUserResponse.body.errors).toBeUndefined();
+
+      const preBlockLoginResponse = await attemptLogin(createdUser.email, input.password!);
+      expect(preBlockLoginResponse.status).toBe(200);
+      expect(preBlockLoginResponse.body.errors).toBeUndefined();
+
+      const preBlockQueryResponse = await postGraphQLWithRetry(
+        url,
+        getReadUserByIdQuery(createdUser.userId),
+        createdUser.token,
+        1,
+      );
+      expect(preBlockQueryResponse.status).toBe(200);
+      expect(preBlockQueryResponse.body.errors).toBeUndefined();
+
+      const blockUserResponse = await postGraphQLWithRetry(
+        url,
+        getUpdateUserMutation({
+          appAccessBlocked: true,
+          userId: createdUser.userId,
+        }),
+        adminToken,
+      );
+
+      expect(blockUserResponse.status).toBe(200);
+      expect(blockUserResponse.body.errors).toBeUndefined();
+
+      const blockedQueryResponse = await postGraphQLWithRetry(
+        url,
+        getReadUserByIdQuery(createdUser.userId),
+        createdUser.token,
+        1,
+      );
+      expect(blockedQueryResponse.status).toBe(403);
+      expect(blockedQueryResponse.body.errors[0].extensions.code).toBe('APP_ACCESS_BLOCKED');
+      expect(blockedQueryResponse.body.errors[0].message).toBe(COMMON_ERROR_MESSAGES.APP_ACCESS_BLOCKED);
+
+      const blockedLoginResponse = await attemptLogin(createdUser.email, input.password!);
+      expect(blockedLoginResponse.status).toBe(403);
+      expect(blockedLoginResponse.body.errors[0].extensions.code).toBe('APP_ACCESS_BLOCKED');
+      expect(blockedLoginResponse.body.errors[0].message).toBe(COMMON_ERROR_MESSAGES.APP_ACCESS_BLOCKED);
     });
   });
 });

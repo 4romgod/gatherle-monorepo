@@ -14,6 +14,10 @@ import { buildStackName } from './naming';
 
 export const setupServiceAccount = (app: App, account: ServiceAccount) => {
   const enableCustomDomains = process.env.ENABLE_CUSTOM_DOMAINS === 'true';
+  const alertEmailRecipients = (process.env.ALERT_EMAIL_RECIPIENTS ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
   const mongoDbUrl = process.env.MONGO_DB_URL?.trim();
   const jwtSecret = process.env.JWT_SECRET?.trim();
   const firebaseFcmServiceAccountJson = process.env.FIREBASE_FCM_SERVICE_ACCOUNT_JSON?.trim();
@@ -134,6 +138,7 @@ export const setupServiceAccount = (app: App, account: ServiceAccount) => {
     websocketLambdaLogGroup: webSocketApiStack.websocketLambdaLogGroup,
     websocketApi: webSocketApiStack.websocketApi,
     websocketStage: webSocketApiStack.websocketStage,
+    alertEmailRecipients,
     description: 'This stack includes CloudWatch dashboards for monitoring both the GraphQL and WebSocket APIs',
   });
 
