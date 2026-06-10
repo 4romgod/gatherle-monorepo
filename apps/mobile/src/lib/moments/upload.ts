@@ -1,37 +1,14 @@
 import { uploadAsync, FileSystemUploadType, type FileSystemUploadResult } from 'expo-file-system/legacy';
 import type { ImagePickerAsset } from 'expo-image-picker';
+import { ensurePickedAssetIsAvailableLocally, getPickedAssetExtension } from '@/lib/media/pickedAsset';
 
-function getExtensionFromAsset(asset: ImagePickerAsset): string {
-  const fileName = asset.fileName?.trim();
-  if (fileName?.includes('.')) {
-    return fileName.split('.').pop()?.toLowerCase() ?? 'jpg';
-  }
-
-  if (asset.mimeType?.includes('/')) {
-    const subtype = asset.mimeType.split('/')[1]?.toLowerCase();
-    if (subtype) {
-      if (subtype === 'jpeg') {
-        return 'jpg';
-      }
-
-      if (subtype === 'quicktime') {
-        return 'mov';
-      }
-
-      return subtype;
-    }
-  }
-
-  return 'jpg';
-}
-
-function getUploadHeaders(asset: ImagePickerAsset): Record<string, string> | undefined {
-  if (!asset.mimeType) {
+function getUploadHeaders(mimeType?: string): Record<string, string> | undefined {
+  if (!mimeType) {
     return undefined;
   }
 
   return {
-    'Content-Type': asset.mimeType,
+    'Content-Type': mimeType,
   };
 }
 
@@ -44,19 +21,16 @@ function ensureSuccessfulUpload(result: FileSystemUploadResult): void {
 }
 
 export async function uploadMomentAssetToSignedUrl(uploadUrl: string, asset: ImagePickerAsset): Promise<string> {
-  if (!asset.uri) {
-    throw new Error('Selected media is missing a file URI.');
-  }
-
   try {
-    const uploadResult = await uploadAsync(uploadUrl, asset.uri, {
-      headers: getUploadHeaders(asset),
+    const resolvedAsset = await ensurePickedAssetIsAvailableLocally(asset);
+    const uploadResult = await uploadAsync(uploadUrl, resolvedAsset.uri, {
+      headers: getUploadHeaders(resolvedAsset.mimeType),
       httpMethod: 'PUT',
       uploadType: FileSystemUploadType.BINARY_CONTENT,
     });
 
     ensureSuccessfulUpload(uploadResult);
-    return getExtensionFromAsset(asset);
+    return resolvedAsset.extension;
   } catch (error) {
     const detail = error instanceof Error ? error.message : 'Unknown upload error.';
     throw new Error(`We could not upload this moment media. ${detail}`);
@@ -64,5 +38,5 @@ export async function uploadMomentAssetToSignedUrl(uploadUrl: string, asset: Ima
 }
 
 export function getMomentAssetExtension(asset: ImagePickerAsset): string {
-  return getExtensionFromAsset(asset);
+  return getPickedAssetExtension(asset);
 }

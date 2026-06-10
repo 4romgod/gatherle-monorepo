@@ -154,6 +154,7 @@ export function EditEventScreen() {
       allowsEditing: true,
       aspect: MOBILE_MEDIA_PICKER_ASPECTS.eventCover,
       mediaTypes: 'images',
+      preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
       quality: 0.85,
     });
     if (!result.canceled && result.assets[0]) {

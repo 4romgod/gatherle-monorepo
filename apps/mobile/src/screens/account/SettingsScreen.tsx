@@ -310,6 +310,7 @@ export function SettingsScreen() {
       allowsEditing: true,
       aspect: MOBILE_MEDIA_PICKER_ASPECTS.avatar,
       mediaTypes: 'images',
+      preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
       quality: 0.85,
     });
 

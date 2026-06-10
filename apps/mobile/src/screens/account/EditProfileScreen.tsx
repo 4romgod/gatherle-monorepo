@@ -61,6 +61,7 @@ export function EditProfileScreen() {
       allowsEditing: true,
       aspect: MOBILE_MEDIA_PICKER_ASPECTS.avatar,
       mediaTypes: 'images',
+      preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
       quality: 0.85,
     });
     if (result.canceled || !result.assets[0]) return;

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import * as FileSystem from 'expo-file-system';
 import {
   ActivityIndicator,
   Image,
@@ -34,11 +33,16 @@ import {
   MOMENT_VIDEO_EXTENSIONS,
   type MomentBackgroundToken,
 } from '@/lib/moments/constants';
-import { getMomentAssetExtension } from '@/lib/moments/upload';
+import { ensurePickedAssetIsAvailableLocally } from '@/lib/media/pickedAsset';
 
 type ComposerTab = 'text' | 'image' | 'video';
 
 type ComposerNotice = {
+  message: string;
+  title: string;
+};
+
+type ComposerBlockingState = {
   message: string;
   title: string;
 };
@@ -69,6 +73,7 @@ export function MomentComposerModal({
     EventMomentImageDisplayMode.Fit,
   );
   const [composerNotice, setComposerNotice] = useState<ComposerNotice | null>(null);
+  const [blockingState, setBlockingState] = useState<ComposerBlockingState | null>(null);
   const [submissionMessage, setSubmissionMessage] = useState<string | null>(null);
   const remainingCaption = useMemo(() => MOMENT_MAX_CAPTION_LENGTH - caption.length, [caption.length]);
   const videoPreviewSource = useMemo(
@@ -79,6 +84,7 @@ export function MomentComposerModal({
     player.loop = true;
     player.muted = true;
   });
+  const isBusy = loading || Boolean(blockingState);
 
   useEffect(() => {
     if (!videoPreviewSource) {
@@ -99,11 +105,12 @@ export function MomentComposerModal({
     setSelectedAsset(null);
     setImageDisplayMode(EventMomentImageDisplayMode.Fit);
     setComposerNotice(null);
+    setBlockingState(null);
     setSubmissionMessage(null);
   };
 
   const closeComposer = (force = false) => {
-    if (loading && !force) {
+    if (isBusy && !force) {
       return;
     }
 
@@ -120,76 +127,100 @@ export function MomentComposerModal({
   };
 
   const handlePickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.85,
-      selectionLimit: 1,
+    setComposerNotice(null);
+    setBlockingState({
+      message: 'Getting your image ready for the story frame.',
+      title: 'Preparing image',
     });
 
-    if (result.canceled || !result.assets[0]) {
-      return;
-    }
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+        quality: 0.85,
+        selectionLimit: 1,
+      });
 
-    const asset = result.assets[0];
-    const extension = getMomentAssetExtension(asset);
-
-    if (!MOMENT_IMAGE_EXTENSIONS.includes(extension as (typeof MOMENT_IMAGE_EXTENSIONS)[number])) {
-      showComposerError('Unsupported image', 'Please choose a JPEG, PNG, or WEBP image. GIFs are not supported.');
-      return;
-    }
-
-    let effectiveImageSize = asset.fileSize;
-    if (effectiveImageSize == null) {
-      try {
-        const info = await FileSystem.getInfoAsync(asset.uri);
-        effectiveImageSize = info.exists ? info.size : undefined;
-      } catch {
-        effectiveImageSize = undefined;
+      if (result.canceled || !result.assets[0]) {
+        return;
       }
-    }
 
-    if (effectiveImageSize != null && effectiveImageSize > MOMENT_MAX_IMAGE_BYTES) {
-      showComposerError('Image too large', 'Images must be 15 MB or smaller.');
-      return;
-    }
+      const asset = result.assets[0];
+      const resolvedAsset = await ensurePickedAssetIsAvailableLocally(asset);
+      const extension = resolvedAsset.extension;
 
-    setComposerNotice(null);
-    setSelectedAsset(asset);
-    setActiveTab('image');
+      if (!MOMENT_IMAGE_EXTENSIONS.includes(extension as (typeof MOMENT_IMAGE_EXTENSIONS)[number])) {
+        showComposerError('Unsupported image', 'Please choose a JPEG, PNG, or WEBP image. GIFs are not supported.');
+        return;
+      }
+      const effectiveImageSize = resolvedAsset.fileSize;
+
+      if (effectiveImageSize != null && effectiveImageSize > MOMENT_MAX_IMAGE_BYTES) {
+        showComposerError('Image too large', 'Images must be 15 MB or smaller.');
+        return;
+      }
+
+      setSelectedAsset(asset);
+      setActiveTab('image');
+    } catch (error) {
+      showComposerError(
+        'Image unavailable',
+        error instanceof Error ? error.message : 'We could not access that image on this device.',
+      );
+    } finally {
+      setBlockingState(null);
+    }
   };
 
   const handlePickVideo = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['videos'],
-      quality: 0.85,
-      selectionLimit: 1,
+    setComposerNotice(null);
+    setBlockingState({
+      message: 'Getting your video ready for upload. This can take a moment while we prepare the file.',
+      title: 'Preparing video',
     });
 
-    if (result.canceled || !result.assets[0]) {
-      return;
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['videos'],
+        preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+        quality: 0.85,
+        selectionLimit: 1,
+        videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality,
+      });
+
+      if (result.canceled || !result.assets[0]) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      const resolvedAsset = await ensurePickedAssetIsAvailableLocally(asset);
+      const extension = resolvedAsset.extension;
+
+      if (!MOMENT_VIDEO_EXTENSIONS.includes(extension as (typeof MOMENT_VIDEO_EXTENSIONS)[number])) {
+        showComposerError('Unsupported video', 'Please choose an MP4, MOV, or WEBM video.');
+        return;
+      }
+
+      if (resolvedAsset.fileSize && resolvedAsset.fileSize > MOMENT_MAX_VIDEO_BYTES) {
+        showComposerError('Video too large', 'Videos must be 75 MB or smaller.');
+        return;
+      }
+
+      if (asset.duration && asset.duration > MOMENT_MAX_VIDEO_DURATION_MS) {
+        showComposerError('Video too long', 'Videos must be 30 seconds or shorter.');
+        return;
+      }
+
+      setSelectedAsset(asset);
+      setActiveTab('video');
+    } catch (error) {
+      showComposerError(
+        'Video unavailable',
+        error instanceof Error ? error.message : 'We could not access that video on this device.',
+      );
+    } finally {
+      setBlockingState(null);
     }
-
-    const asset = result.assets[0];
-    const extension = getMomentAssetExtension(asset);
-
-    if (!MOMENT_VIDEO_EXTENSIONS.includes(extension as (typeof MOMENT_VIDEO_EXTENSIONS)[number])) {
-      showComposerError('Unsupported video', 'Please choose an MP4, MOV, or WEBM video.');
-      return;
-    }
-
-    if (asset.fileSize && asset.fileSize > MOMENT_MAX_VIDEO_BYTES) {
-      showComposerError('Video too large', 'Videos must be 75 MB or smaller.');
-      return;
-    }
-
-    if (asset.duration && asset.duration > MOMENT_MAX_VIDEO_DURATION_MS) {
-      showComposerError('Video too long', 'Videos must be 30 seconds or shorter.');
-      return;
-    }
-
-    setComposerNotice(null);
-    setSelectedAsset(asset);
-    setActiveTab('video');
   };
 
   const handleSubmit = async () => {
@@ -262,6 +293,8 @@ export function MomentComposerModal({
 
   const submitLabel = loading ? 'Posting moment' : 'Post moment';
   const submissionOverlayMessage = submissionMessage ?? 'We’re getting this moment ready for the event feed.';
+  const overlayTitle = loading ? 'Posting moment' : (blockingState?.title ?? 'Preparing media');
+  const overlayMessage = loading ? submissionOverlayMessage : (blockingState?.message ?? submissionOverlayMessage);
 
   return (
     <Modal animationType="slide" onRequestClose={handleClose} statusBarTranslucent visible={open}>
@@ -287,12 +320,12 @@ export function MomentComposerModal({
                 accessibilityHint="Dismisses the moment composer without posting"
                 accessibilityLabel="Close moment composer"
                 accessibilityRole="button"
-                disabled={loading}
+                disabled={isBusy}
                 hitSlop={12}
                 onPress={handleClose}
                 style={styles.closeButton}
               >
-                <Text style={[styles.closeText, { color: theme.colors.textSecondary, opacity: loading ? 0.45 : 1 }]}>
+                <Text style={[styles.closeText, { color: theme.colors.textSecondary, opacity: isBusy ? 0.45 : 1 }]}>
                   ×
                 </Text>
               </Pressable>
@@ -303,7 +336,7 @@ export function MomentComposerModal({
                 const active = tab === activeTab;
                 return (
                   <Pressable
-                    disabled={loading}
+                    disabled={isBusy}
                     key={tab}
                     onPress={() => {
                       if (tab !== activeTab) {
@@ -317,7 +350,7 @@ export function MomentComposerModal({
                       {
                         backgroundColor: active ? theme.colors.primarySoft : theme.colors.surface,
                         borderColor: active ? theme.colors.primary : theme.colors.border,
-                        opacity: loading ? 0.55 : 1,
+                        opacity: isBusy ? 0.55 : 1,
                       },
                     ]}
                   >
@@ -357,7 +390,7 @@ export function MomentComposerModal({
                     const selected = swatch.token === selectedBackground;
                     return (
                       <Pressable
-                        disabled={loading}
+                        disabled={isBusy}
                         key={swatch.token}
                         onPress={() => setSelectedBackground(swatch.token)}
                         style={[
@@ -365,7 +398,7 @@ export function MomentComposerModal({
                           {
                             backgroundColor: swatch.color,
                             borderColor: selected ? theme.colors.textPrimary : 'transparent',
-                            opacity: loading ? 0.55 : 1,
+                            opacity: isBusy ? 0.55 : 1,
                           },
                         ]}
                       />
@@ -404,14 +437,14 @@ export function MomentComposerModal({
                   </View>
                 ) : (
                   <Pressable
-                    disabled={loading}
+                    disabled={isBusy}
                     onPress={() => void handlePickImage()}
                     style={[
                       styles.imagePickerButton,
                       {
                         backgroundColor: theme.colors.surface,
                         borderColor: theme.colors.border,
-                        opacity: loading ? 0.55 : 1,
+                        opacity: isBusy ? 0.55 : 1,
                       },
                     ]}
                   >
@@ -430,7 +463,7 @@ export function MomentComposerModal({
                       const selected = imageDisplayMode === option.value;
                       return (
                         <Pressable
-                          disabled={loading}
+                          disabled={isBusy}
                           key={option.value}
                           onPress={() => setImageDisplayMode(option.value)}
                           style={[
@@ -438,7 +471,7 @@ export function MomentComposerModal({
                             {
                               backgroundColor: selected ? theme.colors.primarySoft : theme.colors.surface,
                               borderColor: selected ? theme.colors.primary : theme.colors.border,
-                              opacity: loading ? 0.55 : 1,
+                              opacity: isBusy ? 0.55 : 1,
                             },
                           ]}
                         >
@@ -459,10 +492,8 @@ export function MomentComposerModal({
                 ) : null}
 
                 {selectedAsset ? (
-                  <Pressable disabled={loading} onPress={() => void handlePickImage()}>
-                    <Text
-                      style={[styles.changeImageText, { color: theme.colors.primary, opacity: loading ? 0.55 : 1 }]}
-                    >
+                  <Pressable disabled={isBusy} onPress={() => void handlePickImage()}>
+                    <Text style={[styles.changeImageText, { color: theme.colors.primary, opacity: isBusy ? 0.55 : 1 }]}>
                       Change image
                     </Text>
                   </Pressable>
@@ -484,14 +515,14 @@ export function MomentComposerModal({
                   </View>
                 ) : (
                   <Pressable
-                    disabled={loading}
+                    disabled={isBusy}
                     onPress={() => void handlePickVideo()}
                     style={[
                       styles.imagePickerButton,
                       {
                         backgroundColor: theme.colors.surface,
                         borderColor: theme.colors.border,
-                        opacity: loading ? 0.55 : 1,
+                        opacity: isBusy ? 0.55 : 1,
                       },
                     ]}
                   >
@@ -500,23 +531,21 @@ export function MomentComposerModal({
                 )}
 
                 {selectedAsset ? (
-                  <Pressable disabled={loading} onPress={() => void handlePickVideo()}>
-                    <Text
-                      style={[styles.changeImageText, { color: theme.colors.primary, opacity: loading ? 0.55 : 1 }]}
-                    >
+                  <Pressable disabled={isBusy} onPress={() => void handlePickVideo()}>
+                    <Text style={[styles.changeImageText, { color: theme.colors.primary, opacity: isBusy ? 0.55 : 1 }]}>
                       Change video
                     </Text>
                   </Pressable>
                 ) : null}
                 <Text style={[styles.mediaHintText, { color: theme.colors.textMuted }]}>
-                  MP4, MOV, WEBM up to 75 MB, 30 seconds max
+                  Videos up to 75 MB, 30 seconds max
                 </Text>
               </View>
             )}
 
             <View style={styles.inputWrap}>
               <TextInput
-                editable={!loading}
+                editable={!isBusy}
                 maxLength={MOMENT_MAX_CAPTION_LENGTH}
                 multiline
                 onChangeText={(nextCaption) => {
@@ -533,7 +562,7 @@ export function MomentComposerModal({
                     backgroundColor: theme.colors.surface,
                     borderColor: theme.colors.border,
                     color: theme.colors.textPrimary,
-                    opacity: loading ? 0.7 : 1,
+                    opacity: isBusy ? 0.7 : 1,
                   },
                 ]}
                 textAlignVertical="top"
@@ -571,13 +600,13 @@ export function MomentComposerModal({
             ) : null}
 
             <Pressable
-              disabled={loading}
+              disabled={isBusy}
               onPress={() => void handleSubmit()}
               style={[
                 styles.submitButton,
                 {
                   backgroundColor: theme.colors.secondary,
-                  opacity: loading ? 0.82 : 1,
+                  opacity: isBusy ? 0.82 : 1,
                 },
               ]}
             >
@@ -592,7 +621,7 @@ export function MomentComposerModal({
             </Pressable>
           </View>
 
-          {loading ? (
+          {isBusy ? (
             <View pointerEvents="auto" style={styles.submissionOverlay}>
               <View
                 style={[
@@ -604,10 +633,8 @@ export function MomentComposerModal({
                 ]}
               >
                 <ActivityIndicator color={theme.colors.primary} size="large" />
-                <Text style={[styles.submissionTitle, { color: theme.colors.textPrimary }]}>Posting moment</Text>
-                <Text style={[styles.submissionMessage, { color: theme.colors.textSecondary }]}>
-                  {submissionOverlayMessage}
-                </Text>
+                <Text style={[styles.submissionTitle, { color: theme.colors.textPrimary }]}>{overlayTitle}</Text>
+                <Text style={[styles.submissionMessage, { color: theme.colors.textSecondary }]}>{overlayMessage}</Text>
               </View>
             </View>
           ) : null}

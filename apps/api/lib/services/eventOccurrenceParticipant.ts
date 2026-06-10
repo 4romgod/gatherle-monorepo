@@ -5,7 +5,6 @@ import type {
   EventSeries,
   UpsertEventOccurrenceParticipantInput,
   User,
-  UserRole,
 } from '@gatherle/commons/server/types';
 import {
   EventOccurrenceStatus,
@@ -13,12 +12,19 @@ import {
   NotificationTargetType,
   NotificationType,
   ParticipantStatus,
+  UserRole,
 } from '@gatherle/commons/server/types';
 import { PUBLIC_OCCURRENCE_QUERY_PARAM, getOccurrencePublicAnchor } from '@gatherle/commons/server/utils';
 import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, UserDAO } from '@/mongodb/dao';
 import { logger } from '@/utils/logger';
 import { publishEventRsvpUpdated, type EventRsvpRealtimeSnapshot } from '@/websocket/publisher';
-import { CustomError, ErrorTypes, sumActiveOccurrenceRsvpCount, validatePaginationInput } from '@/utils';
+import {
+  CustomError,
+  ErrorTypes,
+  sanitizeQueryLimit,
+  sumActiveOccurrenceRsvpCount,
+  validatePaginationInput,
+} from '@/utils';
 import NotificationService from './notification';
 import EventSeriesService from './eventSeries';
 
@@ -106,19 +112,9 @@ function isNotifiableRsvpStatus(status: ParticipantStatus): boolean {
   return status === ParticipantStatus.Going || status === ParticipantStatus.Interested;
 }
 
+const USER_PARTICIPANT_VISIBILITY_BATCH_SIZE = 25;
+
 class EventOccurrenceParticipantService {
-  private static paginateParticipants(
-    participants: EventOccurrenceParticipant[],
-    pagination?: QueryOptionsInput['pagination'],
-  ): EventOccurrenceParticipant[] {
-    if (!pagination) {
-      return participants;
-    }
-
-    const { skip, limit } = validatePaginationInput(pagination);
-    return participants.slice(skip ?? 0, (skip ?? 0) + limit);
-  }
-
   private static assertOccurrenceAllowsRsvpUpdates(
     occurrence: Pick<EventOccurrence, 'status'>,
     eventSeries: Pick<EventSeries, 'status'>,
@@ -460,6 +456,59 @@ class EventOccurrenceParticipantService {
     return participant;
   }
 
+  private static async filterVisibleParticipants(
+    participants: EventOccurrenceParticipant[],
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+    visibleEventSeriesIds: Set<string> = new Set<string>(),
+    hiddenEventSeriesIds: Set<string> = new Set<string>(),
+  ): Promise<EventOccurrenceParticipant[]> {
+    if (participants.length === 0) {
+      return [];
+    }
+
+    const occurrences = await EventOccurrenceDAO.readByOccurrenceIds([
+      ...new Set(participants.map((participant) => participant.occurrenceId)),
+    ]);
+    if (occurrences.length === 0) {
+      return [];
+    }
+
+    const occurrencesById = new Map(occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]));
+    const unresolvedEventSeriesIds = [
+      ...new Set(
+        occurrences
+          .map((occurrence) => occurrence.eventSeriesId)
+          .filter(
+            (eventSeriesId) => !visibleEventSeriesIds.has(eventSeriesId) && !hiddenEventSeriesIds.has(eventSeriesId),
+          ),
+      ),
+    ];
+
+    if (unresolvedEventSeriesIds.length > 0) {
+      const visibleEventSeries = await EventSeriesService.readVisibleEventsByIds(
+        unresolvedEventSeriesIds,
+        viewerUserId,
+        viewerUserRole,
+      );
+      const batchVisibleEventSeriesIds = new Set(visibleEventSeries.map((eventSeries) => eventSeries.eventId));
+
+      unresolvedEventSeriesIds.forEach((eventSeriesId) => {
+        if (batchVisibleEventSeriesIds.has(eventSeriesId)) {
+          visibleEventSeriesIds.add(eventSeriesId);
+          return;
+        }
+
+        hiddenEventSeriesIds.add(eventSeriesId);
+      });
+    }
+
+    return participants.filter((participant) => {
+      const occurrence = occurrencesById.get(participant.occurrenceId);
+      return occurrence ? visibleEventSeriesIds.has(occurrence.eventSeriesId) : false;
+    });
+  }
+
   static async readByOccurrence(
     occurrenceId: string,
     viewerUserId?: string,
@@ -486,46 +535,59 @@ class EventOccurrenceParticipantService {
     viewerUserId?: string,
     viewerUserRole?: UserRole,
   ): Promise<EventOccurrenceParticipant[]> {
-    const occurrenceParticipants = await EventOccurrenceParticipantDAO.readByUser(
-      userId,
-      activeOnly,
-      options
-        ? {
-            ...options,
-            pagination: undefined,
-          }
-        : undefined,
+    if (viewerUserRole === UserRole.Admin) {
+      return EventOccurrenceParticipantDAO.readByUser(userId, activeOnly, options);
+    }
+
+    const pagination = options?.pagination ? validatePaginationInput(options.pagination) : undefined;
+    const shouldPaginateAfterVisibilityFiltering = Boolean(pagination);
+
+    if (!shouldPaginateAfterVisibilityFiltering || !pagination) {
+      const participants = await EventOccurrenceParticipantDAO.readByUser(userId, activeOnly, options);
+      return this.filterVisibleParticipants(participants, viewerUserId, viewerUserRole);
+    }
+
+    const visibleParticipants: EventOccurrenceParticipant[] = [];
+    const visibleEventSeriesIds = new Set<string>();
+    const hiddenEventSeriesIds = new Set<string>();
+    const batchLimit = sanitizeQueryLimit(
+      Math.max(pagination.limit, USER_PARTICIPANT_VISIBILITY_BATCH_SIZE),
+      USER_PARTICIPANT_VISIBILITY_BATCH_SIZE,
     );
-    if (occurrenceParticipants.length === 0) {
-      return [];
-    }
+    const requiredVisibleCount = (pagination.skip ?? 0) + pagination.limit;
+    let currentSkip = 0;
 
-    const occurrences = await EventOccurrenceDAO.readByOccurrenceIds([
-      ...new Set(occurrenceParticipants.map((participant) => participant.occurrenceId)),
-    ]);
-    if (occurrences.length === 0) {
-      return [];
-    }
+    while (visibleParticipants.length < requiredVisibleCount) {
+      const participantBatch = await EventOccurrenceParticipantDAO.readByUser(userId, activeOnly, {
+        ...options,
+        pagination: {
+          skip: currentSkip,
+          limit: batchLimit,
+        },
+      });
 
-    const visibleEventSeriesIds = new Set(
-      (
-        await EventSeriesService.readVisibleEventsByIds(
-          [...new Set(occurrences.map((occurrence) => occurrence.eventSeriesId))],
+      if (participantBatch.length === 0) {
+        break;
+      }
+
+      visibleParticipants.push(
+        ...(await this.filterVisibleParticipants(
+          participantBatch,
           viewerUserId,
           viewerUserRole,
-        )
-      ).map((eventSeries) => eventSeries.eventId),
-    );
-    const visibleOccurrenceIds = new Set(
-      occurrences
-        .filter((occurrence) => visibleEventSeriesIds.has(occurrence.eventSeriesId))
-        .map((occurrence) => occurrence.occurrenceId),
-    );
-    const visibleParticipants = occurrenceParticipants.filter((participant) =>
-      visibleOccurrenceIds.has(participant.occurrenceId),
-    );
+          visibleEventSeriesIds,
+          hiddenEventSeriesIds,
+        )),
+      );
+      currentSkip += participantBatch.length;
 
-    return this.paginateParticipants(visibleParticipants, options?.pagination);
+      if (participantBatch.length < batchLimit) {
+        break;
+      }
+    }
+
+    const startIndex = pagination.skip ?? 0;
+    return visibleParticipants.slice(startIndex, startIndex + pagination.limit);
   }
 }
 
