@@ -35,7 +35,8 @@ npm run apk:release
 That script:
 
 - runs Expo prebuild without reinstalling dependencies
-- builds a universal Android release APK with Gradle for sideloading across 32-bit and 64-bit ARM phones
+- matches the GitHub CI release path for Android
+- builds an `arm64-v8a` Android release APK with Gradle for sideloading on modern 64-bit ARM phones
 
 The generated APK will be at:
 

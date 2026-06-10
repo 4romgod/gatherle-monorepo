@@ -64,6 +64,7 @@ jest.mock('@/constants', () => ({
 jest.mock('@/mongodb/dao', () => ({
   EventOccurrenceDAO: {
     readByOccurrenceId: jest.fn(),
+    readByOccurrenceIds: jest.fn(),
     reserveSlots: jest.fn(),
     releaseReservedSlots: jest.fn(),
   },
@@ -77,6 +78,10 @@ jest.mock('@/mongodb/dao', () => ({
   },
   EventSeriesDAO: {
     readEventById: jest.fn(),
+    readEventsByIds: jest.fn(),
+  },
+  OrganizationMembershipDAO: {
+    readMembershipsByUserId: jest.fn(),
   },
   UserDAO: {
     readUserById: jest.fn(),
@@ -101,7 +106,13 @@ jest.mock('@/utils/logger', () => ({
 }));
 
 import EventOccurrenceParticipantService from '@/services/eventOccurrenceParticipant';
-import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO, UserDAO } from '@/mongodb/dao';
+import {
+  EventOccurrenceDAO,
+  EventOccurrenceParticipantDAO,
+  EventSeriesDAO,
+  OrganizationMembershipDAO,
+  UserDAO,
+} from '@/mongodb/dao';
 import NotificationService from '@/services/notification';
 import { publishEventRsvpUpdated } from '@/websocket/publisher';
 import type { EventOccurrence, EventOccurrenceParticipant, EventSeries } from '@gatherle/commons/server/types';
@@ -109,6 +120,7 @@ import {
   EventOccurrenceStatus,
   EventOrganizerRole,
   EventStatus,
+  EventVisibility,
   NotificationTargetType,
   NotificationType,
   ParticipantStatus,
@@ -168,9 +180,12 @@ describe('EventOccurrenceParticipantService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (EventOccurrenceDAO.readByOccurrenceId as jest.Mock).mockResolvedValue(occurrence);
+    (EventOccurrenceDAO.readByOccurrenceIds as jest.Mock).mockResolvedValue([occurrence]);
     (EventOccurrenceDAO.reserveSlots as jest.Mock).mockResolvedValue(true);
     (EventOccurrenceDAO.releaseReservedSlots as jest.Mock).mockResolvedValue(undefined);
     (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(recurringEventSeries);
+    (EventSeriesDAO.readEventsByIds as jest.Mock).mockResolvedValue([recurringEventSeries]);
+    (OrganizationMembershipDAO.readMembershipsByUserId as jest.Mock).mockResolvedValue([]);
     (UserDAO.readUserById as jest.Mock).mockResolvedValue(actor);
   });
 
@@ -409,5 +424,47 @@ describe('EventOccurrenceParticipantService', () => {
 
     expect(EventOccurrenceParticipantDAO.readByUser).toHaveBeenCalledWith(actor.userId, false, undefined);
     expect(result).toEqual([goingParticipant]);
+  });
+
+  it('filters hidden private occurrence RSVPs out of readByUser results', async () => {
+    const hiddenEventSeries: EventSeries = {
+      ...(recurringEventSeries as EventSeries),
+      eventId: 'series-hidden',
+      visibility: EventVisibility.Private,
+    };
+    const hiddenOccurrence: EventOccurrence = {
+      ...occurrence,
+      occurrenceId: 'series-hidden#2099-05-06T16:00:00.000Z',
+      eventSeriesId: hiddenEventSeries.eventId,
+      occurrenceKey: 'series-hidden#2099-05-06T16:00:00.000Z',
+    };
+    const hiddenParticipant: EventOccurrenceParticipant = {
+      ...goingParticipant,
+      occurrenceId: hiddenOccurrence.occurrenceId,
+    };
+
+    (EventOccurrenceParticipantDAO.readByUser as jest.Mock).mockResolvedValue([hiddenParticipant]);
+    (EventOccurrenceDAO.readByOccurrenceIds as jest.Mock).mockResolvedValue([hiddenOccurrence]);
+    (EventSeriesDAO.readEventsByIds as jest.Mock).mockResolvedValue([hiddenEventSeries]);
+
+    const result = await EventOccurrenceParticipantService.readByUser(actor.userId, false);
+
+    expect(result).toEqual([]);
+  });
+
+  it('rejects RSVP changes for a private occurrence when the viewer can no longer access the parent event', async () => {
+    (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
+      ...recurringEventSeries,
+      visibility: EventVisibility.Private,
+    });
+
+    await expect(
+      EventOccurrenceParticipantService.rsvp(
+        { occurrenceId: occurrence.occurrenceId, status: ParticipantStatus.Going },
+        actor.userId,
+      ),
+    ).rejects.toThrow('EventSeries not found');
+
+    expect(EventOccurrenceParticipantDAO.upsert).not.toHaveBeenCalled();
   });
 });

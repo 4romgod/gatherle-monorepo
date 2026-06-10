@@ -30,6 +30,7 @@ import { AdminModal } from '@/components/admin/AdminModal';
 import { AdminPill } from '@/components/admin/AdminPill';
 import { InlineButton } from '@/components/core/InlineButton';
 import { typography } from '@/app/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 
 type OrganizationFormState = {
   billingEmail: string;
@@ -92,6 +93,7 @@ function getOwnerLabel(organization: {
 }
 
 export function AdminOrganizationsScreen() {
+  const { theme } = useAppTheme();
   const navigation = useNavigation<DetailNavigation>();
   const { showToast } = useAppFeedback();
   const {
@@ -418,13 +420,19 @@ export function AdminOrganizationsScreen() {
                 title={organization.name}
               >
                 {organization.billingEmail ? (
-                  <Text style={styles.metaText}>Billing: {organization.billingEmail}</Text>
+                  <Text style={[styles.metaText, { color: theme.colors.primaryContrast }]}>
+                    Billing: {organization.billingEmail}
+                  </Text>
                 ) : null}
                 {organization.tags?.length ? (
-                  <Text style={styles.metaText}>Tags: {organization.tags.join(', ')}</Text>
+                  <Text style={[styles.metaText, { color: theme.colors.primaryContrast }]}>
+                    Tags: {organization.tags.join(', ')}
+                  </Text>
                 ) : null}
                 {organization.domainsAllowed?.length ? (
-                  <Text style={styles.metaText}>Domains: {organization.domainsAllowed.join(', ')}</Text>
+                  <Text style={[styles.metaText, { color: theme.colors.primaryContrast }]}>
+                    Domains: {organization.domainsAllowed.join(', ')}
+                  </Text>
                 ) : null}
               </AdminEntityCard>
             ))}

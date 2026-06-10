@@ -31,7 +31,7 @@ export class EventSeriesParticipantResolver {
       throw CustomError('You can only RSVP on your own behalf.', ErrorTypes.UNAUTHORIZED);
     }
 
-    const participant = await EventSeriesParticipantService.rsvp(input);
+    const participant = await EventSeriesParticipantService.rsvp(input, user.userId, user.userRole);
 
     UserFeedDAO.removeEventFromFeed(input.userId, input.eventId).catch((err) => {
       logger.warn('[EventSeriesParticipantResolver] Failed to remove event from feed after upsertEventParticipant', {
@@ -57,7 +57,7 @@ export class EventSeriesParticipantResolver {
       throw CustomError('You can only cancel your own RSVP.', ErrorTypes.UNAUTHORIZED);
     }
 
-    const participant = await EventSeriesParticipantService.cancel(input);
+    const participant = await EventSeriesParticipantService.cancel(input, user.userId, user.userRole);
 
     RecommendationService.computeFeedForUser(input.userId).catch((err) => {
       logger.warn('[EventSeriesParticipantResolver] Feed trigger failed after cancelEventParticipant', { error: err });
@@ -76,14 +76,22 @@ export class EventSeriesParticipantResolver {
     if (!context.user?.userId) {
       throw CustomError('User not authenticated', ErrorTypes.UNAUTHENTICATED);
     }
-    return EventSeriesParticipantService.checkIn(eventId, context.user.userId);
+    return EventSeriesParticipantService.checkIn(
+      eventId,
+      context.user.userId,
+      context.user.userId,
+      context.user.userRole,
+    );
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
   @Query(() => [EventSeriesParticipant])
-  async readEventParticipants(@Arg('eventId', () => String) eventId: string): Promise<EventSeriesParticipant[]> {
+  async readEventParticipants(
+    @Arg('eventId', () => String) eventId: string,
+    @Ctx() context: ServerContext,
+  ): Promise<EventSeriesParticipant[]> {
     validateMongodbId(eventId);
-    return EventSeriesParticipantService.readByEvent(eventId);
+    return EventSeriesParticipantService.readByEvent(eventId, context.user?.userId, context.user?.userRole);
   }
 
   /**
@@ -103,7 +111,12 @@ export class EventSeriesParticipantResolver {
     if (!context.user?.userId) {
       return null;
     }
-    return EventSeriesParticipantService.readByEventAndUser(eventId, context.user.userId);
+    return EventSeriesParticipantService.readByEventAndUser(
+      eventId,
+      context.user.userId,
+      context.user.userId,
+      context.user.userRole,
+    );
   }
 
   /**
@@ -119,7 +132,12 @@ export class EventSeriesParticipantResolver {
     if (!context.user?.userId) {
       return [];
     }
-    return EventSeriesParticipantService.readByUser(context.user.userId, !includeCancelled);
+    return EventSeriesParticipantService.readByUser(
+      context.user.userId,
+      !includeCancelled,
+      context.user.userId,
+      context.user.userRole,
+    );
   }
 
   @FieldResolver(() => User, { nullable: true })

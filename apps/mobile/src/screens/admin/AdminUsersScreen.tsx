@@ -24,6 +24,7 @@ import { AdminModal } from '@/components/admin/AdminModal';
 import { AdminPill } from '@/components/admin/AdminPill';
 import { InlineButton } from '@/components/core/InlineButton';
 import { typography } from '@/app/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 
 const USER_QUEUE_OPTIONS: { key: AdminUserQueue; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -59,6 +60,7 @@ function getUserDisplayName(user: {
 }
 
 export function AdminUsersScreen() {
+  const { theme } = useAppTheme();
   const { showToast } = useAppFeedback();
   const {
     authToken,
@@ -361,9 +363,11 @@ export function AdminUsersScreen() {
                   subtitle={user.username ? `@${user.username}` : null}
                   title={displayName}
                 >
-                  {user.bio ? <Text style={styles.metaText}>{user.bio}</Text> : null}
+                  {user.bio ? (
+                    <Text style={[styles.metaText, { color: theme.colors.primaryContrast }]}>{user.bio}</Text>
+                  ) : null}
                   {user.location?.city || user.location?.country ? (
-                    <Text style={styles.metaText}>
+                    <Text style={[styles.metaText, { color: theme.colors.primaryContrast }]}>
                       {[user.location?.city, user.location?.state, user.location?.country].filter(Boolean).join(', ')}
                     </Text>
                   ) : null}

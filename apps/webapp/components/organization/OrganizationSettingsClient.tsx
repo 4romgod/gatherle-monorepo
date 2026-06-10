@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { ArrowBack, Settings, Group, Warning } from '@mui/icons-material';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import CustomTabs, { TabPersistenceConfig } from '@/components/core/tabs/CustomTabs';
 import { ROUTES } from '@/lib/constants';
 import { OrganizationMembership, OrganizationRole, User } from '@/data/graphql/types/graphql';
@@ -37,6 +38,7 @@ interface OrganizationSettingsClientProps {
 }
 
 export default function OrganizationSettingsClient({ slug }: OrganizationSettingsClientProps) {
+  const router = useRouter();
   const {
     organization,
     orgLoading,
@@ -196,18 +198,22 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
   );
 
   const executeRemoveMember = useCallback(
-    async (membershipId: string) => {
-      setMembershipAction({ type: 'remove', membershipId });
+    async (membershipId: string, isSelf: boolean) => {
+      setMembershipAction({ type: 'remove', membershipId, isSelf });
       try {
         await deleteOrganizationMembership(membershipId);
+        if (isSelf) {
+          router.push(ROUTES.ACCOUNT.ORGANIZATIONS.ROOT);
+          return;
+        }
         await refetchMemberships();
       } catch (err: any) {
-        setError(err.message || 'Failed to remove member');
+        setError(err.message || (isSelf ? 'Failed to leave organization' : 'Failed to remove member'));
       } finally {
         setMembershipAction((prev) => (prev?.type === 'remove' && prev.membershipId === membershipId ? null : prev));
       }
     },
-    [deleteOrganizationMembership, refetchMemberships],
+    [deleteOrganizationMembership, refetchMemberships, router],
   );
 
   const promptAddMember = useCallback(() => {
@@ -234,9 +240,13 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
   const promptRemoveMember = useCallback(
     (membership: OrganizationMembership) => {
       if (isMembershipActionInProgress) return;
-      setPendingMembershipConfirmation({ type: 'remove', membership });
+      setPendingMembershipConfirmation({
+        type: 'remove',
+        membership,
+        isSelf: membership.userId === session?.user?.userId,
+      });
     },
-    [isMembershipActionInProgress],
+    [isMembershipActionInProgress, session?.user?.userId],
   );
 
   const confirmMembershipChange = useCallback(async () => {
@@ -250,7 +260,10 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
           pendingMembershipConfirmation.newRole,
         );
       } else if (pendingMembershipConfirmation.type === 'remove') {
-        await executeRemoveMember(pendingMembershipConfirmation.membership.membershipId);
+        await executeRemoveMember(
+          pendingMembershipConfirmation.membership.membershipId,
+          Boolean(pendingMembershipConfirmation.isSelf),
+        );
       }
     } finally {
       setPendingMembershipConfirmation(null);
@@ -265,7 +278,7 @@ export default function OrganizationSettingsClient({ slug }: OrganizationSetting
       case 'update':
         return 'Updating role...';
       case 'remove':
-        return 'Removing member...';
+        return membershipAction.isSelf ? 'Leaving organization...' : 'Removing member...';
     }
   }, [membershipAction]);
 

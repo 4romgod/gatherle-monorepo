@@ -3,6 +3,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Alert, Pressable, StyleSheet } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
+import { profileMetrics } from '@/lib/account/profileMetrics';
 
 export type ProfileBadgeTone = 'primary' | 'secondary' | 'success';
 
@@ -68,7 +69,7 @@ export function ProfileBadge({ badge }: ProfileBadgeProps) {
           },
         ]}
       >
-        <MaterialCommunityIcons color={palette.iconColor} name={badge.icon} size={13} />
+        <MaterialCommunityIcons color={palette.iconColor} name={badge.icon} size={profileMetrics.badgeIconSize} />
       </LinearGradient>
     </Pressable>
   );
@@ -77,8 +78,8 @@ export function ProfileBadge({ badge }: ProfileBadgeProps) {
 const styles = StyleSheet.create({
   badge: {
     alignItems: 'center',
-    borderRadius: 8,
-    height: 22,
+    borderRadius: profileMetrics.badgeRadius,
+    height: profileMetrics.badgeSize,
     justifyContent: 'center',
     shadowOffset: {
       height: 4,
@@ -86,9 +87,9 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.22,
     shadowRadius: 8,
-    width: 22,
+    width: profileMetrics.badgeSize,
   },
   badgeWrap: {
-    borderRadius: 8,
+    borderRadius: profileMetrics.badgeRadius,
   },
 });

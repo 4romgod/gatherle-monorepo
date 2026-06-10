@@ -11,9 +11,9 @@ export interface OrganizationFormData {
 export type MembershipAction =
   | { type: 'add' }
   | { type: 'update'; membershipId: string }
-  | { type: 'remove'; membershipId: string };
+  | { type: 'remove'; membershipId: string; isSelf?: boolean };
 
 export type PendingMembershipConfirmation =
   | { type: 'add'; user: User; role: OrganizationRole }
   | { type: 'role'; membership: OrganizationMembership; newRole: OrganizationRole }
-  | { type: 'remove'; membership: OrganizationMembership };
+  | { type: 'remove'; membership: OrganizationMembership; isSelf?: boolean };

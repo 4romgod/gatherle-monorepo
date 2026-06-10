@@ -163,29 +163,37 @@ export class EventSeriesResolver {
   }
 
   @Query(() => EventSeries, { description: RESOLVER_DESCRIPTIONS.EVENT.readEventById })
-  async readEventById(@Arg('eventId', () => String) eventId: string): Promise<EventSeries | null> {
+  async readEventById(
+    @Arg('eventId', () => String) eventId: string,
+    @Ctx() context: ServerContext,
+  ): Promise<EventSeries | null> {
     validateMongodbId(eventId, ERROR_MESSAGES.NOT_FOUND('EventSeries', 'ID', eventId));
-    return EventSeriesDAO.readEventById(eventId);
+    return EventSeriesService.readVisibleEventById(eventId, context.user?.userId, context.user?.userRole);
   }
 
   @Query(() => EventSeries, { description: RESOLVER_DESCRIPTIONS.EVENT.readEventBySlug })
-  async readEventBySlug(@Arg('slug', () => String) slug: string): Promise<EventSeries | null> {
-    return EventSeriesDAO.readEventBySlug(slug);
+  async readEventBySlug(
+    @Arg('slug', () => String) slug: string,
+    @Ctx() context: ServerContext,
+  ): Promise<EventSeries | null> {
+    return EventSeriesService.readVisibleEventBySlug(slug, context.user?.userId, context.user?.userRole);
   }
 
   @Query(() => [EventSeries], { description: RESOLVER_DESCRIPTIONS.EVENT.readEvents })
   async readEvents(
     @Arg('options', () => EventsQueryOptionsInput, { nullable: true }) options?: EventsQueryOptionsInput,
+    @Ctx() context?: ServerContext,
   ): Promise<EventSeries[]> {
     logger.debug('[readEvents] GraphQL query options:', { options });
-    return EventSeriesDAO.readEvents(options);
+    return EventSeriesService.readVisibleEvents(options, context?.user?.userId, context?.user?.userRole);
   }
 
   @Query(() => Int, { description: 'Read the total number of events.' })
   async readEventsCount(
     @Arg('options', () => EventsQueryOptionsInput, { nullable: true }) options?: EventsQueryOptionsInput,
+    @Ctx() context?: ServerContext,
   ): Promise<number> {
-    return EventSeriesDAO.countEvents(options);
+    return EventSeriesService.countVisibleEvents(options, context?.user?.userId, context?.user?.userRole);
   }
 
   @Query(() => [EventSeries], { description: 'Read the top trending upcoming events ranked by RSVP + saved-by score.' })

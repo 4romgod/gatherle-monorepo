@@ -10,7 +10,7 @@ import type {
   EventSeries,
   User,
 } from '@gatherle/commons/server/types';
-import { ParticipantStatus } from '@gatherle/commons/server/types';
+import { ParticipantStatus, UserRole } from '@gatherle/commons/server/types';
 import * as validation from '@/validation';
 import { createMockContext } from '../../../../utils/mockContext';
 
@@ -55,7 +55,7 @@ describe('EventSeriesParticipantResolver', () => {
 
   const userId = '507f1f77bcf86cd799439012';
   const eventId = '507f1f77bcf86cd799439011';
-  const mockContext = createMockContext({ user: { userId } as User });
+  const mockContext = createMockContext({ user: { userId, userRole: UserRole.User } as User });
 
   const mockParticipant: EventSeriesParticipant = {
     participantId: 'participant123',
@@ -77,7 +77,7 @@ describe('EventSeriesParticipantResolver', () => {
   describe('field resolvers', () => {
     it('loads the event through the DataLoader when the participant projection has no embedded event snapshot', async () => {
       const context = createMockContext(
-        { user: { userId } as User },
+        { user: { userId, userRole: UserRole.User } as User },
         {
           events: new Map([[eventId, { eventId, title: 'Weekly Yoga' } as EventSeries]]),
         },
@@ -103,7 +103,7 @@ describe('EventSeriesParticipantResolver', () => {
       const result = await resolver.upsertEventParticipant(mockInput, mockContext);
 
       expect(validation.validateMongodbId).toHaveBeenCalledWith(eventId);
-      expect(EventSeriesParticipantService.rsvp).toHaveBeenCalledWith(mockInput);
+      expect(EventSeriesParticipantService.rsvp).toHaveBeenCalledWith(mockInput, userId, UserRole.User);
       expect(UserFeedDAO.removeEventFromFeed).toHaveBeenCalledWith(userId, eventId);
       expect(result).toEqual(mockParticipant);
     });
@@ -142,7 +142,7 @@ describe('EventSeriesParticipantResolver', () => {
       const result = await resolver.cancelEventParticipant(mockInput, mockContext);
 
       expect(validation.validateMongodbId).toHaveBeenCalledWith(eventId);
-      expect(EventSeriesParticipantService.cancel).toHaveBeenCalledWith(mockInput);
+      expect(EventSeriesParticipantService.cancel).toHaveBeenCalledWith(mockInput, userId, UserRole.User);
       expect(RecommendationService.computeFeedForUser).toHaveBeenCalledWith(userId);
       expect(result).toEqual(cancelledParticipant);
     });
@@ -167,10 +167,10 @@ describe('EventSeriesParticipantResolver', () => {
     it('validates eventId and delegates to the service', async () => {
       (EventSeriesParticipantService.readByEvent as jest.Mock).mockResolvedValue([mockParticipant]);
 
-      const result = await resolver.readEventParticipants(eventId);
+      const result = await resolver.readEventParticipants(eventId, mockContext);
 
       expect(validation.validateMongodbId).toHaveBeenCalledWith(eventId);
-      expect(EventSeriesParticipantService.readByEvent).toHaveBeenCalledWith(eventId);
+      expect(EventSeriesParticipantService.readByEvent).toHaveBeenCalledWith(eventId, userId, UserRole.User);
       expect(result).toEqual([mockParticipant]);
     });
   });
@@ -182,7 +182,12 @@ describe('EventSeriesParticipantResolver', () => {
       const result = await resolver.myRsvpStatus(eventId, mockContext);
 
       expect(validation.validateMongodbId).toHaveBeenCalledWith(eventId);
-      expect(EventSeriesParticipantService.readByEventAndUser).toHaveBeenCalledWith(eventId, userId);
+      expect(EventSeriesParticipantService.readByEventAndUser).toHaveBeenCalledWith(
+        eventId,
+        userId,
+        userId,
+        UserRole.User,
+      );
       expect(result).toEqual(mockParticipant);
     });
 
@@ -209,7 +214,7 @@ describe('EventSeriesParticipantResolver', () => {
       const result = await resolver.checkInEventParticipant(eventId, mockContext);
 
       expect(validation.validateMongodbId).toHaveBeenCalledWith(eventId);
-      expect(EventSeriesParticipantService.checkIn).toHaveBeenCalledWith(eventId, userId);
+      expect(EventSeriesParticipantService.checkIn).toHaveBeenCalledWith(eventId, userId, userId, UserRole.User);
       expect(result).toEqual(checkedInParticipant);
     });
 
@@ -235,7 +240,7 @@ describe('EventSeriesParticipantResolver', () => {
 
       const result = await resolver.myRsvps(false, mockContext);
 
-      expect(EventSeriesParticipantService.readByUser).toHaveBeenCalledWith(userId, true);
+      expect(EventSeriesParticipantService.readByUser).toHaveBeenCalledWith(userId, true, userId, UserRole.User);
       expect(result).toEqual([mockParticipant]);
     });
 
@@ -252,7 +257,7 @@ describe('EventSeriesParticipantResolver', () => {
 
       const result = await resolver.myRsvps(true, mockContext);
 
-      expect(EventSeriesParticipantService.readByUser).toHaveBeenCalledWith(userId, false);
+      expect(EventSeriesParticipantService.readByUser).toHaveBeenCalledWith(userId, false, userId, UserRole.User);
       expect(result).toEqual([mockParticipant, cancelledParticipant]);
     });
 

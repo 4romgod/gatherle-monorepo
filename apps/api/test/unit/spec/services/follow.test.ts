@@ -70,6 +70,8 @@ jest.mock('@/mongodb/dao', () => ({
     remove: jest.fn(),
     updateApprovalStatus: jest.fn(),
     removeFollower: jest.fn(),
+    readSavedEventsForUser: jest.fn(),
+    isEventSavedByUser: jest.fn(),
   },
   UserDAO: {
     readUserById: jest.fn(),
@@ -77,8 +79,13 @@ jest.mock('@/mongodb/dao', () => ({
   OrganizationDAO: {
     readOrganizationById: jest.fn(),
   },
-  EventSeriesDAO: {
-    readEventById: jest.fn(),
+}));
+
+jest.mock('@/services/eventSeries', () => ({
+  __esModule: true,
+  default: {
+    readVisibleEventById: jest.fn(),
+    readVisibleEventsByIds: jest.fn(),
   },
 }));
 
@@ -103,7 +110,8 @@ jest.mock('@/websocket/publisher', () => ({
 }));
 
 import { FollowService } from '@/services';
-import { FollowDAO, UserDAO, OrganizationDAO, EventSeriesDAO } from '@/mongodb/dao';
+import { FollowDAO, UserDAO, OrganizationDAO } from '@/mongodb/dao';
+import EventSeriesService from '@/services/eventSeries';
 import NotificationService from '@/services/notification';
 import {
   publishEventSaveUpdated,
@@ -355,15 +363,17 @@ describe('FollowService', () => {
       it('creates follow with Accepted status (events are always public)', async () => {
         const eventFollow = { ...mockFollow, targetType: FollowTargetType.EventSeries, targetId: 'event-1' };
 
-        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
+        (EventSeriesService.readVisibleEventById as jest.Mock).mockResolvedValue(mockEvent);
         (FollowDAO.upsert as jest.Mock).mockResolvedValue(eventFollow);
 
         await FollowService.follow({
           followerUserId: 'user-1',
+          followerUserRole: 'User' as any,
           targetType: FollowTargetType.EventSeries,
           targetId: 'event-1',
         });
 
+        expect(EventSeriesService.readVisibleEventById).toHaveBeenCalledWith('event-1', 'user-1', 'User');
         expect(FollowDAO.upsert).toHaveBeenCalledWith(
           expect.objectContaining({
             approvalStatus: FollowApprovalStatus.Accepted,
@@ -374,7 +384,7 @@ describe('FollowService', () => {
       it('publishes event.save.updated for cross-device sync', async () => {
         const eventFollow = { ...mockFollow, targetType: FollowTargetType.EventSeries, targetId: 'event-1' };
 
-        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
+        (EventSeriesService.readVisibleEventById as jest.Mock).mockResolvedValue(mockEvent);
         (FollowDAO.upsert as jest.Mock).mockResolvedValue(eventFollow);
 
         await FollowService.follow({
@@ -395,7 +405,7 @@ describe('FollowService', () => {
       it('does not send notification for event saves', async () => {
         const eventFollow = { ...mockFollow, targetType: FollowTargetType.EventSeries, targetId: 'event-1' };
 
-        (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
+        (EventSeriesService.readVisibleEventById as jest.Mock).mockResolvedValue(mockEvent);
         (FollowDAO.upsert as jest.Mock).mockResolvedValue(eventFollow);
 
         await FollowService.follow({
@@ -409,6 +419,24 @@ describe('FollowService', () => {
 
         expect(NotificationService.notify).not.toHaveBeenCalled();
         expect(publishFollowRequestCreated).not.toHaveBeenCalled();
+      });
+
+      it('rejects saving an event that the viewer cannot access', async () => {
+        (EventSeriesService.readVisibleEventById as jest.Mock).mockRejectedValue(
+          new GraphQLError('EventSeries not found', {
+            extensions: { code: 'NOT_FOUND' },
+          }),
+        );
+
+        await expect(
+          FollowService.follow({
+            followerUserId: 'user-1',
+            targetType: FollowTargetType.EventSeries,
+            targetId: 'event-1',
+          }),
+        ).rejects.toThrow(GraphQLError);
+
+        expect(FollowDAO.upsert).not.toHaveBeenCalled();
       });
     });
   });
@@ -530,6 +558,51 @@ describe('FollowService', () => {
 
       expect(FollowDAO.removeFollower).toHaveBeenCalledWith('user-2', 'user-1', FollowTargetType.User);
       expect(result).toBe(true);
+    });
+  });
+
+  describe('saved events visibility', () => {
+    it('filters hidden private events out of saved events results', async () => {
+      const visibleFollow: Follow = {
+        ...mockFollow,
+        followId: 'follow-visible',
+        targetType: FollowTargetType.EventSeries,
+        targetId: 'event-visible',
+      };
+      const hiddenFollow: Follow = {
+        ...mockFollow,
+        followId: 'follow-hidden',
+        targetType: FollowTargetType.EventSeries,
+        targetId: 'event-hidden',
+      };
+
+      (FollowDAO.readSavedEventsForUser as jest.Mock).mockResolvedValue([visibleFollow, hiddenFollow]);
+      (EventSeriesService.readVisibleEventsByIds as jest.Mock).mockResolvedValue([
+        { eventId: 'event-visible', title: 'Visible Event' },
+      ]);
+
+      const result = await FollowService.readSavedEvents('user-1', undefined, 'user-1');
+
+      expect(FollowDAO.readSavedEventsForUser).toHaveBeenCalledWith('user-1', undefined);
+      expect(EventSeriesService.readVisibleEventsByIds).toHaveBeenCalledWith(
+        ['event-visible', 'event-hidden'],
+        'user-1',
+        undefined,
+      );
+      expect(result).toEqual([visibleFollow]);
+    });
+
+    it('returns false for isEventSaved when the event is no longer visible', async () => {
+      (EventSeriesService.readVisibleEventById as jest.Mock).mockRejectedValue(
+        new GraphQLError('EventSeries not found', {
+          extensions: { code: 'NOT_FOUND' },
+        }),
+      );
+
+      const result = await FollowService.isEventSaved('event-hidden', 'user-1', 'user-1');
+
+      expect(result).toBe(false);
+      expect(FollowDAO.isEventSavedByUser).not.toHaveBeenCalled();
     });
   });
 });

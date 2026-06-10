@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { MOBILE_RADIUS } from '@/app/theme/radius';
 import { typography } from '@/app/theme/typography';
+import { profileCompactTextProps, profileMetrics } from '@/lib/account/profileMetrics';
 
 type ProfileStatProps = {
   label: string;
@@ -14,10 +15,18 @@ export function ProfileStat({ label, onPress, value }: ProfileStatProps) {
 
   const content = (
     <>
-      <Text numberOfLines={1} style={[styles.profileStatValue, { color: theme.colors.textPrimary }]}>
+      <Text
+        numberOfLines={1}
+        style={[styles.profileStatValue, { color: theme.colors.textPrimary }]}
+        {...profileCompactTextProps}
+      >
         {value}
       </Text>
-      <Text numberOfLines={1} style={[styles.profileStatLabel, { color: theme.colors.textSecondary }]}>
+      <Text
+        numberOfLines={1}
+        style={[styles.profileStatLabel, { color: theme.colors.textSecondary }]}
+        {...profileCompactTextProps}
+      >
         {label}
       </Text>
     </>
@@ -44,22 +53,25 @@ const styles = StyleSheet.create({
     borderRadius: MOBILE_RADIUS.control,
     flex: 1,
     gap: 2,
-    minHeight: 54,
+    minHeight: profileMetrics.statMinHeight,
     justifyContent: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    minWidth: 0,
+    paddingHorizontal: profileMetrics.statPaddingHorizontal,
+    paddingVertical: profileMetrics.statPaddingVertical,
   },
   profileStatLabel: {
     ...typography.bodyRegular,
-    fontSize: 12,
+    flexShrink: 1,
+    fontSize: profileMetrics.statLabelSize,
     textAlign: 'center',
+    width: '100%',
   },
   profileStatPressed: {
     opacity: 0.72,
   },
   profileStatValue: {
     ...typography.displayBold,
-    fontSize: 21,
+    fontSize: profileMetrics.statValueSize,
     letterSpacing: -0.5,
   },
 });

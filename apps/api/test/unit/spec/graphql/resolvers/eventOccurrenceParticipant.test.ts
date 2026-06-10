@@ -85,7 +85,6 @@ import RecommendationService from '@/services/recommendation';
 import type { ServerContext } from '@/graphql';
 import type { EventOccurrence, EventOccurrenceParticipant, User } from '@gatherle/commons/server/types';
 import { ParticipantStatus } from '@gatherle/commons/server/types';
-import { buildMyEventOccurrenceParticipantLoadKey } from '@/utils';
 
 jest.mock('@/mongodb/dao', () => ({
   EventOccurrenceDAO: {
@@ -101,6 +100,8 @@ jest.mock('@/services', () => ({
     rsvp: jest.fn(),
     cancel: jest.fn(),
     checkIn: jest.fn(),
+    readByOccurrence: jest.fn(),
+    readByOccurrenceAndUser: jest.fn(),
     readByUser: jest.fn(),
   },
   RecommendationService: {
@@ -171,10 +172,7 @@ describe('EventOccurrenceParticipantResolver', () => {
       eventOccurrenceParticipantCountByOccurrence: new DataLoader(async (keys: readonly string[]) => keys.map(() => 1)),
       eventSaveCount: new DataLoader(async (keys: readonly string[]) => keys.map(() => 0)),
       eventSavedByMe: new DataLoader(async (keys: readonly string[]) => keys.map(() => false)),
-      myEventOccurrenceParticipant: new DataLoader(async (keys: readonly string[]) => {
-        const expectedKey = buildMyEventOccurrenceParticipantLoadKey(occurrence.occurrenceId, user.userId);
-        return keys.map((key) => (key === expectedKey ? participant : null));
-      }),
+      myEventOccurrenceParticipant: new DataLoader(async (keys: readonly string[]) => keys.map(() => participant)),
     },
   } as unknown as ServerContext;
 
@@ -196,14 +194,22 @@ describe('EventOccurrenceParticipantResolver', () => {
     expect(EventOccurrenceParticipantService.rsvp).toHaveBeenCalledWith(
       { occurrenceId: occurrence.occurrenceId, status: ParticipantStatus.Going },
       'user-1',
+      user.userRole,
     );
     expect(UserFeedDAO.removeEventFromFeed).toHaveBeenCalledWith('user-1', occurrence.eventSeriesId);
     expect(result).toEqual(participant);
   });
 
-  it('reads occurrence participants through the occurrence loader and enriches user fields', async () => {
+  it('reads occurrence participants through the service layer and enriches user fields', async () => {
+    (EventOccurrenceParticipantService.readByOccurrence as jest.Mock).mockResolvedValue([participant]);
+
     const result = await resolver.readEventOccurrenceParticipants(occurrence.occurrenceId, context);
 
+    expect(EventOccurrenceParticipantService.readByOccurrence).toHaveBeenCalledWith(
+      occurrence.occurrenceId,
+      user.userId,
+      user.userRole,
+    );
     expect(result).toEqual([
       expect.objectContaining({
         occurrenceId: occurrence.occurrenceId,
@@ -212,9 +218,17 @@ describe('EventOccurrenceParticipantResolver', () => {
     ]);
   });
 
-  it('resolves the current user occurrence RSVP through the my-occurrence loader', async () => {
+  it('resolves the current user occurrence RSVP through the service layer', async () => {
+    (EventOccurrenceParticipantService.readByOccurrenceAndUser as jest.Mock).mockResolvedValue(participant);
+
     const result = await resolver.myEventOccurrenceRsvpStatus(occurrence.occurrenceId, context);
 
+    expect(EventOccurrenceParticipantService.readByOccurrenceAndUser).toHaveBeenCalledWith(
+      occurrence.occurrenceId,
+      user.userId,
+      user.userId,
+      user.userRole,
+    );
     expect(result).toEqual(participant);
   });
 
@@ -223,20 +237,20 @@ describe('EventOccurrenceParticipantResolver', () => {
 
     const result = await resolver.myEventOccurrenceRsvps(false, undefined, context);
 
-    expect(EventOccurrenceParticipantService.readByUser).toHaveBeenCalledWith(user.userId, true, undefined);
+    expect(EventOccurrenceParticipantService.readByUser).toHaveBeenCalledWith(
+      user.userId,
+      true,
+      undefined,
+      user.userId,
+      user.userRole,
+    );
     expect(result).toEqual([participant]);
   });
 
   it('returns null when the current user has not RSVPd to the occurrence', async () => {
-    const emptyContext: ServerContext = {
-      ...context,
-      loaders: {
-        ...context.loaders,
-        myEventOccurrenceParticipant: new DataLoader(async (keys: readonly string[]) => keys.map(() => null)),
-      },
-    } as unknown as ServerContext;
+    (EventOccurrenceParticipantService.readByOccurrenceAndUser as jest.Mock).mockResolvedValue(null);
 
-    const result = await resolver.myEventOccurrenceRsvpStatus(occurrence.occurrenceId, emptyContext);
+    const result = await resolver.myEventOccurrenceRsvpStatus(occurrence.occurrenceId, context);
 
     expect(result).toBeNull();
   });

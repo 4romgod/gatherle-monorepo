@@ -1,12 +1,19 @@
 import EventOccurrenceService, { createEventOccurrenceQueryRequestCache } from '@/services/eventOccurrence';
-import { EventOccurrenceDAO, EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';
 import {
+  EventOccurrenceDAO,
+  EventOccurrenceParticipantDAO,
+  EventSeriesDAO,
+  OrganizationMembershipDAO,
+} from '@/mongodb/dao';
+import {
+  EventVisibility,
   EventOccurrenceStatus,
   EventStatus,
   FilterOperatorInput,
   SortOrderInput,
   type EventOccurrence,
   type EventSeries,
+  UserRole,
 } from '@gatherle/commons/server/types';
 import { DATE_FILTER_OPTIONS } from '@gatherle/commons/server';
 import { logger } from '@/utils/logger';
@@ -19,6 +26,7 @@ jest.mock('@/mongodb/dao', () => ({
     countByEventSeriesIdsInRange: jest.fn(),
     deleteByOccurrenceIds: jest.fn(),
     readByOccurrenceId: jest.fn(),
+    readByOccurrenceIds: jest.fn(),
     readByEventSeriesId: jest.fn(),
     readByEventSeriesIds: jest.fn(),
     readFirstByEventSeriesId: jest.fn(),
@@ -36,11 +44,16 @@ jest.mock('@/mongodb/dao', () => ({
     readActiveCountsByOccurrences: jest.fn(),
     cancelAllByOccurrence: jest.fn(),
     deleteByOccurrenceIds: jest.fn(),
+    readOccurrenceIdsByUser: jest.fn(),
     reassignOccurrenceIds: jest.fn(),
   },
   EventSeriesDAO: {
     readEventById: jest.fn(),
     readCandidateEventSeriesForOccurrences: jest.fn(),
+    readEventsByIds: jest.fn(),
+  },
+  OrganizationMembershipDAO: {
+    readMembershipsByUserId: jest.fn(),
   },
 }));
 
@@ -160,6 +173,137 @@ describe('EventOccurrenceService', () => {
 
       expect(result).toBeNull();
       expect(EventOccurrenceDAO.bulkUpsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('readUserEventOccurrences', () => {
+    it('paginates after filtering out invisible private occurrences', async () => {
+      const publicOccurrence = buildOccurrence({
+        occurrenceId: 'series-public-1#2026-05-20T16:00:00.000Z',
+        occurrenceKey: 'series-public-1#2026-05-20T16:00:00.000Z',
+        eventSeriesId: 'series-public-1',
+        eventSeriesSlug: 'series-public-1',
+        originalStartAt: new Date('2026-05-20T16:00:00.000Z'),
+        startAt: new Date('2026-05-20T16:00:00.000Z'),
+      });
+      const privateOccurrence = buildOccurrence({
+        occurrenceId: 'series-private-1#2026-05-13T16:00:00.000Z',
+        occurrenceKey: 'series-private-1#2026-05-13T16:00:00.000Z',
+        eventSeriesId: 'series-private-1',
+        eventSeriesSlug: 'series-private-1',
+        originalStartAt: new Date('2026-05-13T16:00:00.000Z'),
+        startAt: new Date('2026-05-13T16:00:00.000Z'),
+      });
+      const secondPublicOccurrence = buildOccurrence({
+        occurrenceId: 'series-public-2#2026-05-06T16:00:00.000Z',
+        occurrenceKey: 'series-public-2#2026-05-06T16:00:00.000Z',
+        eventSeriesId: 'series-public-2',
+        eventSeriesSlug: 'series-public-2',
+        originalStartAt: new Date('2026-05-06T16:00:00.000Z'),
+        startAt: new Date('2026-05-06T16:00:00.000Z'),
+      });
+
+      (EventOccurrenceParticipantDAO.readOccurrenceIdsByUser as jest.Mock).mockResolvedValue([
+        publicOccurrence.occurrenceId,
+        privateOccurrence.occurrenceId,
+        secondPublicOccurrence.occurrenceId,
+      ]);
+      (EventOccurrenceDAO.readByOccurrenceIds as jest.Mock).mockResolvedValue([
+        publicOccurrence,
+        privateOccurrence,
+        secondPublicOccurrence,
+      ]);
+      (EventSeriesDAO.readEventsByIds as jest.Mock).mockResolvedValue([
+        buildSeries({ eventId: 'series-public-1', visibility: EventVisibility.Public }),
+        buildSeries({ eventId: 'series-private-1', visibility: EventVisibility.Private, orgId: 'org-1' }),
+        buildSeries({ eventId: 'series-public-2', visibility: EventVisibility.Public }),
+      ]);
+      (OrganizationMembershipDAO.readMembershipsByUserId as jest.Mock).mockResolvedValue([]);
+
+      const result = await EventOccurrenceService.readUserEventOccurrences(
+        'user-1',
+        true,
+        {
+          pagination: {
+            skip: 0,
+            limit: 2,
+          },
+        },
+        'viewer-1',
+        UserRole.User,
+      );
+
+      expect(EventOccurrenceParticipantDAO.readOccurrenceIdsByUser).toHaveBeenCalledWith('user-1', true, -1, 0, 25);
+      expect(result.map((occurrence) => occurrence.occurrenceId)).toEqual([
+        publicOccurrence.occurrenceId,
+        secondPublicOccurrence.occurrenceId,
+      ]);
+    });
+
+    it('keeps fetching bounded batches until enough visible occurrences are collected', async () => {
+      const hiddenOccurrences = Array.from({ length: 25 }, (_, index) =>
+        buildOccurrence({
+          occurrenceId: `series-private-1#2026-05-${String(index + 1).padStart(2, '0')}T16:00:00.000Z`,
+          occurrenceKey: `series-private-1#2026-05-${String(index + 1).padStart(2, '0')}T16:00:00.000Z`,
+          eventSeriesId: 'series-private-1',
+          eventSeriesSlug: 'series-private-1',
+          originalStartAt: new Date(`2026-05-${String(index + 1).padStart(2, '0')}T16:00:00.000Z`),
+          startAt: new Date(`2026-05-${String(index + 1).padStart(2, '0')}T16:00:00.000Z`),
+        }),
+      );
+      const visibleOccurrence = buildOccurrence({
+        occurrenceId: 'series-public-1#2026-05-13T16:00:00.000Z',
+        occurrenceKey: 'series-public-1#2026-05-13T16:00:00.000Z',
+        eventSeriesId: 'series-public-1',
+        eventSeriesSlug: 'series-public-1',
+        originalStartAt: new Date('2026-05-13T16:00:00.000Z'),
+        startAt: new Date('2026-05-13T16:00:00.000Z'),
+      });
+
+      (EventOccurrenceParticipantDAO.readOccurrenceIdsByUser as jest.Mock)
+        .mockResolvedValueOnce(hiddenOccurrences.map((occurrence) => occurrence.occurrenceId))
+        .mockResolvedValueOnce([visibleOccurrence.occurrenceId])
+        .mockResolvedValueOnce([]);
+      (EventOccurrenceDAO.readByOccurrenceIds as jest.Mock)
+        .mockResolvedValueOnce(hiddenOccurrences)
+        .mockResolvedValueOnce([visibleOccurrence]);
+      (EventSeriesDAO.readEventsByIds as jest.Mock)
+        .mockResolvedValueOnce([
+          buildSeries({ eventId: 'series-private-1', visibility: EventVisibility.Private, orgId: 'org-1' }),
+        ])
+        .mockResolvedValueOnce([buildSeries({ eventId: 'series-public-1', visibility: EventVisibility.Public })]);
+      (OrganizationMembershipDAO.readMembershipsByUserId as jest.Mock).mockResolvedValue([]);
+
+      const result = await EventOccurrenceService.readUserEventOccurrences(
+        'user-1',
+        true,
+        {
+          pagination: {
+            skip: 0,
+            limit: 1,
+          },
+        },
+        'viewer-1',
+        UserRole.User,
+      );
+
+      expect(EventOccurrenceParticipantDAO.readOccurrenceIdsByUser).toHaveBeenNthCalledWith(
+        1,
+        'user-1',
+        true,
+        -1,
+        0,
+        25,
+      );
+      expect(EventOccurrenceParticipantDAO.readOccurrenceIdsByUser).toHaveBeenNthCalledWith(
+        2,
+        'user-1',
+        true,
+        -1,
+        25,
+        25,
+      );
+      expect(result.map((occurrence) => occurrence.occurrenceId)).toEqual([visibleOccurrence.occurrenceId]);
     });
   });
 

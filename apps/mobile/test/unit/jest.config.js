@@ -1,4 +1,5 @@
 const config = {
+  watchman: false,
   preset: 'jest-expo',
   rootDir: '../../',
   setupFilesAfterEnv: ['<rootDir>/test/unit/setup.ts'],

@@ -28,6 +28,7 @@ import { useHostedEventsByUser } from '@/hooks/events/useHostedEventsByUser';
 import { useMyEventOccurrenceRsvps } from '@/hooks/events/useMyEventOccurrenceRsvps';
 import { useSavedEvents } from '@/hooks/events/useSavedEvents';
 import { useUserMoments } from '@/hooks/moments/useUserMoments';
+import { profileCompactTextProps, profileMetrics, profileTextProps } from '@/lib/account/profileMetrics';
 import { usePreviewProfile } from '@/hooks/session/usePreviewProfile';
 import { buildProfileBadges } from '@/lib/account/profileBadges';
 import { isInvalidSessionError } from '@/lib/auth/sessionValidation';
@@ -361,7 +362,12 @@ export function AccountScreen() {
 
             <View style={styles.profileTopRail}>
               <View style={styles.profileIdentityRow}>
-                <Text numberOfLines={1} style={[styles.profileTopHandle, { color: theme.colors.textPrimary }]}>
+                <Text
+                  ellipsizeMode="tail"
+                  numberOfLines={1}
+                  style={[styles.profileTopHandle, { color: theme.colors.textPrimary }]}
+                  {...profileCompactTextProps}
+                >
                   @{profile?.username ?? username}
                 </Text>
 
@@ -391,15 +397,19 @@ export function AccountScreen() {
           </View>
 
           <View style={styles.profileTextBlock}>
-            <Text style={[styles.profileName, { color: theme.colors.textPrimary }]}>{profileName}</Text>
-            <Text style={[styles.profileBio, { color: theme.colors.textPrimary }]}>
+            <Text style={[styles.profileName, { color: theme.colors.textPrimary }]} {...profileTextProps}>
+              {profileName}
+            </Text>
+            <Text style={[styles.profileBio, { color: theme.colors.textPrimary }]} {...profileTextProps}>
               {profile?.bio || 'Add a short line so people know what kinds of events and communities pull you in.'}
             </Text>
           </View>
 
           {interests.length > 0 ? (
             <View style={styles.interestsBlock}>
-              <Text style={[styles.interestsLabel, { color: theme.colors.textSecondary }]}>Interests</Text>
+              <Text style={[styles.interestsLabel, { color: theme.colors.textSecondary }]} {...profileTextProps}>
+                Interests
+              </Text>
               <View style={styles.interestsWrap}>
                 {interests.map((interest) => (
                   <View
@@ -412,7 +422,9 @@ export function AccountScreen() {
                       },
                     ]}
                   >
-                    <Text style={[styles.interestText, { color: theme.colors.textPrimary }]}>{interest.name}</Text>
+                    <Text style={[styles.interestText, { color: theme.colors.textPrimary }]} {...profileTextProps}>
+                      {interest.name}
+                    </Text>
                   </View>
                 ))}
               </View>
@@ -529,19 +541,19 @@ const styles = StyleSheet.create({
   interestPill: {
     borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: profileMetrics.interestPillPaddingHorizontal,
+    paddingVertical: profileMetrics.interestPillPaddingVertical,
   },
   interestText: {
     ...typography.bodyMedium,
-    fontSize: 13,
+    fontSize: profileMetrics.accountInterestTextSize,
   },
   interestsBlock: {
     gap: 10,
   },
   interestsLabel: {
     ...typography.bodyBold,
-    fontSize: 11,
+    fontSize: profileMetrics.interestsLabelSize,
     letterSpacing: 1.1,
     textTransform: 'uppercase',
   },
@@ -558,8 +570,8 @@ const styles = StyleSheet.create({
   },
   profileBio: {
     ...typography.bodyRegular,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: profileMetrics.profileBioSize,
+    lineHeight: profileMetrics.profileBioLineHeight,
   },
   profileEventGrid: {
     marginTop: -14,
@@ -570,45 +582,48 @@ const styles = StyleSheet.create({
   profileBadgesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: profileMetrics.badgeWrapGap,
   },
   profileHeaderSection: {
-    gap: 14,
+    gap: profileMetrics.headerGap,
   },
   profileIdentityRow: {
     alignItems: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: profileMetrics.identityGap,
+    minWidth: 0,
   },
   profileName: {
     ...typography.displayBold,
-    fontSize: 18,
+    fontSize: profileMetrics.profileNameSize,
     letterSpacing: -0.5,
   },
   profileStatsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: profileMetrics.profileStatsGap,
     justifyContent: 'space-between',
   },
   profileTopHandle: {
     ...typography.bodyBold,
-    fontSize: 16,
+    flexShrink: 1,
+    fontSize: profileMetrics.profileTopHandleSize,
     letterSpacing: -0.2,
   },
   profileTopRail: {
     flex: 1,
-    gap: 12,
+    gap: profileMetrics.profileTopRailGap,
     justifyContent: 'center',
-    minHeight: 88,
+    minHeight: profileMetrics.profileTopRailMinHeight,
+    minWidth: 0,
   },
   profileTextBlock: {
-    gap: 4,
+    gap: profileMetrics.profileTextBlockGap,
   },
   profileTopRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 16,
+    gap: profileMetrics.profileTopRowGap,
   },
   toolbarActions: {
     flexDirection: 'row',

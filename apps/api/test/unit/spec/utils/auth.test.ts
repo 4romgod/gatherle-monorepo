@@ -5,7 +5,12 @@ import type { User } from '@gatherle/commons/server/types';
 import { UserRole } from '@gatherle/commons/server/types';
 import { OPERATIONS } from '@/constants';
 import { verify, sign } from 'jsonwebtoken';
-import { EventOccurrenceParticipantDAO, EventSeriesDAO } from '@/mongodb/dao';
+import {
+  EventOccurrenceParticipantDAO,
+  EventSeriesDAO,
+  OrganizationDAO,
+  OrganizationMembershipDAO,
+} from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import type { ArgsDictionary } from 'type-graphql';
 import type { GraphQLResolveInfo } from 'graphql';
@@ -250,6 +255,45 @@ describe('Auth Utilities', () => {
       const result = await isAuthorizedByOperation(
         OPERATIONS.EVENT_PARTICIPANT.READ_EVENT_PARTICIPANTS,
         { eventId: 'event-id' },
+        mockUser,
+      );
+
+      expect(result).toBe(false);
+    });
+
+    it('authorizes deleting your own organization membership', async () => {
+      (OrganizationMembershipDAO.readMembershipById as jest.Mock).mockResolvedValue({
+        membershipId: 'membership-1',
+        orgId: 'org-1',
+        userId: 'user-id',
+        role: 'Member',
+      });
+
+      const result = await isAuthorizedByOperation(
+        OPERATIONS.ORGANIZATION_MEMBERSHIP.DELETE_ORGANIZATION_MEMBERSHIP,
+        { input: { membershipId: 'membership-1' } },
+        mockUser,
+      );
+
+      expect(result).toBe(true);
+    });
+
+    it('still denies updating your own organization membership role', async () => {
+      (OrganizationMembershipDAO.readMembershipById as jest.Mock).mockResolvedValue({
+        membershipId: 'membership-1',
+        orgId: 'org-1',
+        userId: 'user-id',
+        role: 'Member',
+      });
+      (OrganizationDAO.readOrganizationById as jest.Mock).mockResolvedValue({
+        orgId: 'org-1',
+        ownerId: 'someone-else',
+      });
+      (OrganizationMembershipDAO.readMembershipsByOrgId as jest.Mock).mockResolvedValue([]);
+
+      const result = await isAuthorizedByOperation(
+        OPERATIONS.ORGANIZATION_MEMBERSHIP.UPDATE_ORGANIZATION_MEMBERSHIP,
+        { input: { membershipId: 'membership-1', role: 'Admin' } },
         mockUser,
       );
 

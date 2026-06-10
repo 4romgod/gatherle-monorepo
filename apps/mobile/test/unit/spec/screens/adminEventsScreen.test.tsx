@@ -62,6 +62,28 @@ jest.mock('@/app/providers/AppFeedbackProvider', () => ({
   useAppFeedback: () => ({ showToast: mockShowToast }),
 }));
 
+jest.mock('@/app/theme/AppThemeProvider', () => ({
+  useAppTheme: () => ({
+    theme: {
+      colors: {
+        background: '#05070d',
+        border: '#1f2430',
+        error: '#ff5f56',
+        errorSoft: '#2b1215',
+        primary: '#6c63ff',
+        primarySoft: '#201d45',
+        secondary: '#ff8b3d',
+        surface: '#0f1420',
+        surfaceRaised: '#141a29',
+        success: '#35c48b',
+        textMuted: '#7d8596',
+        textPrimary: '#f4f7fb',
+        textSecondary: '#b7c0d1',
+      },
+    },
+  }),
+}));
+
 jest.mock('@/components/core/PageContainer', () => ({
   PageContainer: ({ children, onRefresh }: React.PropsWithChildren<{ onRefresh?: () => void }>) => {
     const ReactNative = require('react-native');

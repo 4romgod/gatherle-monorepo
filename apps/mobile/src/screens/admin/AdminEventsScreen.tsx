@@ -26,6 +26,7 @@ import { AdminListFooter } from '@/components/admin/AdminListFooter';
 import { AdminModal } from '@/components/admin/AdminModal';
 import { AdminPill } from '@/components/admin/AdminPill';
 import { typography } from '@/app/theme/typography';
+import { useAppTheme } from '@/app/theme/AppThemeProvider';
 
 const EVENT_QUEUE_OPTIONS: { key: AdminEventQueue; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -46,6 +47,7 @@ type EventModerationState = {
 };
 
 export function AdminEventsScreen() {
+  const { theme } = useAppTheme();
   const navigation = useNavigation<DetailNavigation>();
   const { showToast } = useAppFeedback();
   const { authToken, isAdmin, isAuthenticated, loading: accessLoading, refetch: refetchAdminAccess } = useAdminAccess();
@@ -343,10 +345,12 @@ export function AdminEventsScreen() {
                 title={event.title}
               >
                 {event.organization?.name ? (
-                  <Text style={styles.metaText}>Organization: {event.organization.name}</Text>
+                  <Text style={[styles.metaText, { color: theme.colors.primaryContrast }]}>
+                    Organization: {event.organization.name}
+                  </Text>
                 ) : null}
                 {event.location?.address?.city || event.location?.address?.country ? (
-                  <Text style={styles.metaText}>
+                  <Text style={[styles.metaText, { color: theme.colors.primaryContrast }]}>
                     {[event.location.address?.city, event.location.address?.state, event.location.address?.country]
                       .filter(Boolean)
                       .join(', ')}

@@ -425,14 +425,16 @@ describe('OrganizationMembershipService', () => {
       expect(NotificationService.notify).not.toHaveBeenCalled();
     });
 
-    it('throws error when user tries to remove themselves', async () => {
+    it('allows a user to remove their own membership so they can leave the organization', async () => {
       (OrganizationMembershipDAO.readMembershipById as jest.Mock).mockResolvedValue(mockMembership);
+      (OrganizationMembershipDAO.delete as jest.Mock).mockResolvedValue(mockMembership);
 
-      await expect(
-        OrganizationMembershipService.removeMember('membership-1', 'user-1'), // Same as membership userId
-      ).rejects.toThrow('Users cannot remove themselves from an organization');
+      const result = await OrganizationMembershipService.removeMember('membership-1', 'user-1');
 
-      expect(OrganizationMembershipDAO.delete).not.toHaveBeenCalled();
+      expect(OrganizationMembershipDAO.delete).toHaveBeenCalledWith('membership-1');
+      expect(OrganizationMembershipDAO.readMembershipsByOrgId).not.toHaveBeenCalled();
+      expect(UserDAO.readUserById).not.toHaveBeenCalled();
+      expect(result).toEqual(mockMembership);
     });
 
     it('rejects removing the Owner membership through member management', async () => {
@@ -491,6 +493,20 @@ describe('OrganizationMembershipService', () => {
       await OrganizationMembershipService.removeMember('membership-1', 'admin-user');
 
       expect(AuditLogService.logOrgMembershipDeleted).not.toHaveBeenCalled();
+    });
+
+    it('still blocks an owner from removing their own membership directly', async () => {
+      (OrganizationMembershipDAO.readMembershipById as jest.Mock).mockResolvedValue({
+        ...mockMembership,
+        userId: 'owner-user',
+        role: OrganizationRole.Owner,
+      });
+
+      await expect(OrganizationMembershipService.removeMember('membership-1', 'owner-user')).rejects.toThrow(
+        'Owner membership cannot be removed from member management',
+      );
+
+      expect(OrganizationMembershipDAO.delete).not.toHaveBeenCalled();
     });
   });
 });

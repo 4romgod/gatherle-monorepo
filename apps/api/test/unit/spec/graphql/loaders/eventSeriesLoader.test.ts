@@ -2,6 +2,7 @@ import { createEventSeriesLoader } from '@/graphql/loaders';
 import { FollowDAO } from '@/mongodb/dao';
 import { EventSeries as EventSeriesModel } from '@/mongodb/models';
 import type { EventSeries } from '@gatherle/commons/server/types';
+import EventSeriesService from '@/services/eventSeries';
 
 jest.mock('@/mongodb/models', () => ({
   EventSeries: {
@@ -16,11 +17,19 @@ jest.mock('@/mongodb/dao', () => ({
   },
 }));
 
+jest.mock('@/services/eventSeries', () => ({
+  __esModule: true,
+  default: {
+    filterVisibleEvents: jest.fn(),
+  },
+}));
+
 describe('EventSeriesLoader', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (FollowDAO.countSavesForEvents as jest.Mock).mockResolvedValue(new Map());
     (FollowDAO.readSavedEventIdsForUser as jest.Mock).mockResolvedValue(new Set());
+    (EventSeriesService.filterVisibleEvents as jest.Mock).mockImplementation(async (events: EventSeries[]) => events);
   });
 
   it('should batch load events by ID', async () => {
@@ -92,6 +101,35 @@ describe('EventSeriesLoader', () => {
       savedByCount: 1,
       isSavedByMe: true,
     });
+  });
+
+  it('drops invisible events after visibility filtering', async () => {
+    const mockEvents: Array<Partial<EventSeries> & { _id: string }> = [
+      {
+        _id: 'event1',
+        eventId: 'event1',
+        title: 'Visible event',
+      },
+      {
+        _id: 'event2',
+        eventId: 'event2',
+        title: 'Hidden event',
+      },
+    ];
+    const mockQuery = {
+      lean: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue(mockEvents),
+    };
+
+    (EventSeriesModel.find as jest.Mock).mockReturnValue(mockQuery);
+    (EventSeriesService.filterVisibleEvents as jest.Mock).mockResolvedValue([mockEvents[0]]);
+
+    const loader = createEventSeriesLoader('user-1', 'User' as any);
+    const [visible, hidden] = await Promise.all([loader.load('event1'), loader.load('event2')]);
+
+    expect(EventSeriesService.filterVisibleEvents).toHaveBeenCalledWith(mockEvents, 'user-1', 'User');
+    expect(visible).toMatchObject({ eventId: 'event1' });
+    expect(hidden).toBeNull();
   });
 
   it('should handle empty input', async () => {

@@ -35,6 +35,7 @@ jest.mock('@/mongodb/dao', () => ({
   },
   EventSeriesDAO: {
     readEventById: jest.fn(),
+    readEventsByIds: jest.fn(),
   },
 }));
 
@@ -608,6 +609,7 @@ describe('FollowResolver', () => {
         },
       ];
       (FollowDAO.readSavedEventsForUser as jest.Mock).mockResolvedValue(mockSavedEvents);
+      (EventSeriesDAO.readEventsByIds as jest.Mock).mockResolvedValue([mockEvent]);
 
       const result = await resolver.readSavedEvents(undefined, mockContext as ServerContext);
 
@@ -616,6 +618,7 @@ describe('FollowResolver', () => {
     });
 
     it('checks if event is saved by current user', async () => {
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(mockEvent);
       (FollowDAO.isEventSavedByUser as jest.Mock).mockResolvedValue(true);
 
       const result = await resolver.isEventSaved(mockEvent.eventId!, mockContext as ServerContext);

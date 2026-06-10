@@ -663,9 +663,9 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
                 <Typography
                   sx={{
                     fontSize: { xs: 13, md: 14 },
-                    fontWeight: 700,
+                    fontWeight: 500,
                     letterSpacing: '-0.02em',
-                    lineHeight: 1.1,
+                    lineHeight: 1,
                     color: 'inherit',
                   }}
                 >

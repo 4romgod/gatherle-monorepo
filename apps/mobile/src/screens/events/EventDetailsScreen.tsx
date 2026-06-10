@@ -259,6 +259,7 @@ export function EventDetailsScreen() {
   const [composerVisible, setComposerVisible] = useState(false);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [eventOptionsVisible, setEventOptionsVisible] = useState(false);
+  const [pendingMomentSuccessToast, setPendingMomentSuccessToast] = useState(false);
   const [localParticipantCount, setLocalParticipantCount] = useState(participantCount);
   const initialGoingCount = useMemo(
     () =>
@@ -291,6 +292,24 @@ export function EventDetailsScreen() {
       ),
     });
   }, [navigation]);
+
+  useEffect(() => {
+    if (composerVisible || !pendingMomentSuccessToast) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      showToast({
+        message: 'Your moment is live.',
+        tone: 'success',
+      });
+      setPendingMomentSuccessToast(false);
+    }, 180);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [composerVisible, pendingMomentSuccessToast, showToast]);
 
   useEffect(() => {
     setLocalParticipantCount(participantCount);
@@ -983,6 +1002,7 @@ export function EventDetailsScreen() {
           occurrenceId={occurrence.occurrenceId}
           onClose={() => setComposerVisible(false)}
           onCreated={() => {
+            setPendingMomentSuccessToast(true);
             void refetchMoments();
           }}
           open={composerVisible}

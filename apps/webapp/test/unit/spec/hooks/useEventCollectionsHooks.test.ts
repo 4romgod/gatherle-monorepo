@@ -489,18 +489,24 @@ describe('event collection hooks', () => {
 
   describe('useUserEventOccurrences', () => {
     it('requests paginated occurrences and partitions upcoming/past events', () => {
+      const now = Date.now();
+      const upcomingStart = new Date(now + 3 * 24 * 60 * 60 * 1000).toISOString();
+      const upcomingEnd = new Date(now + (3 * 24 + 2) * 60 * 60 * 1000).toISOString();
+      const pastStart = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const pastEnd = new Date(now - (30 * 24 - 2) * 60 * 60 * 1000).toISOString();
+
       useQueryMock.mockReturnValue({
         data: {
           readUserEventOccurrences: [
             {
               occurrenceId: 'upcoming',
-              startAt: '2026-06-10T10:00:00.000Z',
-              endAt: '2026-06-10T12:00:00.000Z',
+              startAt: upcomingStart,
+              endAt: upcomingEnd,
             },
             {
               occurrenceId: 'past',
-              startAt: '2026-04-10T10:00:00.000Z',
-              endAt: '2026-04-10T12:00:00.000Z',
+              startAt: pastStart,
+              endAt: pastEnd,
             },
           ],
         },

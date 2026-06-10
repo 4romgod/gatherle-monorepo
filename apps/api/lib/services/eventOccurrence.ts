@@ -21,28 +21,32 @@ import type {
   EventsQueryOptionsInput,
   FilterInput,
   QueryOptionsInput,
-  UpdateEventOccurrenceInput,
   SortInput,
+  UpdateEventOccurrenceInput,
 } from '@gatherle/commons/server/types';
-import { FilterOperatorInput, SelectorOperatorInput, SortOrderInput } from '@gatherle/commons/server/types';
+import { FilterOperatorInput, SelectorOperatorInput, SortOrderInput, UserRole } from '@gatherle/commons/server/types';
 import { EventOccurrenceStatus, EventStatus } from '@gatherle/commons/server/types';
 import { DATE_FILTER_OPTIONS } from '@gatherle/commons/server';
 import { sanitizeQueryLimit, validatePaginationInput } from '@/utils';
 import { logger } from '@/utils/logger';
+import EventSeriesService from './eventSeries';
 
 /** Maximum look-ahead window for materialising occurrence rows. Balances pre-computation cost with enough runway for schedulers and calendar integrations. */
 const MATERIALIZATION_WINDOW_MONTHS = 12;
 /** Hard cap on occurrences generated per sync run. Guards against runaway infinite RRULE expansions exhausting database write capacity. */
 const MAX_WINDOW_OCCURRENCES = 1000;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const USER_OCCURRENCE_VISIBILITY_BATCH_SIZE = 25;
 
-type OccurrenceQuerySeries = Pick<
+type OccurrenceSeriesSnapshot = Pick<
   EventSeries,
   'eventId' | 'slug' | 'primarySchedule' | 'status' | 'scheduleVersion'
 > & {
   createdAt?: Date;
   updatedAt?: Date;
 };
+
+type OccurrenceQuerySeries = OccurrenceSeriesSnapshot & Pick<EventSeries, 'visibility' | 'orgId' | 'organizers'>;
 
 export type EventOccurrenceQueryRequestCache = {
   candidateSeriesByOptionsKey: Map<string, OccurrenceQuerySeries[]>;
@@ -276,7 +280,7 @@ function getUserOccurrenceSortInput(sort?: QueryOptionsInput['sort']): { field: 
   }));
 }
 
-function buildSingleOccurrenceForSeries(eventSeries: OccurrenceQuerySeries): EventOccurrence {
+function buildSingleOccurrenceForSeries(eventSeries: OccurrenceSeriesSnapshot): EventOccurrence {
   const anchorStartAt = getScheduleAnchorStartAt(eventSeries.primarySchedule);
   const durationMs = getScheduleDurationMinutes(eventSeries.primarySchedule) * 60 * 1000;
   const occurrenceKey = EventOccurrenceService.buildOccurrenceKey(eventSeries.eventId, anchorStartAt);
@@ -388,8 +392,14 @@ class EventOccurrenceService {
   private static async readCandidateEventSeriesForOccurrenceQuery(
     options: EventsQueryOptionsInput | undefined,
     requestCache?: EventOccurrenceQueryRequestCache,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
   ): Promise<OccurrenceQuerySeries[]> {
-    const cacheKey = stableSerialize(options ?? null);
+    const cacheKey = stableSerialize({
+      options: options ?? null,
+      viewerUserId: viewerUserId ?? null,
+      viewerUserRole: viewerUserRole ?? null,
+    });
     const cached = requestCache?.candidateSeriesByOptionsKey.get(cacheKey);
     if (cached) {
       return cached;
@@ -398,9 +408,14 @@ class EventOccurrenceService {
     const candidateEventSeries = (await EventSeriesDAO.readCandidateEventSeriesForOccurrences(
       options,
     )) as OccurrenceQuerySeries[];
+    const visibleEventSeries = (await EventSeriesService.filterVisibleEvents(
+      candidateEventSeries,
+      viewerUserId,
+      viewerUserRole,
+    )) as OccurrenceQuerySeries[];
 
-    requestCache?.candidateSeriesByOptionsKey.set(cacheKey, candidateEventSeries);
-    return candidateEventSeries;
+    requestCache?.candidateSeriesByOptionsKey.set(cacheKey, visibleEventSeries);
+    return visibleEventSeries;
   }
 
   private static async readPersistedOccurrencesInRange(
@@ -459,6 +474,8 @@ class EventOccurrenceService {
     userId: string,
     activeOnly = true,
     options?: QueryOptionsInput,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
   ): Promise<EventOccurrence[]> {
     if (options?.search) {
       throw CustomError('User occurrence queries do not support text search.', ErrorTypes.BAD_REQUEST);
@@ -470,24 +487,109 @@ class EventOccurrenceService {
 
     const [{ order: startAtOrder }] = getUserOccurrenceSortInput(options?.sort);
     const pagination = options?.pagination ? validatePaginationInput(options.pagination) : undefined;
-    const orderedOccurrenceIds = await EventOccurrenceParticipantDAO.readOccurrenceIdsByUser(
-      userId,
-      activeOnly,
-      startAtOrder === SortOrderInput.asc ? 1 : -1,
-      pagination?.skip ?? 0,
-      pagination?.limit,
-    );
+    const shouldPaginateAfterVisibilityFiltering = viewerUserRole !== UserRole.Admin && Boolean(pagination);
 
+    if (!shouldPaginateAfterVisibilityFiltering || !pagination) {
+      const orderedOccurrenceIds = await EventOccurrenceParticipantDAO.readOccurrenceIdsByUser(
+        userId,
+        activeOnly,
+        startAtOrder === SortOrderInput.asc ? 1 : -1,
+        pagination?.skip ?? 0,
+        pagination?.limit,
+      );
+      return this.filterVisibleUserOccurrences(orderedOccurrenceIds, viewerUserId, viewerUserRole);
+    }
+
+    const visibleOccurrences: EventOccurrence[] = [];
+    const visibleEventSeriesIds = new Set<string>();
+    const hiddenEventSeriesIds = new Set<string>();
+    const batchLimit = sanitizeQueryLimit(
+      Math.max(pagination.limit, USER_OCCURRENCE_VISIBILITY_BATCH_SIZE),
+      USER_OCCURRENCE_VISIBILITY_BATCH_SIZE,
+    );
+    const requiredVisibleCount = (pagination.skip ?? 0) + pagination.limit;
+    let currentSkip = 0;
+
+    while (visibleOccurrences.length < requiredVisibleCount) {
+      const orderedOccurrenceIds = await EventOccurrenceParticipantDAO.readOccurrenceIdsByUser(
+        userId,
+        activeOnly,
+        startAtOrder === SortOrderInput.asc ? 1 : -1,
+        currentSkip,
+        batchLimit,
+      );
+
+      if (orderedOccurrenceIds.length === 0) {
+        break;
+      }
+
+      visibleOccurrences.push(
+        ...(await this.filterVisibleUserOccurrences(
+          orderedOccurrenceIds,
+          viewerUserId,
+          viewerUserRole,
+          visibleEventSeriesIds,
+          hiddenEventSeriesIds,
+        )),
+      );
+      currentSkip += orderedOccurrenceIds.length;
+
+      if (orderedOccurrenceIds.length < batchLimit) {
+        break;
+      }
+    }
+
+    const startIndex = pagination.skip ?? 0;
+    return visibleOccurrences.slice(startIndex, startIndex + pagination.limit);
+  }
+
+  private static async filterVisibleUserOccurrences(
+    orderedOccurrenceIds: string[],
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+    visibleEventSeriesIds: Set<string> = new Set<string>(),
+    hiddenEventSeriesIds: Set<string> = new Set<string>(),
+  ): Promise<EventOccurrence[]> {
     if (orderedOccurrenceIds.length === 0) {
       return [];
     }
 
     const occurrences = await EventOccurrenceDAO.readByOccurrenceIds(orderedOccurrenceIds);
     const occurrenceMap = new Map(occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]));
+    const unresolvedEventSeriesIds = [
+      ...new Set(
+        occurrences
+          .map((occurrence) => occurrence.eventSeriesId)
+          .filter(
+            (eventSeriesId) => !visibleEventSeriesIds.has(eventSeriesId) && !hiddenEventSeriesIds.has(eventSeriesId),
+          ),
+      ),
+    ];
+
+    if (unresolvedEventSeriesIds.length > 0) {
+      const visibleEventSeries = await EventSeriesService.readVisibleEventsByIds(
+        unresolvedEventSeriesIds,
+        viewerUserId,
+        viewerUserRole,
+      );
+      const batchVisibleEventSeriesIds = new Set(visibleEventSeries.map((eventSeries) => eventSeries.eventId));
+
+      unresolvedEventSeriesIds.forEach((eventSeriesId) => {
+        if (batchVisibleEventSeriesIds.has(eventSeriesId)) {
+          visibleEventSeriesIds.add(eventSeriesId);
+          return;
+        }
+
+        hiddenEventSeriesIds.add(eventSeriesId);
+      });
+    }
 
     return orderedOccurrenceIds
       .map((occurrenceId) => occurrenceMap.get(occurrenceId))
-      .filter((occurrence): occurrence is EventOccurrence => Boolean(occurrence));
+      .filter(
+        (occurrence): occurrence is EventOccurrence =>
+          occurrence !== undefined && occurrence !== null && visibleEventSeriesIds.has(occurrence.eventSeriesId),
+      );
   }
 
   static async readOccurrenceForSeries(eventSeriesId: string, occurrenceId?: string): Promise<EventOccurrence | null> {
@@ -579,10 +681,7 @@ class EventOccurrenceService {
     return occurrenceCount > singleEventSpanDays;
   }
 
-  static buildOccurrencesForSeries(
-    eventSeries: Pick<EventSeries, 'eventId' | 'slug' | 'primarySchedule' | 'status' | 'scheduleVersion'>,
-    now: Date = new Date(),
-  ): EventOccurrence[] {
+  static buildOccurrencesForSeries(eventSeries: OccurrenceSeriesSnapshot, now: Date = new Date()): EventOccurrence[] {
     if (!eventSeries.primarySchedule) {
       return [];
     }
@@ -642,11 +741,18 @@ class EventOccurrenceService {
   static async readEventOccurrences(
     options: EventsQueryOptionsInput,
     requestCache?: EventOccurrenceQueryRequestCache,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
   ): Promise<EventOccurrence[]> {
     const { startDate, endDate } = resolveOccurrenceDateRange(options);
     const sortInput = getOccurrenceSortInput(options.sort);
     const { seriesOptions, statusFilters } = splitOccurrenceStatusFilters(options);
-    const candidateEventSeries = await this.readCandidateEventSeriesForOccurrenceQuery(seriesOptions, requestCache);
+    const candidateEventSeries = await this.readCandidateEventSeriesForOccurrenceQuery(
+      seriesOptions,
+      requestCache,
+      viewerUserId,
+      viewerUserRole,
+    );
     const eventSeriesIds = candidateEventSeries.map((eventSeries) => eventSeries.eventId);
 
     logIfQueryExceedsMaterializationWindow(
@@ -684,10 +790,17 @@ class EventOccurrenceService {
   static async countEventOccurrences(
     options: EventsQueryOptionsInput,
     requestCache?: EventOccurrenceQueryRequestCache,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
   ): Promise<number> {
     const { startDate, endDate } = resolveOccurrenceDateRange(options);
     const { seriesOptions, statusFilters } = splitOccurrenceStatusFilters(options);
-    const candidateEventSeries = await this.readCandidateEventSeriesForOccurrenceQuery(seriesOptions, requestCache);
+    const candidateEventSeries = await this.readCandidateEventSeriesForOccurrenceQuery(
+      seriesOptions,
+      requestCache,
+      viewerUserId,
+      viewerUserRole,
+    );
     const eventSeriesIds = candidateEventSeries.map((eventSeries) => eventSeries.eventId);
 
     logIfQueryExceedsMaterializationWindow(
@@ -710,7 +823,7 @@ class EventOccurrenceService {
   }
 
   static async readUpcomingOccurrencesForSeries(
-    eventSeries: OccurrenceQuerySeries,
+    eventSeries: OccurrenceSeriesSnapshot,
     limit: number = 5,
     fromDate: Date = new Date(),
   ): Promise<EventOccurrence[]> {

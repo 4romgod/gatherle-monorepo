@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "apk:release": "node ./scripts/prepare-android-firebase-config.mjs && expo prebuild --no-install && npm run android:prepare:signing && ./android/gradlew -p android app:assembleRelease --build-cache --parallel -Dorg.gradle.caching=true",
+    "apk:release": "node ./scripts/prepare-android-firebase-config.mjs && expo prebuild --no-install --platform android && npm run android:prepare:signing && ./android/gradlew -p android app:assembleRelease -PreactNativeArchitectures=arm64-v8a --build-cache --parallel -Dorg.gradle.caching=true",
     "apk:install": "sh -c 'if [ -n \"$ANDROID_SERIAL\" ]; then adb -s \"$ANDROID_SERIAL\" install -r android/app/build/outputs/apk/release/app-release.apk; else adb install -r android/app/build/outputs/apk/release/app-release.apk; fi'",
     "android:oauth:doctor": "node ./scripts/android-google-oauth-doctor.mjs",
     "android:prepare:signing": "node ./scripts/prepare-android-release-signing.mjs",
