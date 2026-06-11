@@ -125,6 +125,7 @@ import {
   NotificationType,
   ParticipantStatus,
   ParticipantVisibility,
+  UserRole,
 } from '@gatherle/commons/server/types';
 
 describe('EventOccurrenceParticipantService', () => {
@@ -450,6 +451,88 @@ describe('EventOccurrenceParticipantService', () => {
     const result = await EventOccurrenceParticipantService.readByUser(actor.userId, false);
 
     expect(result).toEqual([]);
+  });
+
+  it('keeps fetching participant batches until enough visible RSVPs are collected', async () => {
+    const hiddenOccurrences = Array.from({ length: 25 }, (_, index) => ({
+      ...occurrence,
+      occurrenceId: `series-hidden#2099-05-${String(index + 1).padStart(2, '0')}T16:00:00.000Z`,
+      eventSeriesId: 'series-hidden',
+      occurrenceKey: `series-hidden#2099-05-${String(index + 1).padStart(2, '0')}T16:00:00.000Z`,
+      originalStartAt: new Date(`2099-05-${String(index + 1).padStart(2, '0')}T16:00:00.000Z`),
+      startAt: new Date(`2099-05-${String(index + 1).padStart(2, '0')}T16:00:00.000Z`),
+      endAt: new Date(`2099-05-${String(index + 1).padStart(2, '0')}T18:00:00.000Z`),
+    }));
+    const hiddenParticipants = hiddenOccurrences.map((hiddenOccurrence, index) => ({
+      ...goingParticipant,
+      participantId: `participant-hidden-${index + 1}`,
+      occurrenceId: hiddenOccurrence.occurrenceId,
+    }));
+    const visibleOccurrence: EventOccurrence = {
+      ...occurrence,
+      occurrenceId: 'series-public#2099-06-01T16:00:00.000Z',
+      eventSeriesId: 'series-public',
+      occurrenceKey: 'series-public#2099-06-01T16:00:00.000Z',
+      originalStartAt: new Date('2099-06-01T16:00:00.000Z'),
+      startAt: new Date('2099-06-01T16:00:00.000Z'),
+      endAt: new Date('2099-06-01T18:00:00.000Z'),
+    };
+    const visibleParticipant: EventOccurrenceParticipant = {
+      ...goingParticipant,
+      participantId: 'participant-visible-1',
+      occurrenceId: visibleOccurrence.occurrenceId,
+    };
+
+    (EventOccurrenceParticipantDAO.readByUser as jest.Mock)
+      .mockResolvedValueOnce(hiddenParticipants)
+      .mockResolvedValueOnce([visibleParticipant]);
+    (EventOccurrenceDAO.readByOccurrenceIds as jest.Mock)
+      .mockResolvedValueOnce(hiddenOccurrences)
+      .mockResolvedValueOnce([visibleOccurrence]);
+    (EventSeriesDAO.readEventsByIds as jest.Mock)
+      .mockResolvedValueOnce([
+        {
+          ...(recurringEventSeries as EventSeries),
+          eventId: 'series-hidden',
+          visibility: EventVisibility.Private,
+          orgId: 'org-1',
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          ...(recurringEventSeries as EventSeries),
+          eventId: 'series-public',
+          visibility: EventVisibility.Public,
+        },
+      ]);
+    (OrganizationMembershipDAO.readMembershipsByUserId as jest.Mock).mockResolvedValue([]);
+
+    const result = await EventOccurrenceParticipantService.readByUser(
+      actor.userId,
+      false,
+      {
+        pagination: {
+          skip: 0,
+          limit: 1,
+        },
+      },
+      'viewer-1',
+      UserRole.User,
+    );
+
+    expect(EventOccurrenceParticipantDAO.readByUser).toHaveBeenNthCalledWith(1, actor.userId, false, {
+      pagination: {
+        skip: 0,
+        limit: 25,
+      },
+    });
+    expect(EventOccurrenceParticipantDAO.readByUser).toHaveBeenNthCalledWith(2, actor.userId, false, {
+      pagination: {
+        skip: 25,
+        limit: 25,
+      },
+    });
+    expect(result).toEqual([visibleParticipant]);
   });
 
   it('rejects RSVP changes for a private occurrence when the viewer can no longer access the parent event', async () => {

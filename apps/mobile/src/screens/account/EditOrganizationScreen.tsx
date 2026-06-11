@@ -100,6 +100,7 @@ export function EditOrganizationScreen() {
       allowsEditing: true,
       aspect: MOBILE_MEDIA_PICKER_ASPECTS.organizationLogo,
       mediaTypes: 'images',
+      preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
       quality: 0.85,
     });
     if (!result.canceled && result.assets[0]) {

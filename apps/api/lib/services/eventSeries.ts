@@ -23,7 +23,7 @@ import { CustomError, ErrorTypes, KnownCommonError, areEventSchedulesEqual, getS
 import { EventVisibility, FollowTargetType, NotificationTargetType, UserRole } from '@gatherle/commons/server/types';
 import { logger } from '@/utils/logger';
 import EventOccurrenceService from './eventOccurrence';
-import { validatePaginationInput } from '@/utils';
+import { sanitizeQueryLimit, validatePaginationInput } from '@/utils';
 
 /**
  * Service for event domain logic.
@@ -33,6 +33,8 @@ import { validatePaginationInput } from '@/utils';
  * not in the DAO.
  */
 class EventSeriesService {
+  private static readonly EVENT_VISIBILITY_BATCH_SIZE = 50;
+
   private static isPrivateEvent(eventSeries: Pick<EventSeries, 'visibility'>): boolean {
     return eventSeries.visibility === EventVisibility.Private;
   }
@@ -83,6 +85,25 @@ class EventSeriesService {
     }
 
     return viewerOrgMemberships.has(eventSeries.orgId);
+  }
+
+  private static filterVisibleEventsWithMemberships<T extends Pick<EventSeries, 'visibility' | 'orgId' | 'organizers'>>(
+    eventSeriesList: T[],
+    viewerOrgMemberships: Set<string>,
+    viewerUserId?: string,
+    viewerUserRole?: UserRole,
+  ): T[] {
+    if (viewerUserRole === UserRole.Admin) {
+      return eventSeriesList;
+    }
+
+    if (!eventSeriesList.some((eventSeries) => this.isPrivateEvent(eventSeries))) {
+      return eventSeriesList;
+    }
+
+    return eventSeriesList.filter((eventSeries) =>
+      this.canViewerAccessEventWithMemberships(eventSeries, viewerOrgMemberships, viewerUserId, viewerUserRole),
+    );
   }
 
   private static paginateVisibleEvents<T>(events: T[], pagination?: PaginationInput): T[] {
@@ -150,6 +171,14 @@ class EventSeriesService {
       return true;
     }
 
+    if (viewerUserRole === UserRole.Admin) {
+      return true;
+    }
+
+    if (this.isViewerOrganizer(eventSeries, viewerUserId)) {
+      return true;
+    }
+
     const viewerOrgMemberships = await this.buildViewerOrgMembershipSet(viewerUserId);
     return this.canViewerAccessEventWithMemberships(eventSeries, viewerOrgMemberships, viewerUserId, viewerUserRole);
   }
@@ -170,7 +199,7 @@ class EventSeriesService {
     viewerUserId?: string,
     viewerUserRole?: UserRole,
   ): Promise<T[]> {
-    if (viewerUserRole === 'Admin') {
+    if (viewerUserRole === UserRole.Admin) {
       return eventSeriesList;
     }
 
@@ -179,9 +208,7 @@ class EventSeriesService {
     }
 
     const viewerOrgMemberships = await this.buildViewerOrgMembershipSet(viewerUserId);
-    return eventSeriesList.filter((eventSeries) =>
-      this.canViewerAccessEventWithMemberships(eventSeries, viewerOrgMemberships, viewerUserId, viewerUserRole),
-    );
+    return this.filterVisibleEventsWithMemberships(eventSeriesList, viewerOrgMemberships, viewerUserId, viewerUserRole);
   }
 
   static async readVisibleEventById(
@@ -243,16 +270,41 @@ class EventSeriesService {
       return EventSeriesDAO.countEvents(options);
     }
 
-    const allMatchingEvents = await EventSeriesDAO.readEvents(
-      options
-        ? {
-            ...options,
-            pagination: undefined,
-          }
-        : undefined,
+    const viewerOrgMemberships = await this.buildViewerOrgMembershipSet(viewerUserId);
+    const batchLimit = sanitizeQueryLimit(
+      EventSeriesService.EVENT_VISIBILITY_BATCH_SIZE,
+      EventSeriesService.EVENT_VISIBILITY_BATCH_SIZE,
     );
-    const visibleEvents = await this.filterVisibleEvents(allMatchingEvents, viewerUserId, viewerUserRole);
-    return visibleEvents.length;
+    let visibleCount = 0;
+    let currentSkip = 0;
+
+    while (true) {
+      const eventBatch = await EventSeriesDAO.readEvents({
+        ...options,
+        pagination: {
+          skip: currentSkip,
+          limit: batchLimit,
+        },
+      });
+
+      if (eventBatch.length === 0) {
+        break;
+      }
+
+      visibleCount += this.filterVisibleEventsWithMemberships(
+        eventBatch,
+        viewerOrgMemberships,
+        viewerUserId,
+        viewerUserRole,
+      ).length;
+      currentSkip += eventBatch.length;
+
+      if (eventBatch.length < batchLimit) {
+        break;
+      }
+    }
+
+    return visibleCount;
   }
 
   private static async syncOccurrencesForSeries(

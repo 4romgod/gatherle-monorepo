@@ -7,6 +7,7 @@ import type {
 } from '@gatherle/commons/server/types';
 import {
   EventOccurrenceStatus,
+  EventOrganizerRole,
   EventVisibility,
   EventStatus,
   FollowTargetType,
@@ -393,6 +394,20 @@ describe('EventSeriesService', () => {
       expect(result).toBe(event);
     });
 
+    it('allows organizers to read a private org event without loading memberships', async () => {
+      const event = makeEvent({
+        visibility: EventVisibility.Private,
+        orgId: 'org-1',
+        organizers: [{ user: 'host-user-id' as any, role: EventOrganizerRole.Host }],
+      });
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue(event);
+
+      const result = await EventSeriesService.readVisibleEventById('event-1', 'host-user-id', UserRole.User);
+
+      expect(OrganizationMembershipDAO.readMembershipsByUserId).not.toHaveBeenCalled();
+      expect(result).toBe(event);
+    });
+
     it('hides a private org event from non-members', async () => {
       const event = makeEvent({
         visibility: EventVisibility.Private,
@@ -431,6 +446,36 @@ describe('EventSeriesService', () => {
 
       const count = await EventSeriesService.countVisibleEvents(undefined, 'user-2', UserRole.User);
 
+      expect(count).toBe(1);
+    });
+
+    it('counts visible events in bounded batches for non-admin viewers', async () => {
+      const hiddenBatch = Array.from({ length: 50 }, (_, index) =>
+        makeEvent({
+          eventId: `event-hidden-${index + 1}`,
+          visibility: EventVisibility.Private,
+          orgId: 'org-1',
+        }),
+      );
+      const visibleEvent = makeEvent({ eventId: 'event-public-1', visibility: EventVisibility.Public });
+
+      (EventSeriesDAO.readEvents as jest.Mock).mockResolvedValueOnce(hiddenBatch).mockResolvedValueOnce([visibleEvent]);
+
+      const count = await EventSeriesService.countVisibleEvents(undefined, 'user-2', UserRole.User);
+
+      expect(EventSeriesDAO.readEvents).toHaveBeenNthCalledWith(1, {
+        pagination: {
+          skip: 0,
+          limit: 50,
+        },
+      });
+      expect(EventSeriesDAO.readEvents).toHaveBeenNthCalledWith(2, {
+        pagination: {
+          skip: 50,
+          limit: 50,
+        },
+      });
+      expect(OrganizationMembershipDAO.readMembershipsByUserId).toHaveBeenCalledTimes(1);
       expect(count).toBe(1);
     });
 
