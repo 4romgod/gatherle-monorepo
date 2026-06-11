@@ -204,7 +204,6 @@ export default function ConversationThread({ username }: ConversationThreadProps
         startIndex={0}
         open={replyMomentViewerOpen}
         onClose={() => setReplyMomentViewerOpen(false)}
-        organizerIds={[]}
       />
     </Box>
   );

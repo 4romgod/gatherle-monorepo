@@ -2,6 +2,7 @@ import * as Calendar from 'expo-calendar';
 import { Linking, Platform, Share } from 'react-native';
 import type { MobileEventOccurrence } from '@data/graphql/query/Discovery/types';
 import { formatLocationLabel, getEventTitle } from '@/lib/events/formatters';
+import { buildLocationSummaryFromAddress, hasUsableVenueAddress } from '@/lib/events/location';
 
 const DEFAULT_WEBAPP_URL = 'https://gatherle.com';
 const PUBLIC_OCCURRENCE_QUERY_PARAM = 'occurs';
@@ -44,9 +45,13 @@ export function buildEventWebUrl(occurrence: MobileEventOccurrence) {
 }
 
 function getAddressQuery(occurrence: MobileEventOccurrence) {
-  const address = occurrence.eventSeries?.location?.address;
-  const parts = [address?.city, address?.state, address?.country].filter(Boolean);
-  return parts.join(', ') || formatLocationLabel(occurrence);
+  const location = occurrence.eventSeries?.location;
+
+  if (!hasUsableVenueAddress(location)) {
+    return null;
+  }
+
+  return buildLocationSummaryFromAddress(location?.address) || null;
 }
 
 async function openFirstAvailableUrl(urls: string[]) {
@@ -86,7 +91,13 @@ export async function openLocationQueryInMaps(query: string) {
 }
 
 export async function openEventLocationInMaps(occurrence: MobileEventOccurrence) {
-  await openLocationQueryInMaps(getAddressQuery(occurrence));
+  const query = getAddressQuery(occurrence);
+
+  if (!query) {
+    throw new Error('Only events with a physical venue can open directions.');
+  }
+
+  await openLocationQueryInMaps(query);
 }
 
 export async function openEventSourceLink(eventLink?: string | null) {
@@ -136,7 +147,7 @@ function buildGoogleCalendarUrl(occurrence: MobileEventOccurrence) {
   const details = encodeURIComponent(
     `${occurrence.eventSeries?.summary || occurrence.eventSeries?.description || ''}\n\n${buildEventSeriesWebUrl(occurrence)}`.trim(),
   );
-  const location = encodeURIComponent(getAddressQuery(occurrence));
+  const location = encodeURIComponent(getAddressQuery(occurrence) ?? formatLocationLabel(occurrence));
   const startDate = occurrence.startAt ? new Date(occurrence.startAt) : new Date();
   const endDate = occurrence.endAt ? new Date(occurrence.endAt) : new Date(startDate.getTime() + 60 * 60 * 1000);
   const timeZone = occurrence.timezone?.trim();

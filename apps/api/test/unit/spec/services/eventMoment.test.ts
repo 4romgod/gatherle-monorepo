@@ -82,6 +82,9 @@ jest.mock('@/mongodb/dao', () => ({
     readEventById: jest.fn(),
     readEventsByIds: jest.fn(),
   },
+  OrganizationMembershipDAO: {
+    readMembershipByOrgIdAndUser: jest.fn(),
+  },
 }));
 
 // The service imports POSTING_WINDOW_HOURS_AFTER_EVENT and MAX_STATUSES_PER_WINDOW directly
@@ -119,6 +122,7 @@ import {
   EventOccurrenceParticipantDAO,
   EventSeriesDAO,
   FollowDAO,
+  OrganizationMembershipDAO,
   UserDAO,
 } from '@/mongodb/dao';
 import { getS3ObjectSize } from '@/clients/AWS/s3Client';
@@ -621,6 +625,27 @@ describe('EventMomentService', () => {
         ...mockEvent,
         organizers: [{ user: 'organizer-1' }],
       });
+    });
+
+    it('org event admins can delete a moment without being listed as organizers', async () => {
+      const othersMoment = { ...mockMoment, authorId: 'other-user' };
+      (EventMomentDAO.readById as jest.Mock).mockResolvedValue(othersMoment);
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
+        ...mockEvent,
+        orgId: 'org-1',
+        organizers: [{ user: 'organizer-1' }],
+      });
+      (OrganizationMembershipDAO.readMembershipByOrgIdAndUser as jest.Mock).mockResolvedValue({
+        membershipId: 'membership-1',
+        orgId: 'org-1',
+        userId: 'org-admin-1',
+        role: 'Admin',
+      });
+
+      const result = await EventMomentService.delete('moment-1', 'org-admin-1');
+
+      expect(result).toBe(true);
+      expect(OrganizationMembershipDAO.readMembershipByOrgIdAndUser).toHaveBeenCalledWith('org-1', 'org-admin-1');
     });
 
     it('throws UNAUTHORIZED when caller is neither author nor organizer', async () => {

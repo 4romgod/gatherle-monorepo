@@ -1,5 +1,6 @@
 export * from './auth';
 export * from './authAbuseMetrics';
+export * from './eventManagementAccess';
 export * from './eventOccurrence';
 export * from './eventStatus';
 export * from './externalAuth';

@@ -29,6 +29,7 @@ import { SectionHeading } from '@/components/core/SectionHeading';
 import { StateNotice } from '@/components/core/StateNotice';
 import { useInfiniteScroll } from '@/hooks/core/useInfiniteScroll';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
+import { useEventManagementAccess } from '@/hooks/events/useEventManagementAccess';
 import { getApolloAuthContext } from '@/lib/auth';
 import {
   ORGANIZER_OCCURRENCE_LOOKAHEAD_DAYS,
@@ -96,6 +97,9 @@ export function OrganizerEventSessionsScreen() {
 
   const occurrences = query.data?.readEventOccurrences ?? [];
   const totalCount = query.data?.readEventOccurrencesCount ?? occurrences.length;
+  const { canManageEvent, loading: eventManagementLoading } = useEventManagementAccess(
+    occurrences[0]?.eventSeries ?? null,
+  );
 
   const [cancelOccurrence] = useMutation(CancelEventOccurrenceDocument, getApolloAuthContext(authToken));
   const [updateOccurrence] = useMutation(UpdateEventOccurrenceDocument, getApolloAuthContext(authToken));
@@ -353,7 +357,15 @@ export function OrganizerEventSessionsScreen() {
   if (!isAuthenticated) {
     return (
       <PageContainer>
-        <StateNotice message="Sign in to manage the sessions for events that you organize." />
+        <StateNotice message="Sign in to manage the sessions for events that you can manage." />
+      </PageContainer>
+    );
+  }
+
+  if (!query.loading && !eventManagementLoading && occurrences.length > 0 && !canManageEvent) {
+    return (
+      <PageContainer onRefresh={onRefresh} refreshing={refreshing}>
+        <StateNotice message="Only Gatherle admins and the linked organization event managers can manage these sessions." />
       </PageContainer>
     );
   }

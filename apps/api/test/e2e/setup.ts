@@ -159,29 +159,6 @@ const resolveE2eJwtSecret = async (): Promise<string | undefined> => {
   return undefined;
 };
 
-const resolveE2eMongoDbUrl = async (): Promise<string | undefined> => {
-  const maxAttempts = 3;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      return (await getConfigValue(SECRET_KEYS.MONGO_DB_URL)).trim();
-    } catch (error) {
-      const shouldRetry = attempt < maxAttempts && isRetryableSecretFetchError(error);
-
-      if (!shouldRetry) {
-        throw error;
-      }
-
-      console.warn(
-        `[setup] mongo url fetch retry ${attempt}/${maxAttempts} after transient failure: ${describeError(error)}`,
-      );
-      await sleep(750 * attempt);
-    }
-  }
-
-  return undefined;
-};
-
 const getRetryAfterSeconds = (body: unknown): number | undefined => {
   if (!body || typeof body !== 'object') {
     return undefined;
@@ -321,7 +298,7 @@ const assertServerReady = async (graphqlUrl: string): Promise<void> => {
   }
 };
 
-const primeRuntimeContext = async (graphqlUrl: string, jwtSecret?: string, mongoDbUrl?: string): Promise<void> => {
+const primeRuntimeContext = async (graphqlUrl: string, jwtSecret?: string): Promise<void> => {
   const e2eUserNamespace = resolveE2EUserNamespace();
   const seededUsers = getSeededTestUsers();
   const usersByEmail = [seededUsers.admin, seededUsers.user, seededUsers.user2];
@@ -430,7 +407,6 @@ const primeRuntimeContext = async (graphqlUrl: string, jwtSecret?: string, mongo
     seededUsersByEmail,
     firstEventCategory,
     jwtSecret,
-    mongoDbUrl,
     e2eUserNamespace,
   });
 
@@ -465,8 +441,8 @@ const setup = async () => {
     await warmUpLambda(graphqlUrl, API_E2E_REMOTE_WARMUP_REQUESTS);
   }
 
-  const [jwtSecret, mongoDbUrl] = await Promise.all([resolveE2eJwtSecret(), resolveE2eMongoDbUrl()]);
-  await primeRuntimeContext(graphqlUrl, jwtSecret, mongoDbUrl);
+  const jwtSecret = await resolveE2eJwtSecret();
+  await primeRuntimeContext(graphqlUrl, jwtSecret);
 
   console.log('Done setting up e2e tests...');
 };

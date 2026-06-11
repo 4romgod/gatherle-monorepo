@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
-import { MongoDbClient, getConfigValue } from '@/clients';
+import { MongoDbClient } from '@/clients';
 import {
   GATHERLE_APP_VERSION_HEADER,
   GATHERLE_BUILD_VERSION_HEADER,
   GATHERLE_CLIENT_PLATFORM_HEADER,
   GATHERLE_CLIENT_PLATFORM_MOBILE,
   GATHERLE_DEVICE_INSTALLATION_ID_HEADER,
-  SECRET_KEYS,
+  MONGO_DB_URL,
 } from '@/constants';
 import MobileDeviceAccessRegistrationThrottleDAO from '@/mongodb/dao/mobileDeviceAccessRegistrationThrottle';
 import { MobileDeviceAccess, MobileDeviceAccessRegistrationThrottle } from '@/mongodb/models';
@@ -91,10 +91,36 @@ const sendMobileGraphQL = async (url: string, payload: object, deviceInstallatio
     .set(GATHERLE_BUILD_VERSION_HEADER, MOBILE_BUILD_VERSION)
     .send(payload);
 
+const describeError = (error: unknown): string => {
+  if (error instanceof Error) {
+    return `${error.name}: ${error.message}`;
+  }
+
+  return String(error);
+};
+
+const resolveMongoDbUrlForE2E = async () => {
+  const cachedMongoDbUrl = readRuntimeContext()?.mongoDbUrl?.trim();
+
+  if (cachedMongoDbUrl) {
+    return cachedMongoDbUrl;
+  }
+
+  const localMongoDbUrl = MONGO_DB_URL?.trim() || process.env.MONGO_DB_URL?.trim();
+
+  if (localMongoDbUrl) {
+    return localMongoDbUrl;
+  }
+
+  return undefined;
+};
+
 describe('Mobile Device Access Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
   let adminUser: UserWithToken;
   let mongoConnected = false;
+  let mongoCleanupUnavailableReason: string | null = null;
+  let hasLoggedMongoCleanupSkip = false;
   const createdDeviceInstallationIds: string[] = [];
 
   const createTrackedDeviceInstallationId = () => {
@@ -108,9 +134,24 @@ describe('Mobile Device Access Resolver', () => {
       return;
     }
 
-    const mongoDbUrl = readRuntimeContext()?.mongoDbUrl?.trim() || (await getConfigValue(SECRET_KEYS.MONGO_DB_URL));
-    await MongoDbClient.connectToDatabase(mongoDbUrl);
-    mongoConnected = true;
+    if (mongoCleanupUnavailableReason) {
+      throw new Error(mongoCleanupUnavailableReason);
+    }
+
+    const mongoDbUrl = await resolveMongoDbUrlForE2E();
+    if (!mongoDbUrl) {
+      mongoCleanupUnavailableReason =
+        'MONGO_DB_URL is not configured for direct Mongo cleanup in mobileDeviceAccess.e2e.ts.';
+      throw new Error(mongoCleanupUnavailableReason);
+    }
+
+    try {
+      await MongoDbClient.connectToDatabase(mongoDbUrl);
+      mongoConnected = true;
+    } catch (error) {
+      mongoCleanupUnavailableReason = describeError(error);
+      throw error;
+    }
   };
 
   const cleanupMobileDeviceAccessRecords = async (phase = 'cleanup') => {
@@ -118,7 +159,18 @@ describe('Mobile Device Access Resolver', () => {
       return [];
     }
 
-    await ensureMongoConnection();
+    try {
+      await ensureMongoConnection();
+    } catch (error) {
+      if (!hasLoggedMongoCleanupSkip) {
+        console.warn(
+          `[mobileDeviceAccess.e2e] skipping ${phase} cleanup because direct Mongo access is unavailable: ${describeError(error)}`,
+        );
+        hasLoggedMongoCleanupSkip = true;
+      }
+      createdDeviceInstallationIds.length = 0;
+      return [];
+    }
 
     return cleanupTrackedItems({
       items: createdDeviceInstallationIds,

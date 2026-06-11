@@ -9,6 +9,8 @@ import { ROUTES, SECTION_TITLE_STYLES } from '@/lib/constants';
 import type { EventDetail } from '@/data/graphql/query/Event/types';
 import type { Metadata } from 'next';
 import { buildPageMetadata } from '@/lib/metadata';
+import { getAuthHeader } from '@/lib/utils/auth';
+import { loadServerEventManagementAccess } from '@/lib/server/eventManagementAccess';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -16,7 +18,7 @@ interface Props {
 
 export const metadata: Metadata = buildPageMetadata({
   title: 'Manage Sessions',
-  description: 'Inspect, reschedule, cancel, and split recurring event sessions you organize.',
+  description: 'Inspect, reschedule, cancel, and split recurring event sessions you manage.',
   noIndex: true,
 });
 
@@ -32,6 +34,7 @@ export default async function AccountEventSessionsPage(props: Props) {
   const { data } = await getClient().query({
     query: GetEventBySlugDocument,
     variables: { slug: params.slug },
+    context: { headers: getAuthHeader(session?.user?.token) },
   });
 
   const event = data.readEventBySlug as EventDetail | null;
@@ -41,10 +44,14 @@ export default async function AccountEventSessionsPage(props: Props) {
     redirect(username ? ROUTES.USERS.USER(username) : ROUTES.HOME);
   }
 
-  const isOrganizer = event.organizers.some((organizer) => organizer.user.userId === currentUserId);
-  const isAdmin = session?.user?.userRole === 'Admin';
+  const canManageEvent = await loadServerEventManagementAccess({
+    event,
+    token: session?.user?.token,
+    userId: currentUserId,
+    userRole: session?.user?.userRole,
+  });
 
-  if (!isOrganizer && !isAdmin) {
+  if (!canManageEvent) {
     redirect(username ? ROUTES.USERS.USER(username) : ROUTES.HOME);
   }
 
@@ -86,7 +93,8 @@ export default async function AccountEventSessionsPage(props: Props) {
               </Stack>
               <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.7, maxWidth: 760 }}>
                 Manage the concrete sessions for &quot;{event.title}&quot;. Reschedule one occurrence, cancel a single
-                session, split the future schedule, and inspect attendee state without leaving your organizer tools.
+                session, split the future schedule, and inspect attendee state without leaving your event management
+                tools.
               </Typography>
             </Stack>
 

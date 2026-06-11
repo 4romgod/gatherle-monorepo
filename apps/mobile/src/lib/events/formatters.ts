@@ -4,6 +4,7 @@ import {
   MobileOrganization,
   MobileParticipant,
 } from '@data/graphql/query/Discovery/types';
+import { formatMobileLocationLabel } from '@/lib/events/location';
 
 const DEFAULT_DISCOVERY_OCCURRENCE_WINDOW_MONTHS = 12;
 // Exact event selection should be able to reveal a series across its realistic
@@ -161,9 +162,7 @@ export function getInitials(label: string) {
 }
 
 export function formatLocationLabel(occurrence?: MobileEventOccurrence | null) {
-  const address = occurrence?.eventSeries?.location?.address;
-  const parts = [address?.city, address?.state, address?.country].filter(Boolean);
-  return parts.length ? parts.join(', ') : 'Location to be announced';
+  return formatMobileLocationLabel(occurrence?.eventSeries?.location);
 }
 
 export function formatShortDateTime(isoDate?: string | null) {

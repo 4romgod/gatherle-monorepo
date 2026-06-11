@@ -157,38 +157,6 @@ describe('UserAvatarMomentsRing', () => {
     expect((lastViewerProps as { open: boolean } | null)?.open).toBe(true);
   });
 
-  it('passes organizerIds=[userId] when isOwnProfile is true', async () => {
-    mockUseQuery.mockReturnValue({ data: { readUserEventMoments: [makeMoment()] }, loading: false });
-
-    await act(async () => {
-      renderWithTheme(
-        <UserAvatarMomentsRing
-          {...defaultProps}
-          isOwnProfile={true}
-          events={[{ eventId: 'event-1', title: 'Summer Meetup' }]}
-        />,
-      );
-    });
-
-    expect((lastViewerProps as { organizerIds: string[] } | null)?.organizerIds).toContain('user-123');
-  });
-
-  it('passes empty organizerIds when isOwnProfile is false', async () => {
-    mockUseQuery.mockReturnValue({ data: { readUserEventMoments: [makeMoment()] }, loading: false });
-
-    await act(async () => {
-      renderWithTheme(
-        <UserAvatarMomentsRing
-          {...defaultProps}
-          isOwnProfile={false}
-          events={[{ eventId: 'event-1', title: 'Summer Meetup' }]}
-        />,
-      );
-    });
-
-    expect((lastViewerProps as { organizerIds: string[] } | null)?.organizerIds).toHaveLength(0);
-  });
-
   it('queries each event with the correct userId and eventId', async () => {
     mockUseQuery.mockReturnValue({ data: undefined, loading: true });
 

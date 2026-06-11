@@ -449,6 +449,18 @@ describe('EventSeriesService', () => {
       expect(count).toBe(1);
     });
 
+    it('does not load org memberships when counted batches contain only public events', async () => {
+      (EventSeriesDAO.readEvents as jest.Mock).mockResolvedValueOnce([
+        makeEvent({ eventId: 'event-1', title: 'Public 1' }),
+        makeEvent({ eventId: 'event-2', title: 'Public 2' }),
+      ]);
+
+      const count = await EventSeriesService.countVisibleEvents(undefined, 'user-2', UserRole.User);
+
+      expect(count).toBe(2);
+      expect(OrganizationMembershipDAO.readMembershipsByUserId).not.toHaveBeenCalled();
+    });
+
     it('counts visible events in bounded batches for non-admin viewers', async () => {
       const hiddenBatch = Array.from({ length: 50 }, (_, index) =>
         makeEvent({

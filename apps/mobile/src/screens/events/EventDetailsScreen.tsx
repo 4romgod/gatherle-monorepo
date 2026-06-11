@@ -20,6 +20,7 @@ import { EventDetailSection } from '@/components/events/detail/EventDetailSectio
 import { EventSessionsRail } from '@/components/events/detail/EventSessionsRail';
 import { EventDetailStat } from '@/components/events/detail/EventDetailStat';
 import { useEventDetailActions } from '@/hooks/events/useEventDetailActions';
+import { useEventManagementAccess } from '@/hooks/events/useEventManagementAccess';
 import { useEventMoments } from '@/hooks/moments/useEventMoments';
 import { EventMomentsRing } from '@/components/moments/EventMomentsRing';
 import { MomentComposerModal } from '@/components/moments/MomentComposerModal';
@@ -52,6 +53,7 @@ import { extractFrontendErrorMessage } from '@/lib/errors/frontendFailure';
 import { useAppShell } from '@/app/providers/AppShellProvider';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
+import { hasUsableVenueAddress } from '@/lib/events/location';
 
 type EventDetailsRoute = RouteProp<RootStackParamList, 'EventDetails'>;
 
@@ -178,7 +180,7 @@ function EventOptionsModal({
 export function EventDetailsScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const route = useRoute<EventDetailsRoute>();
-  const { authToken, isAuthenticated, userId } = useAppShell();
+  const { authToken, isAuthenticated } = useAppShell();
   const insets = useSafeAreaInsets();
   const { theme } = useAppTheme();
   const { showToast, withBlockingLoader } = useAppFeedback();
@@ -216,6 +218,7 @@ export function EventDetailsScreen() {
   const imageUrl = getEventImageUrl(occurrence);
   const title = getEventTitle(occurrence);
   const participantCount = getOccurrenceParticipantCount(occurrence) || occurrence.rsvpCount || 0;
+  const canOpenDirections = hasUsableVenueAddress(occurrence.eventSeries?.location);
   const participants = useMemo(
     () =>
       (occurrence.participants ?? [])
@@ -240,9 +243,8 @@ export function EventDetailsScreen() {
   const categories = occurrence.eventSeries?.eventCategories ?? [];
   const eventId = occurrence.eventSeries?.eventId;
   const eventSourceLink = occurrence.eventSeries?.eventLink ?? null;
-  const canEditEvent = Boolean(
-    userId && (occurrence.eventSeries?.organizers ?? []).some((organizer) => organizer.user?.userId === userId),
-  );
+  const { canManageEvent } = useEventManagementAccess(occurrence.eventSeries ?? null);
+  const canEditEvent = canManageEvent;
   const description =
     occurrence.eventSeries?.description?.trim() ||
     occurrence.eventSeries?.summary?.trim() ||
@@ -697,9 +699,11 @@ export function EventDetailsScreen() {
           />
         ) : null}
 
-        <View style={styles.actionsRow}>
-          <EventDetailActionButton icon="map" label="Directions" onPress={handleOpenDirections} tone="secondary" />
-        </View>
+        {canOpenDirections ? (
+          <View style={styles.actionsRow}>
+            <EventDetailActionButton icon="map" label="Directions" onPress={handleOpenDirections} tone="secondary" />
+          </View>
+        ) : null}
 
         {eventSourceLink ? (
           <View style={styles.actionsRow}>
@@ -773,6 +777,7 @@ export function EventDetailsScreen() {
         {eventId ? (
           <EventDetailSection title="Moments">
             <EventMomentsRing
+              canDeleteMoments={canManageEvent}
               moments={moments}
               myRsvpStatus={rsvpStatus ?? null}
               onPressAddMoment={handleOpenMomentComposer}
@@ -792,7 +797,7 @@ export function EventDetailsScreen() {
           <EventDetailStat
             icon="map-pin"
             label="Location"
-            onPress={handleOpenDirections}
+            onPress={canOpenDirections ? handleOpenDirections : undefined}
             value={formatLocationLabel(occurrence)}
           />
           <EventDetailStat icon="users" label="Attendance" value={attendeeLabel} />

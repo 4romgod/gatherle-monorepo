@@ -2,7 +2,7 @@ import { authChecker, generateToken, verifyToken, isAuthorizedByOperation } from
 import { CustomError, ErrorTypes } from '@/utils/exceptions';
 import { ERROR_MESSAGES } from '@/validation';
 import type { User } from '@gatherle/commons/server/types';
-import { UserRole } from '@gatherle/commons/server/types';
+import { OrganizationRole, UserRole } from '@gatherle/commons/server/types';
 import { OPERATIONS } from '@/constants';
 import { verify, sign } from 'jsonwebtoken';
 import {
@@ -215,9 +215,66 @@ describe('Auth Utilities', () => {
       expect(result).toBe(true);
     });
 
+    it('authorizes org admins to manage org-linked events without being listed as organizers', async () => {
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
+        orgId: 'org-1',
+        organizers: [{ user: 'another-id', role: 'Host' }],
+      });
+      (OrganizationMembershipDAO.readMembershipByOrgIdAndUser as jest.Mock).mockResolvedValue({
+        membershipId: 'membership-1',
+        orgId: 'org-1',
+        userId: 'user-id',
+        role: OrganizationRole.Admin,
+      });
+
+      const result = await isAuthorizedByOperation(OPERATIONS.EVENT.UPDATE_EVENT, { eventId: 'event-id' }, mockUser);
+
+      expect(result).toBe(true);
+      expect(OrganizationMembershipDAO.readMembershipByOrgIdAndUser).toHaveBeenCalledWith('org-1', 'user-id');
+    });
+
+    it('denies org-linked event management when the viewer lacks an allowed org role', async () => {
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
+        orgId: 'org-1',
+        organizers: [{ user: 'user-id', role: 'Host' }],
+      });
+      (OrganizationMembershipDAO.readMembershipByOrgIdAndUser as jest.Mock).mockResolvedValue({
+        membershipId: 'membership-1',
+        orgId: 'org-1',
+        userId: 'user-id',
+        role: OrganizationRole.Member,
+      });
+
+      const result = await isAuthorizedByOperation(OPERATIONS.EVENT.UPDATE_EVENT, { eventId: 'event-id' }, mockUser);
+
+      expect(result).toBe(false);
+    });
+
     it('authorizes event participant reads for event organizers', async () => {
       (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
         organizers: [{ user: 'user-id', role: 'Host' }],
+      });
+
+      const result = await isAuthorizedByOperation(
+        OPERATIONS.EVENT_PARTICIPANT.READ_EVENT_PARTICIPANTS,
+        { eventId: 'event-id' },
+        mockUser,
+      );
+
+      expect(result).toBe(true);
+      expect(EventOccurrenceParticipantDAO.hasParticipantForEventSeries).not.toHaveBeenCalled();
+    });
+
+    it('authorizes event participant reads for org event managers', async () => {
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
+        orgId: 'org-1',
+        organizers: [{ user: 'another-id', role: 'Host' }],
+      });
+      (OrganizationMembershipDAO.readMembershipByOrgIdAndUser as jest.Mock).mockResolvedValue({
+        membershipId: 'membership-1',
+        orgId: 'org-1',
+        userId: 'user-id',
+        role: OrganizationRole.Host,
       });
 
       const result = await isAuthorizedByOperation(

@@ -58,8 +58,7 @@ interface EventMomentViewerProps {
   onClose: () => void;
   onRequestNextGroup?: () => boolean;
   onRequestPreviousGroup?: () => boolean;
-  /** IDs that may delete any moment (organizer IDs) */
-  organizerIds: string[];
+  canDeleteMoments?: boolean;
   onDeleted?: (momentId: string) => void;
   /** Optional fallback event context shown when the moment doesn't carry its own event field */
   eventContext?: { slug: string; title: string };
@@ -96,7 +95,7 @@ export default function EventMomentViewer({
   onClose,
   onRequestNextGroup,
   onRequestPreviousGroup,
-  organizerIds,
+  canDeleteMoments = false,
   onDeleted,
   eventContext,
 }: EventMomentViewerProps) {
@@ -452,8 +451,7 @@ export default function EventMomentViewer({
   const avatarSrc = author?.profile_picture ?? undefined;
   const initials = author?.given_name?.[0]?.toUpperCase() ?? author?.username?.[0]?.toUpperCase() ?? '?';
 
-  const canDelete =
-    viewerUserId === moment.authorId || (viewerUserId !== undefined && organizerIds.includes(viewerUserId));
+  const canDelete = viewerUserId === moment.authorId || canDeleteMoments;
 
   const timeAgo = (() => {
     const secs = Math.max(0, differenceInSeconds(new Date(), new Date(moment.createdAt)));

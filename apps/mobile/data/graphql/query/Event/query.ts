@@ -124,6 +124,9 @@ export const GetEventByIdDocument = graphql(`
       waitlistEnabled
       allowGuestPlusOnes
       eventLink
+      savedByCount
+      isSavedByMe
+      rsvpCount
       orgId
       venueId
       location {
@@ -134,20 +137,81 @@ export const GetEventByIdDocument = graphql(`
           state
           country
           street
+          zipCode
         }
       }
       media {
         featuredImageUrl
       }
+      organization {
+        orgId
+        slug
+        name
+        logo
+      }
       eventCategories {
         eventCategoryId
+        slug
         name
+        iconName
+        description
+        color
+        interestedUsersCount
+      }
+      organizers {
+        role
+        user {
+          userId
+          username
+          given_name
+          family_name
+          profile_picture
+          defaultVisibility
+        }
+      }
+      myRsvp {
+        participantId
+        status
+        quantity
       }
       primarySchedule {
         anchorStartAt
         occurrenceDurationMinutes
         timezone
         recurrenceRule
+      }
+      representativeOccurrence {
+        occurrenceId
+        occurrenceKey
+        eventSeriesId
+        startAt
+        endAt
+        timezone
+        originalStartAt
+        status
+        isException
+        rsvpCount
+        participants {
+          participantId
+          occurrenceId
+          userId
+          status
+          quantity
+          user {
+            userId
+            username
+            given_name
+            family_name
+            profile_picture
+            defaultVisibility
+          }
+        }
+        myRsvp {
+          participantId
+          occurrenceId
+          status
+          quantity
+        }
       }
     }
   }

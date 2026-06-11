@@ -9,6 +9,7 @@ const mockClearStorage = jest.fn();
 const mockCreateEvent = jest.fn();
 const mockUpdateEvent = jest.fn();
 const mockLoadUsers = jest.fn();
+const mockEventDateInput = jest.fn(() => <div data-testid="event-date-input" />);
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -77,7 +78,7 @@ jest.mock('@/components/forms/eventMutation/EventLocationInput', () => ({
 
 jest.mock('@/components/forms/eventMutation/EventDateInput', () => ({
   __esModule: true,
-  default: () => <div data-testid="event-date-input" />,
+  default: (props: unknown) => mockEventDateInput(props),
 }));
 
 jest.mock('@/components/admin/ConfirmDialog', () => ({
@@ -255,6 +256,16 @@ describe('EventMutationForm', () => {
       expect(screen.getByRole('button', { name: /create event/i })).toBeTruthy();
     });
 
+    it('enables persisted recurrence restore in create mode', () => {
+      render(<EventMutationForm categoryList={mockCategories} />);
+
+      expect(mockEventDateInput.mock.calls[0]?.[0]).toEqual(
+        expect.objectContaining({
+          restorePersistedState: true,
+        }),
+      );
+    });
+
     it('calls createEvent with the full event data on valid submit', async () => {
       const { container } = render(<EventMutationForm categoryList={mockCategories} />);
       await submitForm(container);
@@ -329,6 +340,24 @@ describe('EventMutationForm', () => {
     it('renders "Save Changes" as the submit button label', () => {
       render(<EventMutationForm categoryList={mockCategories} event={mockEventProp} />);
       expect(screen.getByRole('button', { name: /save changes/i })).toBeTruthy();
+    });
+
+    it('passes the existing schedule into the date input in edit mode', () => {
+      (usePersistentState as jest.Mock).mockReturnValue({
+        value: emptyEventData,
+        setValue: jest.fn(),
+        clearStorage: mockClearStorage,
+        isHydrated: false,
+      });
+
+      render(<EventMutationForm categoryList={mockCategories} event={mockEventProp} />);
+
+      expect(mockEventDateInput.mock.calls[0]?.[0]).toEqual(
+        expect.objectContaining({
+          restorePersistedState: false,
+          value: mockEventProp.primarySchedule,
+        }),
+      );
     });
 
     it('calls updateEvent (not createEvent) in edit mode', async () => {
