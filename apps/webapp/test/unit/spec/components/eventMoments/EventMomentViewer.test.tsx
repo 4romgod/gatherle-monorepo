@@ -111,7 +111,7 @@ const defaultProps = {
   startIndex: 0,
   open: true,
   onClose: jest.fn(),
-  organizerIds: [],
+  canDeleteMoments: false,
   onDeleted: jest.fn(),
 };
 

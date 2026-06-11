@@ -19,6 +19,7 @@ import { getS3ObjectSize } from '@/clients/AWS/s3Client';
 import { CustomError, ErrorTypes } from '@/utils';
 import { buildMediaCdnUrl } from '@/utils/mediaUrl';
 import { logger } from '@/utils/logger';
+import { canUserManageEventSeries } from '@/utils/eventManagementAccess';
 import {
   publishMomentCreatedForScopedRecipients,
   publishMomentDeletedForScopedRecipients,
@@ -530,7 +531,7 @@ class EventMomentService {
 
   /**
    * Delete an event moment.
-   * Only the moment's author or an event organizer may delete.
+   * Only the moment's author or someone who can manage the linked event may delete.
    */
   static async delete(momentId: string, callerId: string): Promise<boolean> {
     const moment = await EventMomentDAO.readById(momentId);
@@ -555,23 +556,21 @@ class EventMomentService {
       return wasDeleted;
     }
 
-    // Allow event organizers to remove moments from their event.
+    // Allow event managers to remove moments from their event.
     let event: EventSeries | null = null;
     try {
       event = await EventSeriesDAO.readEventById(moment.eventId);
     } catch {
-      // EventSeries not found — caller is not an organizer.
+      // EventSeries not found — caller cannot be treated as an event manager.
     }
 
-    const isOrganizer = event?.organizers?.some((o) => {
-      const user = o.user;
-      if (typeof user === 'string') return user === callerId;
-      if (user && typeof user === 'object' && 'userId' in user) return (user as { userId: string }).userId === callerId;
-      if (user && typeof user === 'object') return user.toString() === callerId; // ObjectId fallback
-      return false;
-    });
+    const canManageEvent = event
+      ? await canUserManageEventSeries(event, {
+          userId: callerId,
+        })
+      : false;
 
-    if (!isOrganizer) {
+    if (!canManageEvent) {
       throw CustomError('You are not authorized to delete this moment', ErrorTypes.UNAUTHORIZED);
     }
 

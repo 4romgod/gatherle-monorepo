@@ -81,7 +81,7 @@ import {
 } from '@/components/events/occurrence-url';
 import UserPreviewItem from '@/components/users/UserPreviewItem';
 import { useFollowingUserIds } from '@/hooks/useFollow';
-import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useEventManagementAccess } from '@/hooks/useEventManagementAccess';
 import ErrorPage from '@/components/errors/ErrorPage';
 import QueryErrorState from '@/components/errors/QueryErrorState';
 import { isNotFoundGraphQLError } from '@/lib/utils/error-utils';
@@ -318,12 +318,8 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
   };
   const followingUserIds = useFollowingUserIds();
   const viewerUserId = session?.user?.userId;
-  const isAdmin = useIsAdmin();
-  const isOrganizer = useMemo(
-    () => (event?.organizers ?? []).some((o) => o.user?.userId === viewerUserId),
-    [event?.organizers, viewerUserId],
-  );
-  const canEditEvent = isOrganizer || isAdmin;
+  const { canManageEvent, loading: eventManagementLoading } = useEventManagementAccess(event);
+  const canEditEvent = !eventManagementLoading && canManageEvent;
   const followedParticipantPreview = useMemo(() => {
     const seenUserIds = new Set<string>();
 
@@ -484,7 +480,6 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
     (requestedOccurrenceAnchor || legacyRequestedOccurrenceId) && !requestedOccurrenceLoading && !selectedOccurrence,
   );
 
-  const organizerIds = (event?.organizers ?? []).filter((o) => o.user?.userId).map((o) => o.user!.userId);
   const importedOrganizerUser =
     organizerData.find((organizer) => organizer.user?.username === IMPORTED_EVENT_SYSTEM_USERNAME)?.user ?? null;
   const hasImportedSystemOrganizer = organizerData.some(
@@ -1772,7 +1767,7 @@ export default function EventDetailPageClient({ slug }: EventDetailPageClientPro
           setViewerIndex(0);
           return true;
         }}
-        organizerIds={organizerIds}
+        canDeleteMoments={canEditEvent}
         eventContext={{ slug, title }}
         onDeleted={(momentId) => {
           setViewerMoments((prev) => prev.filter((m) => m.momentId !== momentId));

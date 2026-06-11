@@ -1,6 +1,7 @@
 'use client';
 
 import React, { FormEvent, useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import { filterOrganizationMembershipsThatCanManageEvents } from '@gatherle/commons/client/utils';
 import {
   Autocomplete,
   Avatar,
@@ -38,7 +39,6 @@ import {
   EventVisibility,
   EventLifecycleStatus,
   Location,
-  OrganizationRole,
   QueryOptionsInput,
   SortOrderInput,
 } from '@/data/graphql/types/graphql';
@@ -60,7 +60,6 @@ import { ROUTES } from '@/lib/constants';
 import { WEB_MEDIA_CROP_PRESETS } from '@/lib/constants/media';
 import { getAuthHeader } from '@/lib/utils/auth';
 
-const EVENT_ORGANIZATION_ROLES = new Set([OrganizationRole.Owner, OrganizationRole.Admin, OrganizationRole.Host]);
 const EVENT_ORGANIZER_ROLES = [EventOrganizerRole.Host, EventOrganizerRole.CoHost, EventOrganizerRole.Volunteer];
 const ORGANIZER_SEARCH_FIELDS = ['username', 'email', 'given_name', 'family_name'];
 const ORGANIZER_SEARCH_LIMIT = 10;
@@ -319,8 +318,8 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
   };
 
   const featuredImageUrl = getFeaturedImageUrl(displayEventData.media);
-  const eligibleOrganizations = (myOrganizationsData?.readMyOrganizations ?? []).filter((membership) =>
-    EVENT_ORGANIZATION_ROLES.has(membership.role),
+  const eligibleOrganizations = filterOrganizationMembershipsThatCanManageEvents(
+    myOrganizationsData?.readMyOrganizations,
   );
 
   const organizationHelperText = myOrganizationsLoading
@@ -1306,7 +1305,11 @@ export default function EventMutationForm({ categoryList, event }: EventMutation
                 <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
                   When is your event? *
                 </Typography>
-                <EventDateInput onChange={handleEventDateChange} />
+                <EventDateInput
+                  onChange={handleEventDateChange}
+                  restorePersistedState={!event}
+                  value={displayEventData.primarySchedule}
+                />
                 {errors.recurrenceRule && (
                   <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
                     {errors.recurrenceRule}

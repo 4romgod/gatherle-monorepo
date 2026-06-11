@@ -102,7 +102,7 @@ export class EventMomentResolver {
   }
 
   @Authorized([UserRole.Admin, UserRole.Host, UserRole.User])
-  @Mutation(() => Boolean, { description: 'Delete an event moment (author or event organizer only)' })
+  @Mutation(() => Boolean, { description: 'Delete an event moment (author or event manager only)' })
   async deleteEventMoment(
     @Arg('momentId', () => String) momentId: string,
     @Ctx() context: ServerContext,

@@ -183,7 +183,6 @@ export default function FollowedMomentsBar() {
           setViewerIndex(0);
           return true;
         }}
-        organizerIds={[]}
         onDeleted={(momentId) => {
           setDeletedMomentIds((current) => {
             const next = new Set(current);

@@ -9,6 +9,8 @@ import { ROUTES, SECTION_TITLE_STYLES } from '@/lib/constants';
 import { auth } from '@/auth';
 import type { Metadata } from 'next';
 import { buildPageMetadata } from '@/lib/metadata';
+import { getAuthHeader } from '@/lib/utils/auth';
+import { loadServerEventManagementAccess } from '@/lib/server/eventManagementAccess';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -37,6 +39,7 @@ export default async function Page(props: Props) {
   const { data: eventRetrieved } = await getClient().query({
     query: GetEventBySlugDocument,
     variables: { slug: params.slug },
+    context: { headers: getAuthHeader(session?.user?.token) },
   });
 
   const event = eventRetrieved.readEventBySlug as EventDetail;
@@ -48,10 +51,14 @@ export default async function Page(props: Props) {
     redirect(username ? ROUTES.USERS.USER(username) : ROUTES.HOME);
   }
 
-  const isOrganizer = event.organizers.some((organizer) => organizer.user.userId === currentUserId);
-  const isAdmin = session?.user?.userRole === 'Admin';
+  const canManageEvent = await loadServerEventManagementAccess({
+    event,
+    token: session?.user?.token,
+    userId: currentUserId,
+    userRole: session?.user?.userRole,
+  });
 
-  if (!isOrganizer && !isAdmin) {
+  if (!canManageEvent) {
     redirect(username ? ROUTES.USERS.USER(username) : ROUTES.HOME);
   }
 

@@ -124,7 +124,6 @@ function EventMomentsBubble({ userId, eventId, eventName, token, isOwnProfile }:
         startIndex={0}
         open={viewerOpen}
         onClose={() => setViewerOpen(false)}
-        organizerIds={isOwnProfile ? [userId] : []}
         onDeleted={(momentId) => setViewerMoments((prev) => prev.filter((m) => m.momentId !== momentId))}
       />
     </>

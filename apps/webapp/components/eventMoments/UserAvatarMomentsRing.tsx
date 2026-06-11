@@ -144,7 +144,6 @@ export default function UserAvatarMomentsRing({ userId, avatarSrc, displayName, 
           startIndex={0}
           open={viewerOpen}
           onClose={() => setViewerOpen(false)}
-          organizerIds={isOwnProfile ? [userId] : []}
           onDeleted={(momentId) =>
             setMomentsByEvent((prev) => {
               const next = new Map(prev);

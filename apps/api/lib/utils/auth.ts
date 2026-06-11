@@ -14,8 +14,12 @@ import {
   OrganizationDAO,
   OrganizationMembershipDAO,
 } from '@/mongodb/dao';
+import {
+  canUserManageEventSeries,
+  canUserManageEventSeriesById,
+  canUserManageEventSeriesBySlug,
+} from '@/utils/eventManagementAccess';
 import { getConfigValue } from '@/clients';
-import { Types } from 'mongoose';
 import { logger } from '@/utils/logger';
 
 const AUTH_TOKEN_VERSION = 1;
@@ -296,78 +300,6 @@ export const isAuthorizedByOperation = async (
 };
 
 /**
- * Type guard to check if value has a toString method
- */
-const hasToString = (value: unknown): value is { toString: () => string } => {
-  return typeof value === 'object' && value !== null && typeof (value as any).toString === 'function';
-};
-
-/**
- * Type guard to check if value is a record with specific properties
- */
-const isOrganizerRecord = (value: unknown): value is Record<string, unknown> => {
-  return typeof value === 'object' && value !== null;
-};
-
-/**
- * Converts various organizer formats to a user ID string.
- * Handles string IDs, ObjectIds, and organizer objects with userId or _id fields.
- *
- * @param organizer The organizer value in various possible formats
- * @returns The user ID as a string, or undefined if extraction fails
- */
-const toOrganizerUserId = (organizer: unknown): string | undefined => {
-  if (!organizer) {
-    return undefined;
-  }
-
-  if (typeof organizer === 'string') {
-    return organizer;
-  }
-
-  if (organizer instanceof Types.ObjectId) {
-    return organizer.toString();
-  }
-
-  if (isOrganizerRecord(organizer)) {
-    if (typeof organizer.userId === 'string') {
-      return organizer.userId;
-    }
-
-    const organizerId = organizer._id;
-    if (organizerId && hasToString(organizerId)) {
-      return organizerId.toString();
-    }
-
-    if (hasToString(organizer)) {
-      return organizer.toString();
-    }
-  }
-
-  return undefined;
-};
-
-const getOrganizerIdsFromEvent = (event: { organizers?: Array<{ user?: any }> }): string[] => {
-  if (!event.organizers) {
-    return [];
-  }
-  return event.organizers
-    .map((organizer) => {
-      const user = organizer.user;
-      if (typeof user === 'string') return user;
-      if (user && typeof user === 'object' && 'userId' in user) return user.userId;
-      if (user && typeof user === 'object' && 'toString' in user) return user.toString(); // ObjectId
-      return undefined;
-    })
-    .filter((id): id is string => Boolean(id));
-};
-
-const isUserOrganizer = (event: { organizers?: Array<{ user?: any }> }, user: AuthClaims) => {
-  const organizerIds = getOrganizerIdsFromEvent(event);
-  return organizerIds.includes(user.userId);
-};
-
-/**
  * Check if a user is authorized to manage an organization (update/delete).
  * User is authorized if they are:
  * - The organization owner (ownerId matches user.userId)
@@ -509,27 +441,20 @@ const isAuthorizedToDeleteMembership = async (membershipId: string | undefined, 
 };
 
 const isAuthorizedByEventId = async (eventId: string | undefined, user: AuthClaims) => {
-  if (!eventId) {
-    return false;
-  }
-  const event = await EventSeriesDAO.readEventById(eventId);
-  return isUserOrganizer(event, user);
+  return canUserManageEventSeriesById(eventId, user);
 };
 
 const isAuthorizedByEventSlug = async (slug: string | undefined, user: AuthClaims) => {
-  if (!slug) {
-    return false;
-  }
-  const event = await EventSeriesDAO.readEventBySlug(slug);
-  return isUserOrganizer(event, user);
+  return canUserManageEventSeriesBySlug(slug, user);
 };
 
 const isAuthorizedToReadEventParticipants = async (eventId: string | undefined, user: AuthClaims) => {
   if (!eventId) {
     return false;
   }
+
   const event = await EventSeriesDAO.readEventById(eventId);
-  if (isUserOrganizer(event, user)) {
+  if (await canUserManageEventSeries(event, user)) {
     return true;
   }
 

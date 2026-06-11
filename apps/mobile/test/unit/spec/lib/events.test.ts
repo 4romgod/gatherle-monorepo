@@ -162,6 +162,21 @@ describe('mobile event formatters', () => {
     expect(getInitials('   ')).toBe('?');
 
     expect(formatLocationLabel(baseOccurrence)).toBe('Johannesburg, Gauteng, South Africa');
+    expect(
+      formatLocationLabel({
+        eventSeries: { location: { details: 'Zoom webinar', locationType: 'online' } },
+      } as any),
+    ).toBe('Zoom webinar');
+    expect(
+      formatLocationLabel({
+        eventSeries: { location: { locationType: 'online' } },
+      } as any),
+    ).toBe('Online');
+    expect(
+      formatLocationLabel({
+        eventSeries: { location: { locationType: 'tba' } },
+      } as any),
+    ).toBe('Location to be announced');
     expect(formatLocationLabel(null)).toBe('Location to be announced');
     expect(getEventCategoryLabel(baseOccurrence)).toBe('Concerts');
     expect(getEventCategoryLabel(null)).toBe('Event');

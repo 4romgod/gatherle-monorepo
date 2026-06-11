@@ -15,7 +15,6 @@ import {
   EventOrganizer,
   EventSeriesParticipant,
   Organization,
-  OrganizationRole,
   EventLifecycleStatus,
   EventStatus,
 } from '@gatherle/commons/server/types';
@@ -27,16 +26,17 @@ import {
   UpdateEventInputSchema,
   UpdateEventOccurrenceInputSchema,
 } from '@/validation/zod';
-import { EVENT_DESCRIPTIONS, HttpStatusCode, RESOLVER_DESCRIPTIONS } from '@/constants';
-import { EventSeriesDAO, OrganizationMembershipDAO } from '@/mongodb/dao';
+import { EVENT_DESCRIPTIONS, RESOLVER_DESCRIPTIONS } from '@/constants';
+import { EventSeriesDAO } from '@/mongodb/dao';
 import type { ServerContext } from '@/graphql';
 import { logger } from '@/utils/logger';
 import { getAuthenticatedUser } from '@/utils/auth';
-import { CustomError, ErrorTypes } from '@/utils/exceptions';
 import RecommendationService from '@/services/recommendation';
 import EventSeriesService from '@/services/eventSeries';
 import EventOccurrenceService from '@/services/eventOccurrence';
 import {
+  assertUserCanManageEventSeries,
+  assertUserCanUseOrganizationForEvents,
   buildMyEventOccurrenceParticipantLoadKey,
   getRequestIpFromContext,
   projectOccurrenceParticipantToSeriesParticipant,
@@ -44,8 +44,6 @@ import {
   resolveEventStatusFromSchedule,
   sanitizeQueryLimit,
 } from '@/utils';
-
-const EVENT_ORGANIZATION_ROLES = new Set([OrganizationRole.Owner, OrganizationRole.Admin, OrganizationRole.Host]);
 type EventSeriesWithPreloadedMyRsvp = EventSeries & { myRsvp?: EventSeriesParticipant | null };
 type EventSeriesWithPreloadedSaveState = EventSeries & { isSavedByMe?: boolean | null };
 
@@ -423,14 +421,7 @@ export class EventSeriesResolver {
   }
 
   public async ensureUserCanUseOrganization(orgId: string, userId: string): Promise<void> {
-    const membership = await OrganizationMembershipDAO.readMembershipByOrgIdAndUser(orgId, userId);
-    if (!membership || !EVENT_ORGANIZATION_ROLES.has(membership.role)) {
-      throw CustomError(
-        'You do not have permission to create or update events for that organization.',
-        ErrorTypes.UNAUTHORIZED,
-        { http: { status: HttpStatusCode.UNAUTHORIZED } },
-      );
-    }
+    await assertUserCanUseOrganizationForEvents(orgId, userId);
   }
 
   public async ensureUserCanManageEventSeries(
@@ -438,35 +429,6 @@ export class EventSeriesResolver {
     userId: string,
     userRole: UserRole,
   ): Promise<void> {
-    if (userRole === UserRole.Admin) {
-      return;
-    }
-
-    if (event.orgId) {
-      await this.ensureUserCanUseOrganization(event.orgId, userId);
-      return;
-    }
-
-    const isOrganizer = (event.organizers ?? []).some((organizer) => {
-      if (typeof organizer.user === 'string') {
-        return organizer.user === userId;
-      }
-
-      if (organizer.user && typeof organizer.user === 'object' && 'userId' in organizer.user) {
-        return organizer.user.userId === userId;
-      }
-
-      if (organizer.user && typeof organizer.user === 'object' && '_id' in organizer.user) {
-        return organizer.user._id?.toString() === userId;
-      }
-
-      return false;
-    });
-
-    if (!isOrganizer) {
-      throw CustomError('You do not have permission to manage this event series.', ErrorTypes.UNAUTHORIZED, {
-        http: { status: HttpStatusCode.UNAUTHORIZED },
-      });
-    }
+    await assertUserCanManageEventSeries(event, { userId, userRole });
   }
 }

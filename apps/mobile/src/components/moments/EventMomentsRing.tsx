@@ -24,10 +24,12 @@ function groupMomentsByAuthor(moments: MobileEventMoment[]) {
 }
 
 export function EventMomentsRing({
+  canDeleteMoments = false,
   moments,
   myRsvpStatus,
   onPressAddMoment,
 }: {
+  canDeleteMoments?: boolean;
   moments: MobileEventMoment[];
   myRsvpStatus: ParticipantStatus | null;
   onPressAddMoment: () => void;
@@ -90,6 +92,7 @@ export function EventMomentsRing({
       </ScrollView>
 
       <MomentViewer
+        canDeleteMoments={canDeleteMoments}
         hasNextGroup={viewerGroupIndex < groupedMoments.length - 1}
         hasPreviousGroup={viewerGroupIndex > 0}
         moments={viewerMoments}

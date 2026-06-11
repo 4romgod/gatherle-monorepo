@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useLazyQuery } from '@apollo/client';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
-import { KeyboardStickyView } from 'react-native-keyboard-controller';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EventMomentType } from '@data/graphql/types/graphql';
 import { GetMomentByIdDocument } from '@data/graphql/query/EventMoment/query';
@@ -22,7 +22,7 @@ import { ChatThreadSkeleton } from '@/components/skeleton/ChatThreadSkeleton';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useChatRealtime } from '@/hooks/messages/useChatRealtime';
 import { getApolloAuthContext } from '@/lib/auth';
-import { STICKY_COMPOSER_KEYBOARD_OFFSET } from '@/lib/constants/layout';
+import { MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET, MOBILE_IOS_KEYBOARD_VERTICAL_OFFSET } from '@/lib/constants/layout';
 import { DEVICE_STORAGE_KEYS, writeStoredString } from '@/lib/deviceStorage';
 import { useChatThread } from '@/hooks/messages/useChatThread';
 import { buildChatThreadItems } from '@/lib/messages/thread';
@@ -185,79 +185,85 @@ export function MessageThreadScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.inner}>
-        <ChatThreadHeader
-          avatarUrl={avatarUrl}
-          displayName={displayName}
-          onPress={() =>
-            navigation.navigate('UserProfile', {
-              avatarUrl,
-              displayName,
-              userId: withUserId,
-              username,
-            })
-          }
-          username={username}
-        />
-
-        {loading && threadItems.length === 0 ? (
-          <View style={styles.stateWrap}>
-            <ChatThreadSkeleton />
-          </View>
-        ) : error ? (
-          <View style={styles.stateWrap}>
-            <StateNotice
-              actionLabel="Retry"
-              message="We couldn’t load this conversation."
-              onPressAction={() => void refetch()}
-            />
-          </View>
-        ) : threadItems.length > 0 ? (
-          <ScrollView
-            alwaysBounceVertical
-            bounces
-            contentContainerStyle={styles.threadContent}
-            keyboardShouldPersistTaps="handled"
-            overScrollMode="always"
-            ref={scrollRef}
-            refreshControl={
-              <RefreshControl
-                colors={[theme.colors.primary]}
-                onRefresh={onRefresh}
-                progressBackgroundColor={theme.colors.surfaceRaised}
-                refreshing={refreshing}
-                tintColor={theme.colors.primary}
-              />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={
+          Platform.OS === 'android' ? MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET : MOBILE_IOS_KEYBOARD_VERTICAL_OFFSET
+        }
+        style={styles.screen}
+      >
+        <View style={styles.inner}>
+          <ChatThreadHeader
+            avatarUrl={avatarUrl}
+            displayName={displayName}
+            onPress={() =>
+              navigation.navigate('UserProfile', {
+                avatarUrl,
+                displayName,
+                userId: withUserId,
+                username,
+              })
             }
-            showsVerticalScrollIndicator={false}
-            style={styles.threadScroll}
-          >
-            {threadItems.map((item) =>
-              item.kind === 'day' ? (
-                <ChatDayDivider key={item.key} label={item.label} />
-              ) : (
-                <ChatBubble
-                  isOutgoing={item.isOutgoing}
-                  key={item.key}
-                  message={item.message}
-                  onPressReplyMoment={handleOpenReplyMoment}
-                />
-              ),
-            )}
-          </ScrollView>
-        ) : (
-          <View style={styles.stateWrap}>
-            <StateNotice message="No messages have landed in this conversation yet." />
-          </View>
-        )}
+            username={username}
+          />
 
-        <KeyboardStickyView
-          offset={{ opened: STICKY_COMPOSER_KEYBOARD_OFFSET }}
-          style={[styles.composerSticky, { paddingBottom: composerBottomPadding }]}
-        >
-          <ChatComposer isConnected={isConnected} onSend={handleSend} targetUserId={withUserId} />
-        </KeyboardStickyView>
-      </View>
+          {loading && threadItems.length === 0 ? (
+            <View style={styles.stateWrap}>
+              <ChatThreadSkeleton />
+            </View>
+          ) : error ? (
+            <View style={styles.stateWrap}>
+              <StateNotice
+                actionLabel="Retry"
+                message="We couldn’t load this conversation."
+                onPressAction={() => void refetch()}
+              />
+            </View>
+          ) : threadItems.length > 0 ? (
+            <ScrollView
+              alwaysBounceVertical
+              bounces
+              contentContainerStyle={styles.threadContent}
+              keyboardDismissMode="interactive"
+              keyboardShouldPersistTaps="handled"
+              overScrollMode="always"
+              ref={scrollRef}
+              refreshControl={
+                <RefreshControl
+                  colors={[theme.colors.primary]}
+                  onRefresh={onRefresh}
+                  progressBackgroundColor={theme.colors.surfaceRaised}
+                  refreshing={refreshing}
+                  tintColor={theme.colors.primary}
+                />
+              }
+              showsVerticalScrollIndicator={false}
+              style={styles.threadScroll}
+            >
+              {threadItems.map((item) =>
+                item.kind === 'day' ? (
+                  <ChatDayDivider key={item.key} label={item.label} />
+                ) : (
+                  <ChatBubble
+                    isOutgoing={item.isOutgoing}
+                    key={item.key}
+                    message={item.message}
+                    onPressReplyMoment={handleOpenReplyMoment}
+                  />
+                ),
+              )}
+            </ScrollView>
+          ) : (
+            <View style={styles.stateWrap}>
+              <StateNotice message="No messages have landed in this conversation yet." />
+            </View>
+          )}
+
+          <View style={[styles.composerShell, { paddingBottom: composerBottomPadding }]}>
+            <ChatComposer isConnected={isConnected} onSend={handleSend} targetUserId={withUserId} />
+          </View>
+        </View>
+      </KeyboardAvoidingView>
       <MomentViewer
         moments={replyMomentViewerItems}
         onClose={() => setReplyMomentViewerOpen(false)}
@@ -281,9 +287,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 14,
   },
-  composerSticky: {
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
+  composerShell: {
+    paddingTop: 4,
   },
   screen: {
     flex: 1,

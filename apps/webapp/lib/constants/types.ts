@@ -36,6 +36,8 @@ export type CategoryFilterProps = {
 
 export type EventDateInputProps = {
   onChange: (recurrenceRule: string, anchorStartAt: Date, timezone: string, occurrenceDurationMinutes: number) => void;
+  restorePersistedState?: boolean;
+  value?: Partial<NonNullable<CreateEventInput['primarySchedule']>> | null;
 };
 
 export type EventRadioButtonsProps = {

@@ -1,6 +1,12 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useMutation, useQuery, useLazyQuery } from '@apollo/client';
+import { filterOrganizationMembershipsThatCanManageEvents } from '@gatherle/commons/client/utils';
+import {
+  buildEventRecurrenceRule,
+  formatRRuleUntilToken,
+  normalizeRecurrenceInterval,
+} from '@gatherle/commons/client/utils';
 import * as ImagePicker from 'expo-image-picker';
 import { CreateEventDocument, UpdateEventDocument } from '@data/graphql/mutation/Event/mutation';
 import { GetMyOrganizationsDocument } from '@data/graphql/query/Organization/query';
@@ -26,36 +32,30 @@ import { AccountSwitchRow } from '@/components/account/shared/AccountSwitchRow';
 import { AccountTextField } from '@/components/account/shared/AccountTextField';
 import { PageContainer } from '@/components/core/PageContainer';
 import { DatePickerField } from '@/components/core/DatePickerField';
+import { SelectionControl } from '@/components/core/SelectionControl';
 import { SectionHeading } from '@/components/core/SectionHeading';
+import { TimePickerField } from '@/components/core/TimePickerField';
+import { EventLocationEditor } from '@/components/events/EventLocationEditor';
+import { EventRecurrenceEditor } from '@/components/events/EventRecurrenceEditor';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { useMobileHomeDiscovery } from '@/hooks/home/useHomeDiscovery';
 import { getApolloAuthContext } from '@/lib/auth';
+import {
+  COMMON_EVENT_TIMEZONES,
+  initialMobileEventRecurrenceState,
+  ensureWeeklyRecurrenceDays,
+  type MobileEventRecurrenceState,
+} from '@/lib/events/eventMutationForm';
+import {
+  buildMobileEventLocationPayload,
+  type MobileEventLocationType,
+  validateMobileEventLocation,
+} from '@/lib/events/location';
+import { buildIsoFromTimeZoneDateAndTime } from '@/lib/events/organizerSessions';
 import { MOBILE_MEDIA_ASPECT_RATIOS, MOBILE_MEDIA_PICKER_ASPECTS } from '@/lib/media/constants';
 import { getImageAssetExtension, uploadImageAssetToSignedUrl } from '@/lib/media/upload';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
-
-const COMMON_TIMEZONES = [
-  'Africa/Johannesburg',
-  'Europe/London',
-  'Europe/Paris',
-  'America/New_York',
-  'America/Chicago',
-  'America/Los_Angeles',
-  'Asia/Dubai',
-  'Asia/Kolkata',
-  'Asia/Singapore',
-  'Australia/Sydney',
-  'UTC',
-] as const;
-
-type RecurrenceOption = 'once' | 'weekly' | 'monthly';
-
-const RECURRENCE_RULES: Record<RecurrenceOption, string> = {
-  monthly: 'FREQ=MONTHLY',
-  once: 'FREQ=DAILY;COUNT=1',
-  weekly: 'FREQ=WEEKLY',
-};
 
 type EventFormState = {
   allowGuestPlusOnes: boolean;
@@ -66,9 +66,12 @@ type EventFormState = {
   description: string;
   endTime: string;
   eventLink: string;
+  locationDetails: string;
+  locationType: MobileEventLocationType;
   orgId: string;
+  postalCode: string;
   privacySetting: EventPrivacySetting;
-  recurrence: RecurrenceOption;
+  recurrence: MobileEventRecurrenceState;
   startTime: string;
   state: string;
   summary: string;
@@ -88,9 +91,12 @@ const initialFormState: EventFormState = {
   description: '',
   endTime: '',
   eventLink: '',
+  locationDetails: '',
+  locationType: 'venue',
   orgId: '',
+  postalCode: '',
   privacySetting: EventPrivacySetting.Public,
-  recurrence: 'once',
+  recurrence: initialMobileEventRecurrenceState,
   startTime: '',
   state: '',
   summary: '',
@@ -137,13 +143,13 @@ export function CreateEventScreen() {
     ...getApolloAuthContext(authToken),
   });
 
-  const eligibleOrganizations = organizationsQuery.data?.readMyOrganizations ?? [];
+  const eligibleOrganizations = filterOrganizationMembershipsThatCanManageEvents(
+    organizationsQuery.data?.readMyOrganizations,
+  );
   const venues = venuesQuery.data?.readVenues ?? [];
   const selectedVenue = venues.find((venue) => venue.venueId === formState.venueId);
 
   const loading = creating;
-
-  const venueSuggestions = useMemo(() => venues.slice(0, 6), [venues]);
 
   const updateField = <K extends keyof EventFormState>(field: K, value: EventFormState[K]) => {
     setFormState((current) => ({
@@ -181,32 +187,35 @@ export function CreateEventScreen() {
       return null;
     }
 
-    const startAt = new Date(`${formState.date}T${formState.startTime}:00`);
-    const endAt = new Date(`${formState.date}T${formState.endTime}:00`);
+    const startIso = buildIsoFromTimeZoneDateAndTime(formState.date, formState.startTime, formState.timezone);
+    const endIso = buildIsoFromTimeZoneDateAndTime(formState.date, formState.endTime, formState.timezone);
 
+    if (!startIso || !endIso) {
+      return null;
+    }
+
+    const startAt = new Date(startIso);
+    const endAt = new Date(endIso);
     if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime()) || endAt <= startAt) {
       return null;
     }
 
     const occurrenceDurationMinutes = Math.max(0, Math.round((endAt.getTime() - startAt.getTime()) / 60000));
-
-    const locationAddress = selectedVenue
-      ? {
-          city: selectedVenue.address?.city ?? formState.city,
-          country: selectedVenue.address?.country ?? formState.country,
-          state: selectedVenue.address?.region ?? formState.state,
-          street: selectedVenue.address?.street ?? '',
-          zipCode: selectedVenue.address?.postalCode ?? '',
-        }
-      : {
-          city: formState.city,
-          country: formState.country,
-          state: formState.state,
-        };
-
-    const locationSnapshot = [locationAddress.city, locationAddress.state, locationAddress.country]
-      .filter(Boolean)
-      .join(', ');
+    const repeatUntilIso =
+      formState.recurrence.kind === 'recurring' && formState.recurrence.repeatUntilDate
+        ? buildIsoFromTimeZoneDateAndTime(formState.recurrence.repeatUntilDate, formState.startTime, formState.timezone)
+        : null;
+    const recurrenceRule = buildEventRecurrenceRule({
+      daysOfWeek:
+        formState.recurrence.frequency === 'WEEKLY'
+          ? ensureWeeklyRecurrenceDays(formState.recurrence.daysOfWeek, formState.date)
+          : formState.recurrence.daysOfWeek,
+      frequency: formState.recurrence.frequency,
+      interval: normalizeRecurrenceInterval(formState.recurrence.interval),
+      kind: formState.recurrence.kind,
+      untilToken: formatRRuleUntilToken(repeatUntilIso),
+    });
+    const { location, locationSnapshot, venueId } = buildMobileEventLocationPayload(formState, selectedVenue);
 
     const capacityNum = formState.capacity.trim() ? Number.parseInt(formState.capacity, 10) : undefined;
 
@@ -219,19 +228,15 @@ export function CreateEventScreen() {
       eventCategories: selectedCategories,
       eventLink: formState.eventLink.trim() || undefined,
       lifecycleStatus: EventLifecycleStatus.Published,
-      location: {
-        address: locationAddress,
-        details: selectedVenue?.name ?? '',
-        locationType: selectedVenue ? 'venue' : 'address',
-      },
+      location,
       locationSnapshot,
       media: {},
       orgId: formState.orgId || undefined,
       organizers: [{ role: 'Host', user: userId }],
       primarySchedule: {
-        anchorStartAt: startAt.toISOString(),
+        anchorStartAt: startIso,
         occurrenceDurationMinutes,
-        recurrenceRule: RECURRENCE_RULES[formState.recurrence],
+        recurrenceRule,
         timezone: formState.timezone,
       },
       privacySetting: formState.privacySetting,
@@ -240,13 +245,22 @@ export function CreateEventScreen() {
       status: EventStatus.Upcoming,
       summary: formState.summary.trim(),
       title: formState.title.trim(),
-      venueId: selectedVenue?.venueId,
+      venueId,
       visibility: formState.visibility,
       waitlistEnabled: formState.waitlistEnabled,
     };
   };
 
   const submit = async () => {
+    const locationValidationMessage = validateMobileEventLocation(formState);
+    if (locationValidationMessage) {
+      showToast({
+        message: locationValidationMessage,
+        tone: 'error',
+      });
+      return;
+    }
+
     const input = buildInput();
 
     if (!input) {
@@ -343,16 +357,23 @@ export function CreateEventScreen() {
     >
       <View style={styles.section}>
         <SectionHeading title="Basics" />
-        <AccountTextField label="Title" onChangeText={(value) => updateField('title', value)} value={formState.title} />
+        <AccountTextField
+          label="Title"
+          onChangeText={(value) => updateField('title', value)}
+          placeholder="Wednesday Coffee & Code"
+          value={formState.title}
+        />
         <AccountTextField
           label="Summary"
           onChangeText={(value) => updateField('summary', value)}
+          placeholder="A quick snapshot people can scan in the feed."
           value={formState.summary}
         />
         <AccountTextField
           label="Description"
           multiline
           onChangeText={(value) => updateField('description', value)}
+          placeholder="What is happening, who should come, and why it is worth showing up?"
           value={formState.description}
         />
         <AccountTextField
@@ -385,55 +406,45 @@ export function CreateEventScreen() {
 
       <View style={styles.section}>
         <SectionHeading title="Schedule" />
+        <DatePickerField
+          label="Date"
+          minimumDate={new Date()}
+          onChangeDate={(value) => updateField('date', value)}
+          placeholder="Select event date"
+          value={formState.date}
+        />
         <View style={styles.row}>
           <View style={styles.fieldHalf}>
-            <DatePickerField
-              label="Date"
-              minimumDate={new Date()}
-              onChangeDate={(value) => updateField('date', value)}
-              placeholder="Select event date"
-              value={formState.date}
-            />
-          </View>
-          <View style={styles.fieldHalf}>
-            <AccountTextField
+            <TimePickerField
               label="Start"
-              onChangeText={(value) => updateField('startTime', value)}
-              placeholder="18:00"
+              onChangeTime={(value) => updateField('startTime', value)}
+              placeholder="Select start time"
               value={formState.startTime}
             />
           </View>
-        </View>
-        <View style={styles.fieldHalfSingle}>
-          <AccountTextField
-            label="End"
-            onChangeText={(value) => updateField('endTime', value)}
-            placeholder="21:00"
-            value={formState.endTime}
-          />
-        </View>
-        <Text style={[styles.helperText, { color: theme.colors.textSecondary }]}>
-          Use 24-hour time. Dates are formatted as YYYY-MM-DD.
-        </Text>
-
-        <View style={styles.choiceBlock}>
-          <Text style={[styles.choiceLabel, { color: theme.colors.textPrimary }]}>Recurrence</Text>
-          <View style={styles.choiceWrap}>
-            {(['once', 'weekly', 'monthly'] as RecurrenceOption[]).map((opt) => (
-              <AccountChoiceChip
-                key={opt}
-                label={opt === 'once' ? 'One-time' : opt === 'weekly' ? 'Weekly' : 'Monthly'}
-                onPress={() => updateField('recurrence', opt)}
-                selected={formState.recurrence === opt}
-              />
-            ))}
+          <View style={styles.fieldHalf}>
+            <TimePickerField
+              label="End"
+              onChangeTime={(value) => updateField('endTime', value)}
+              placeholder="Select end time"
+              value={formState.endTime}
+            />
           </View>
         </View>
+        <Text style={[styles.helperText, { color: theme.colors.textSecondary }]}>
+          Pick the event date and local start/end times in the selected timezone.
+        </Text>
+
+        <EventRecurrenceEditor
+          date={formState.date}
+          onChange={(value) => updateField('recurrence', value)}
+          value={formState.recurrence}
+        />
 
         <View style={styles.choiceBlock}>
           <Text style={[styles.choiceLabel, { color: theme.colors.textPrimary }]}>Timezone</Text>
           <View style={styles.choiceWrap}>
-            {COMMON_TIMEZONES.map((tz) => (
+            {COMMON_EVENT_TIMEZONES.map((tz) => (
               <AccountChoiceChip
                 key={tz}
                 label={tz}
@@ -447,47 +458,29 @@ export function CreateEventScreen() {
 
       <View style={styles.section}>
         <SectionHeading title="Location" />
-        <View style={styles.row}>
-          <View style={styles.fieldHalf}>
-            <AccountTextField
-              label="City"
-              onChangeText={(value) => updateField('city', value)}
-              value={formState.city}
-            />
-          </View>
-          <View style={styles.fieldHalf}>
-            <AccountTextField
-              label="State"
-              onChangeText={(value) => updateField('state', value)}
-              value={formState.state}
-            />
-          </View>
-        </View>
-        <AccountTextField
-          label="Country"
-          onChangeText={(value) => updateField('country', value)}
-          value={formState.country}
+        <EventLocationEditor
+          city={formState.city}
+          country={formState.country}
+          locationDetails={formState.locationDetails}
+          locationType={formState.locationType}
+          onChangeCity={(value) => updateField('city', value)}
+          onChangeCountry={(value) => updateField('country', value)}
+          onChangeLocationDetails={(value) => updateField('locationDetails', value)}
+          onChangeLocationType={(value) => {
+            updateField('locationType', value);
+            if (value !== 'venue') {
+              updateField('venueId', '');
+            }
+          }}
+          onChangePostalCode={(value) => updateField('postalCode', value)}
+          onChangeState={(value) => updateField('state', value)}
+          onChangeVenueId={(value) => updateField('venueId', value)}
+          onPressCreateVenue={() => navigation.navigate('CreateVenue')}
+          postalCode={formState.postalCode}
+          state={formState.state}
+          venueId={formState.venueId}
+          venues={venues}
         />
-        {venueSuggestions.length > 0 ? (
-          <View style={styles.choiceBlock}>
-            <Text style={[styles.choiceLabel, { color: theme.colors.textPrimary }]}>Venue</Text>
-            <View style={styles.choiceWrap}>
-              <AccountChoiceChip
-                label="Custom address"
-                onPress={() => updateField('venueId', '')}
-                selected={!formState.venueId}
-              />
-              {venueSuggestions.map((venue) => (
-                <AccountChoiceChip
-                  key={venue.venueId}
-                  label={venue.name}
-                  onPress={() => updateField('venueId', venue.venueId)}
-                  selected={formState.venueId === venue.venueId}
-                />
-              ))}
-            </View>
-          </View>
-        ) : null}
       </View>
 
       <View style={styles.section}>
@@ -515,13 +508,15 @@ export function CreateEventScreen() {
 
         <View style={styles.choiceBlock}>
           <Text style={[styles.choiceLabel, { color: theme.colors.textPrimary }]}>Categories</Text>
-          <View style={styles.choiceWrap}>
+          <View style={styles.selectionGrid}>
             {categories.slice(0, 10).map((category) => (
-              <AccountChoiceChip
+              <SelectionControl
                 key={category.eventCategoryId}
+                kind="checkbox"
                 label={category.name}
                 onPress={() => toggleCategory(category.eventCategoryId)}
                 selected={selectedCategories.includes(category.eventCategoryId)}
+                style={styles.selectionGridItem}
               />
             ))}
           </View>
@@ -533,10 +528,18 @@ export function CreateEventScreen() {
 
         <View style={styles.choiceBlock}>
           <Text style={[styles.choiceLabel, { color: theme.colors.textPrimary }]}>Visibility</Text>
-          <View style={styles.choiceWrap}>
+          <View style={styles.selectionStack}>
             {[EventVisibility.Public, EventVisibility.Private, EventVisibility.Unlisted].map((vis) => (
-              <AccountChoiceChip
+              <SelectionControl
                 key={vis}
+                description={
+                  vis === EventVisibility.Public
+                    ? 'Shows up in discovery and search.'
+                    : vis === EventVisibility.Private
+                      ? 'Only eligible people can access it directly.'
+                      : 'Hidden from discovery, but accessible with a link.'
+                }
+                kind="radio"
                 label={vis}
                 onPress={() => updateField('visibility', vis)}
                 selected={formState.visibility === vis}
@@ -547,10 +550,18 @@ export function CreateEventScreen() {
 
         <View style={styles.choiceBlock}>
           <Text style={[styles.choiceLabel, { color: theme.colors.textPrimary }]}>Privacy</Text>
-          <View style={styles.choiceWrap}>
+          <View style={styles.selectionStack}>
             {[EventPrivacySetting.Public, EventPrivacySetting.Invitation, EventPrivacySetting.Private].map((ps) => (
-              <AccountChoiceChip
+              <SelectionControl
                 key={ps}
+                description={
+                  ps === EventPrivacySetting.Public
+                    ? 'Anyone who can see the event can RSVP.'
+                    : ps === EventPrivacySetting.Invitation
+                      ? 'People need an invite or approval to join.'
+                      : 'Attendance stays tightly restricted.'
+                }
+                kind="radio"
                 label={ps === EventPrivacySetting.Invitation ? 'Invite only' : ps}
                 onPress={() => updateField('privacySetting', ps)}
                 selected={formState.privacySetting === ps}
@@ -608,9 +619,6 @@ const styles = StyleSheet.create({
   fieldHalf: {
     flex: 1,
   },
-  fieldHalfSingle: {
-    maxWidth: '48%',
-  },
   helperText: {
     ...typography.bodyRegular,
     fontSize: 12,
@@ -625,16 +633,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pageContent: {
-    gap: 24,
+    gap: 30,
     paddingBottom: 108,
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 24,
   },
   row: {
     flexDirection: 'row',
     gap: 12,
   },
+  selectionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  selectionGridItem: {
+    flexBasis: '48%',
+    flexGrow: 1,
+  },
+  selectionStack: {
+    gap: 8,
+  },
   section: {
-    gap: 14,
+    gap: 16,
   },
 });

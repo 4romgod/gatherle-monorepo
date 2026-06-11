@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontSize, typography } from '@/app/theme/typography';
 
@@ -39,11 +39,14 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     justifyContent: 'center',
-    minHeight: 38,
-    paddingHorizontal: 14,
+    minHeight: Platform.OS === 'android' ? 32 : 34,
+    paddingHorizontal: Platform.OS === 'android' ? 11 : 12,
+    paddingVertical: Platform.OS === 'android' ? 6 : 7,
   },
   label: {
     ...typography.bodySemiBold,
-    fontSize: fontSize.base,
+    fontSize: Platform.OS === 'android' ? fontSize.md : fontSize.base,
+    includeFontPadding: false,
+    lineHeight: Platform.OS === 'android' ? 14 : 16,
   },
 });

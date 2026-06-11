@@ -270,7 +270,7 @@ class EventSeriesService {
       return EventSeriesDAO.countEvents(options);
     }
 
-    const viewerOrgMemberships = await this.buildViewerOrgMembershipSet(viewerUserId);
+    let viewerOrgMemberships: Set<string> | null = null;
     const batchLimit = sanitizeQueryLimit(
       EventSeriesService.EVENT_VISIBILITY_BATCH_SIZE,
       EventSeriesService.EVENT_VISIBILITY_BATCH_SIZE,
@@ -291,12 +291,17 @@ class EventSeriesService {
         break;
       }
 
-      visibleCount += this.filterVisibleEventsWithMemberships(
-        eventBatch,
-        viewerOrgMemberships,
-        viewerUserId,
-        viewerUserRole,
-      ).length;
+      if (!eventBatch.some((eventSeries) => this.isPrivateEvent(eventSeries))) {
+        visibleCount += eventBatch.length;
+      } else {
+        viewerOrgMemberships ??= await this.buildViewerOrgMembershipSet(viewerUserId);
+        visibleCount += this.filterVisibleEventsWithMemberships(
+          eventBatch,
+          viewerOrgMemberships,
+          viewerUserId,
+          viewerUserRole,
+        ).length;
+      }
       currentSkip += eventBatch.length;
 
       if (eventBatch.length < batchLimit) {

@@ -94,6 +94,7 @@ function getMomentDurationMs(moment: MomentLike): number {
 
 export function MomentViewer({
   active = true,
+  canDeleteMoments = false,
   containerHeight,
   embedded = false,
   moments,
@@ -108,6 +109,7 @@ export function MomentViewer({
   startIndex = 0,
 }: {
   active?: boolean;
+  canDeleteMoments?: boolean;
   containerHeight?: number;
   embedded?: boolean;
   hasNextGroup?: boolean;
@@ -688,6 +690,7 @@ export function MomentViewer({
   const momentEventId = currentMoment.event?.eventId ?? currentMoment.eventId;
   const showReplyComposer = Boolean(viewerUserId && viewerUserId !== currentMoment.authorId && currentMoment.authorId);
   const isOwnedByViewer = Boolean(viewerUserId && currentMoment.authorId === viewerUserId);
+  const canDeleteCurrentMoment = isOwnedByViewer || canDeleteMoments;
   const captionBottomOffset = showReplyComposer ? 18 : 28;
 
   const handleOpenAuthor = () => {
@@ -1033,7 +1036,7 @@ export function MomentViewer({
               </Pressable>
             ) : null}
 
-            {isOwnedByViewer ? (
+            {canDeleteCurrentMoment ? (
               <Pressable onPress={handleDeleteMoment} style={styles.menuItem}>
                 <Feather color={theme.colors.error} name="trash-2" size={16} />
                 <View style={styles.menuCopy}>
