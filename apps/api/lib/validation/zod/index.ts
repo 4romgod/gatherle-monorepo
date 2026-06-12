@@ -8,3 +8,4 @@ export * from './venue';
 export * from './social';
 export * from './shared';
 export * from './websocket';
+export * from './supportRequest';

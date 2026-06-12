@@ -117,6 +117,7 @@ const resolveMongoDbUrlForE2E = async () => {
 
 describe('Mobile Device Access Resolver', () => {
   const url = process.env.GRAPHQL_URL!;
+  const requiresDirectMongoCleanup = process.env.CI === 'true' && !new URL(url).hostname.includes('localhost');
   let adminUser: UserWithToken;
   let mongoConnected = false;
   let mongoCleanupUnavailableReason: string | null = null;
@@ -162,6 +163,10 @@ describe('Mobile Device Access Resolver', () => {
     try {
       await ensureMongoConnection();
     } catch (error) {
+      if (requiresDirectMongoCleanup) {
+        throw error;
+      }
+
       if (!hasLoggedMongoCleanupSkip) {
         console.warn(
           `[mobileDeviceAccess.e2e] skipping ${phase} cleanup because direct Mongo access is unavailable: ${describeError(error)}`,
@@ -194,6 +199,12 @@ describe('Mobile Device Access Resolver', () => {
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
     adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
+
+    if (requiresDirectMongoCleanup && !(await resolveMongoDbUrlForE2E())) {
+      throw new Error(
+        'MONGO_DB_URL is required for mobileDeviceAccess.e2e.ts cleanup in CI. Export it before running remote API e2e shards.',
+      );
+    }
   });
 
   afterEach(async () => {

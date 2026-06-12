@@ -20,3 +20,4 @@ export * from './notification';
 export * from './mobileDeviceAccess';
 export * from './pushSubscription';
 export * from './media';
+export * from './supportRequest';

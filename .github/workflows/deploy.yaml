@@ -379,6 +379,9 @@ jobs:
           role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Resolve API E2E MongoDB URL
+        run: bash .github/scripts/export-api-e2e-mongo-url.sh
+
       - name: Run API E2E Tests (Shard 1/3)
         env:
           GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
@@ -423,6 +426,9 @@ jobs:
           role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Resolve API E2E MongoDB URL
+        run: bash .github/scripts/export-api-e2e-mongo-url.sh
+
       - name: Run API E2E Tests (Shard 2/3)
         env:
           GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url }}
@@ -466,6 +472,9 @@ jobs:
         with:
           role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Resolve API E2E MongoDB URL
+        run: bash .github/scripts/export-api-e2e-mongo-url.sh
 
       - name: Run API E2E Tests (Shard 3/3)
         env:

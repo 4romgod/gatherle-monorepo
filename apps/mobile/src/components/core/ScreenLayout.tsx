@@ -1,9 +1,10 @@
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
+import { getResponsiveContentContainerWidth, getResponsiveContentHorizontalPadding } from '@/lib/constants/layout';
 
 export type ActionTone = 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'neutral';
 
@@ -59,61 +60,74 @@ function getTonePalette(tone: ActionTone, colors: ReturnType<typeof useAppTheme>
 
 export function ScreenLayout({ sectionLabel, title, description, badge, metrics, children }: ScreenLayoutProps) {
   const { theme } = useAppTheme();
+  const { width } = useWindowDimensions();
+  const contentContainerWidth = getResponsiveContentContainerWidth(width);
+  const contentHorizontalPadding = getResponsiveContentHorizontalPadding(width);
 
   return (
     <ScrollView
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
       style={{ backgroundColor: theme.colors.background }}
     >
-      <LinearGradient
-        colors={theme.colors.heroGradient}
-        end={{ x: 1, y: 1 }}
-        start={{ x: 0, y: 0 }}
-        style={styles.hero}
+      <View
+        style={[
+          styles.contentContainer,
+          {
+            maxWidth: contentContainerWidth,
+            paddingHorizontal: contentHorizontalPadding,
+          },
+        ]}
       >
-        <View style={styles.heroTopRow}>
-          <View
-            style={[
-              styles.sectionPill,
-              { backgroundColor: theme.colors.heroCard, borderColor: theme.colors.heroCardBorder },
-            ]}
-          >
-            <Text style={[styles.sectionPillText, { color: theme.colors.heroText }]}>{sectionLabel}</Text>
-          </View>
-          {badge ? (
+        <LinearGradient
+          colors={theme.colors.heroGradient}
+          end={{ x: 1, y: 1 }}
+          start={{ x: 0, y: 0 }}
+          style={styles.hero}
+        >
+          <View style={styles.heroTopRow}>
             <View
               style={[
-                styles.badgePill,
+                styles.sectionPill,
                 { backgroundColor: theme.colors.heroCard, borderColor: theme.colors.heroCardBorder },
               ]}
             >
-              <Text style={[styles.badgePillText, { color: theme.colors.heroSubtle }]}>{badge}</Text>
+              <Text style={[styles.sectionPillText, { color: theme.colors.heroText }]}>{sectionLabel}</Text>
             </View>
-          ) : null}
-        </View>
-        <View style={styles.heroCopy}>
-          <Text style={[styles.heroTitle, { color: theme.colors.heroText }]}>{title}</Text>
-          <Text style={[styles.heroDescription, { color: theme.colors.heroSubtle }]}>{description}</Text>
-        </View>
-        {metrics?.length ? (
-          <View style={styles.metricGrid}>
-            {metrics.map((metric) => (
+            {badge ? (
               <View
-                key={`${metric.label}-${metric.value}`}
                 style={[
-                  styles.metricCard,
+                  styles.badgePill,
                   { backgroundColor: theme.colors.heroCard, borderColor: theme.colors.heroCardBorder },
                 ]}
               >
-                <Text style={[styles.metricValue, { color: theme.colors.heroText }]}>{metric.value}</Text>
-                <Text style={[styles.metricLabel, { color: theme.colors.heroSubtle }]}>{metric.label}</Text>
+                <Text style={[styles.badgePillText, { color: theme.colors.heroSubtle }]}>{badge}</Text>
               </View>
-            ))}
+            ) : null}
           </View>
-        ) : null}
-      </LinearGradient>
-      <View style={styles.sections}>{children}</View>
+          <View style={styles.heroCopy}>
+            <Text style={[styles.heroTitle, { color: theme.colors.heroText }]}>{title}</Text>
+            <Text style={[styles.heroDescription, { color: theme.colors.heroSubtle }]}>{description}</Text>
+          </View>
+          {metrics?.length ? (
+            <View style={styles.metricGrid}>
+              {metrics.map((metric) => (
+                <View
+                  key={`${metric.label}-${metric.value}`}
+                  style={[
+                    styles.metricCard,
+                    { backgroundColor: theme.colors.heroCard, borderColor: theme.colors.heroCardBorder },
+                  ]}
+                >
+                  <Text style={[styles.metricValue, { color: theme.colors.heroText }]}>{metric.value}</Text>
+                  <Text style={[styles.metricLabel, { color: theme.colors.heroSubtle }]}>{metric.label}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </LinearGradient>
+        <View style={styles.sections}>{children}</View>
+      </View>
     </ScrollView>
   );
 }
@@ -174,9 +188,14 @@ export function TonePill({ label, tone = 'neutral' }: TonePillProps) {
 
 const styles = StyleSheet.create({
   contentContainer: {
+    alignSelf: 'center',
     gap: 16,
-    padding: 20,
     paddingBottom: 40,
+    paddingTop: 20,
+    width: '100%',
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   hero: {
     borderRadius: 28,

@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@apollo/client';
 import { Alert, Modal, Pressable } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ParticipantStatus } from '@data/graphql/types/graphql';
 import { DeleteEventByIdDocument } from '@data/graphql/mutation/Event/mutation';
@@ -54,6 +54,11 @@ import { useAppShell } from '@/app/providers/AppShellProvider';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { typography } from '@/app/theme/typography';
 import { hasUsableVenueAddress } from '@/lib/events/location';
+import {
+  getResponsiveContentContainerWidth,
+  getResponsiveContentHorizontalPadding,
+  getResponsiveContentWidth,
+} from '@/lib/constants/layout';
 
 type EventDetailsRoute = RouteProp<RootStackParamList, 'EventDetails'>;
 
@@ -181,6 +186,7 @@ export function EventDetailsScreen() {
   const navigation = useNavigation<DetailNavigation>();
   const route = useRoute<EventDetailsRoute>();
   const { authToken, isAuthenticated } = useAppShell();
+  const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { theme } = useAppTheme();
   const { showToast, withBlockingLoader } = useAppFeedback();
@@ -354,6 +360,9 @@ export function EventDetailsScreen() {
         ? "We'll keep this on your radar as the event picks up."
         : null;
   const stickyBarBottom = Math.max(insets.bottom, 24);
+  const contentContainerWidth = getResponsiveContentContainerWidth(width);
+  const contentHorizontalPadding = getResponsiveContentHorizontalPadding(width);
+  const contentWidth = getResponsiveContentWidth(width);
   const heroFallback = (
     <View style={[styles.heroPlaceholder, { backgroundColor: theme.colors.surfaceRaised }]}>
       <Text style={[styles.heroPlaceholderText, { color: theme.colors.heroText }]}>
@@ -648,293 +657,312 @@ export function EventDetailsScreen() {
   return (
     <>
       <ScrollView
-        contentContainerStyle={[
-          styles.pageContent,
-          {
-            paddingBottom: stickyBarBottom + 74,
-          },
-        ]}
+        contentContainerStyle={styles.pageScrollContent}
         showsVerticalScrollIndicator={false}
         style={{ backgroundColor: theme.colors.background }}
       >
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => setImageViewerVisible(true)}
+        <View
           style={[
-            styles.heroFrame,
+            styles.pageContent,
             {
-              backgroundColor: theme.colors.surfaceRaised,
-              borderColor: theme.colors.border,
+              maxWidth: contentContainerWidth,
+              paddingBottom: stickyBarBottom + 74,
+              paddingHorizontal: contentHorizontalPadding,
             },
           ]}
         >
-          <RemoteImage fallback={heroFallback} resizeMode="cover" showLoader style={styles.heroImage} uri={imageUrl} />
-
-          {heroPillLabel ? (
-            <View style={styles.heroPillWrap}>
-              <View
-                style={[
-                  styles.heroPill,
-                  {
-                    backgroundColor: 'rgba(8, 17, 32, 0.72)',
-                    borderColor: 'rgba(255, 255, 255, 0.18)',
-                  },
-                ]}
-              >
-                <Text style={styles.heroPillText}>{heroPillLabel}</Text>
-              </View>
-            </View>
-          ) : null}
-        </Pressable>
-
-        <View style={styles.heroSummary}>
-          <Text style={[styles.heroTitle, { color: theme.colors.textPrimary }]}>{title}</Text>
-        </View>
-
-        {eventNavigationError && failureKind !== 'session-expired' ? (
-          <ScreenErrorState
-            error={eventNavigationError}
-            onRetry={() => void refetchEventNavigation()}
-            resourceName="live event details"
-          />
-        ) : null}
-
-        {canOpenDirections ? (
-          <View style={styles.actionsRow}>
-            <EventDetailActionButton icon="map" label="Directions" onPress={handleOpenDirections} tone="secondary" />
-          </View>
-        ) : null}
-
-        {eventSourceLink ? (
-          <View style={styles.actionsRow}>
-            <EventDetailActionButton
-              icon="external-link"
-              label="View event source"
-              onPress={handleOpenEventSource}
-              tone="secondary"
-            />
-          </View>
-        ) : null}
-
-        {hasImportedSystemOrganizer ? (
-          <View style={styles.actionsRow}>
-            <EventDetailActionButton
-              icon="message-circle"
-              label="Message Gatherle"
-              onPress={handleMessageGatherle}
-              tone="secondary"
-            />
-          </View>
-        ) : null}
-
-        {rsvpContextTitle && rsvpContextBody ? (
-          <View
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setImageViewerVisible(true)}
             style={[
-              styles.rsvpContextCard,
+              styles.heroFrame,
               {
-                backgroundColor:
-                  rsvpStatus === ParticipantStatus.Going ? theme.colors.successSoft : theme.colors.primarySoft,
-                borderColor: rsvpStatus === ParticipantStatus.Going ? theme.colors.success : theme.colors.primary,
+                backgroundColor: theme.colors.surfaceRaised,
+                borderColor: theme.colors.border,
               },
             ]}
           >
-            <Text
+            <RemoteImage
+              fallback={heroFallback}
+              resizeMode="cover"
+              showLoader
+              style={styles.heroImage}
+              uri={imageUrl}
+            />
+
+            {heroPillLabel ? (
+              <View style={styles.heroPillWrap}>
+                <View
+                  style={[
+                    styles.heroPill,
+                    {
+                      backgroundColor: 'rgba(8, 17, 32, 0.72)',
+                      borderColor: 'rgba(255, 255, 255, 0.18)',
+                    },
+                  ]}
+                >
+                  <Text style={styles.heroPillText}>{heroPillLabel}</Text>
+                </View>
+              </View>
+            ) : null}
+          </Pressable>
+
+          <View style={styles.heroSummary}>
+            <Text style={[styles.heroTitle, { color: theme.colors.textPrimary }]}>{title}</Text>
+          </View>
+
+          {eventNavigationError && failureKind !== 'session-expired' ? (
+            <ScreenErrorState
+              error={eventNavigationError}
+              onRetry={() => void refetchEventNavigation()}
+              resourceName="live event details"
+            />
+          ) : null}
+
+          {canOpenDirections ? (
+            <View style={styles.actionsRow}>
+              <EventDetailActionButton icon="map" label="Directions" onPress={handleOpenDirections} tone="secondary" />
+            </View>
+          ) : null}
+
+          {eventSourceLink ? (
+            <View style={styles.actionsRow}>
+              <EventDetailActionButton
+                icon="external-link"
+                label="View event source"
+                onPress={handleOpenEventSource}
+                tone="secondary"
+              />
+            </View>
+          ) : null}
+
+          {hasImportedSystemOrganizer ? (
+            <View style={styles.actionsRow}>
+              <EventDetailActionButton
+                icon="message-circle"
+                label="Message Gatherle"
+                onPress={handleMessageGatherle}
+                tone="secondary"
+              />
+            </View>
+          ) : null}
+
+          {rsvpContextTitle && rsvpContextBody ? (
+            <View
               style={[
-                styles.rsvpContextTitle,
+                styles.rsvpContextCard,
                 {
-                  color: rsvpStatus === ParticipantStatus.Going ? theme.colors.success : theme.colors.primary,
+                  backgroundColor:
+                    rsvpStatus === ParticipantStatus.Going ? theme.colors.successSoft : theme.colors.primarySoft,
+                  borderColor: rsvpStatus === ParticipantStatus.Going ? theme.colors.success : theme.colors.primary,
                 },
               ]}
             >
-              {rsvpContextTitle}
-            </Text>
-            <Text style={[styles.rsvpContextBody, { color: theme.colors.textSecondary }]}>{rsvpContextBody}</Text>
-
-            {rsvpStatus === ParticipantStatus.Going ? (
-              <View style={styles.rsvpContextActions}>
-                <EventDetailActionButton
-                  icon="calendar"
-                  label="Add to calendar"
-                  onPress={handleAddToCalendar}
-                  tone="secondary"
-                />
-                <EventDetailActionButton icon="share-2" label="Invite friends" onPress={handleShare} tone="secondary" />
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-
-        {sessionOccurrences.length > 1 ? (
-          <EventDetailSection title="All Sessions">
-            <EventSessionsRail
-              occurrences={sessionOccurrences}
-              onSelectOccurrence={handleSelectOccurrence}
-              selectedOccurrenceId={occurrence.occurrenceId}
-            />
-          </EventDetailSection>
-        ) : null}
-
-        {eventId ? (
-          <EventDetailSection title="Moments">
-            <EventMomentsRing
-              canDeleteMoments={canManageEvent}
-              moments={moments}
-              myRsvpStatus={rsvpStatus ?? null}
-              onPressAddMoment={handleOpenMomentComposer}
-            />
-            {momentsError && failureKind !== 'session-expired' ? (
-              <ScreenErrorState
-                error={momentsError}
-                onRetry={() => void refetchMoments()}
-                resourceName="event moments"
-              />
-            ) : null}
-          </EventDetailSection>
-        ) : null}
-
-        <View style={styles.statGrid}>
-          <EventDetailStat icon="calendar" label="Schedule" value={formatEventScheduleTwoLine(occurrence)} />
-          <EventDetailStat
-            icon="map-pin"
-            label="Location"
-            onPress={canOpenDirections ? handleOpenDirections : undefined}
-            value={formatLocationLabel(occurrence)}
-          />
-          <EventDetailStat icon="users" label="Attendance" value={attendeeLabel} />
-        </View>
-
-        <EventDetailSection title="About this event">
-          <Text style={[styles.bodyCopy, { color: theme.colors.textSecondary }]}>{description}</Text>
-        </EventDetailSection>
-
-        {categories.length > 0 ? (
-          <EventDetailSection title="Categories">
-            <View style={styles.chipRow}>
-              {categories.map((category) => (
-                <View
-                  key={category.eventCategoryId}
-                  style={[
-                    styles.categoryChip,
-                    {
-                      backgroundColor: theme.colors.surface,
-                      borderColor: theme.colors.border,
-                    },
-                  ]}
-                >
-                  <Text style={[styles.categoryChipText, { color: theme.colors.textPrimary }]}>{category.name}</Text>
-                </View>
-              ))}
-            </View>
-          </EventDetailSection>
-        ) : null}
-
-        <EventDetailSection title="Hosted by">
-          {hostOrganization || visibleOrganizers.length > 0 ? (
-            <View style={styles.hostList}>
-              {hostOrganization ? (
-                <Pressable
-                  onPress={handleOpenOrganizationProfile}
-                  style={({ pressed }) => [
-                    styles.hostCard,
-                    {
-                      backgroundColor: theme.colors.surfaceRaised,
-                      borderColor: theme.colors.border,
-                      opacity: pressed ? 0.92 : 1,
-                    },
-                  ]}
-                >
-                  <ProfileAvatar imageUrl={hostOrganization.logo} label={hostOrganization.name} size={48} />
-                  <View style={styles.hostTextBlock}>
-                    <Text style={[styles.hostTitle, { color: theme.colors.textPrimary }]}>{hostOrganization.name}</Text>
-                    <Text style={[styles.hostSubtitle, { color: theme.colors.textSecondary }]}>Organization</Text>
-                  </View>
-                </Pressable>
-              ) : null}
-
-              {visibleOrganizers
-                .filter((organizer) => organizer.user)
-                .map((organizer) => {
-                  const hostUser = organizer.user;
-                  const hostLabel = getDisplayName(hostUser);
-
-                  return (
-                    <Pressable
-                      key={hostUser?.userId ?? `${hostLabel}:${organizer.role ?? 'host'}`}
-                      onPress={() => handleOpenHostProfile(hostUser)}
-                      style={({ pressed }) => [
-                        styles.hostCard,
-                        {
-                          backgroundColor: theme.colors.surfaceRaised,
-                          borderColor: theme.colors.border,
-                          opacity: pressed ? 0.92 : 1,
-                        },
-                      ]}
-                    >
-                      <ProfileAvatar imageUrl={hostUser?.profile_picture} label={hostLabel} size={48} />
-                      <View style={styles.hostTextBlock}>
-                        <Text style={[styles.hostTitle, { color: theme.colors.textPrimary }]}>{hostLabel}</Text>
-                        <Text style={[styles.hostSubtitle, { color: theme.colors.textSecondary }]}>
-                          {organizer.role || 'Event host'}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-            </View>
-          ) : (
-            <Text style={[styles.hostSubtitle, { color: theme.colors.textSecondary }]}>No organizers listed.</Text>
-          )}
-        </EventDetailSection>
-
-        {participants.length > 0 ? (
-          <EventDetailSection title="People going">
-            <View style={styles.attendeesRow}>
-              {participants.map((participant, index) => (
-                <Pressable
-                  key={getParticipantKey(participant)}
-                  onPress={() => {
-                    if (!participant.user?.userId) {
-                      return;
-                    }
-
-                    navigation.navigate('UserProfile', {
-                      avatarUrl: participant.user.profile_picture,
-                      displayName: getDisplayName(participant.user),
-                      userId: participant.user.userId,
-                      username: participant.user.username,
-                    });
-                  }}
-                  style={[styles.attendeeWrap, { marginLeft: index === 0 ? 0 : -10 }]}
-                >
-                  <ProfileAvatar
-                    imageUrl={participant.user?.profile_picture}
-                    label={getDisplayName(participant.user)}
-                    size={40}
-                  />
-                </Pressable>
-              ))}
-              <Text style={[styles.attendeeSummary, { color: theme.colors.textSecondary }]}>
-                {attendeeSummaryLabel}
+              <Text
+                style={[
+                  styles.rsvpContextTitle,
+                  {
+                    color: rsvpStatus === ParticipantStatus.Going ? theme.colors.success : theme.colors.primary,
+                  },
+                ]}
+              >
+                {rsvpContextTitle}
               </Text>
+              <Text style={[styles.rsvpContextBody, { color: theme.colors.textSecondary }]}>{rsvpContextBody}</Text>
+
+              {rsvpStatus === ParticipantStatus.Going ? (
+                <View style={styles.rsvpContextActions}>
+                  <EventDetailActionButton
+                    icon="calendar"
+                    label="Add to calendar"
+                    onPress={handleAddToCalendar}
+                    tone="secondary"
+                  />
+                  <EventDetailActionButton
+                    icon="share-2"
+                    label="Invite friends"
+                    onPress={handleShare}
+                    tone="secondary"
+                  />
+                </View>
+              ) : null}
             </View>
+          ) : null}
+
+          {sessionOccurrences.length > 1 ? (
+            <EventDetailSection title="All Sessions">
+              <EventSessionsRail
+                occurrences={sessionOccurrences}
+                onSelectOccurrence={handleSelectOccurrence}
+                selectedOccurrenceId={occurrence.occurrenceId}
+              />
+            </EventDetailSection>
+          ) : null}
+
+          {eventId ? (
+            <EventDetailSection title="Moments">
+              <EventMomentsRing
+                canDeleteMoments={canManageEvent}
+                moments={moments}
+                myRsvpStatus={rsvpStatus ?? null}
+                onPressAddMoment={handleOpenMomentComposer}
+              />
+              {momentsError && failureKind !== 'session-expired' ? (
+                <ScreenErrorState
+                  error={momentsError}
+                  onRetry={() => void refetchMoments()}
+                  resourceName="event moments"
+                />
+              ) : null}
+            </EventDetailSection>
+          ) : null}
+
+          <View style={styles.statGrid}>
+            <EventDetailStat icon="calendar" label="Schedule" value={formatEventScheduleTwoLine(occurrence)} />
+            <EventDetailStat
+              icon="map-pin"
+              label="Location"
+              onPress={canOpenDirections ? handleOpenDirections : undefined}
+              value={formatLocationLabel(occurrence)}
+            />
+            <EventDetailStat icon="users" label="Attendance" value={attendeeLabel} />
+          </View>
+
+          <EventDetailSection title="About this event">
+            <Text style={[styles.bodyCopy, { color: theme.colors.textSecondary }]}>{description}</Text>
           </EventDetailSection>
-        ) : null}
 
-        <EventRsvpSheet
-          currentStatus={rsvpStatus}
-          loading={rsvpLoading}
-          onCancelRsvp={handleCancelRsvp}
-          onClose={() => setRsvpSheetVisible(false)}
-          onSelectStatus={(status) => {
-            if (status === ParticipantStatus.Going) {
-              handleSelectGoing();
-              return;
-            }
+          {categories.length > 0 ? (
+            <EventDetailSection title="Categories">
+              <View style={styles.chipRow}>
+                {categories.map((category) => (
+                  <View
+                    key={category.eventCategoryId}
+                    style={[
+                      styles.categoryChip,
+                      {
+                        backgroundColor: theme.colors.surface,
+                        borderColor: theme.colors.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.categoryChipText, { color: theme.colors.textPrimary }]}>{category.name}</Text>
+                  </View>
+                ))}
+              </View>
+            </EventDetailSection>
+          ) : null}
 
-            handleSelectInterested();
-          }}
-          visible={rsvpSheetVisible}
-        />
+          <EventDetailSection title="Hosted by">
+            {hostOrganization || visibleOrganizers.length > 0 ? (
+              <View style={styles.hostList}>
+                {hostOrganization ? (
+                  <Pressable
+                    onPress={handleOpenOrganizationProfile}
+                    style={({ pressed }) => [
+                      styles.hostCard,
+                      {
+                        backgroundColor: theme.colors.surfaceRaised,
+                        borderColor: theme.colors.border,
+                        opacity: pressed ? 0.92 : 1,
+                      },
+                    ]}
+                  >
+                    <ProfileAvatar imageUrl={hostOrganization.logo} label={hostOrganization.name} size={48} />
+                    <View style={styles.hostTextBlock}>
+                      <Text style={[styles.hostTitle, { color: theme.colors.textPrimary }]}>
+                        {hostOrganization.name}
+                      </Text>
+                      <Text style={[styles.hostSubtitle, { color: theme.colors.textSecondary }]}>Organization</Text>
+                    </View>
+                  </Pressable>
+                ) : null}
+
+                {visibleOrganizers
+                  .filter((organizer) => organizer.user)
+                  .map((organizer) => {
+                    const hostUser = organizer.user;
+                    const hostLabel = getDisplayName(hostUser);
+
+                    return (
+                      <Pressable
+                        key={hostUser?.userId ?? `${hostLabel}:${organizer.role ?? 'host'}`}
+                        onPress={() => handleOpenHostProfile(hostUser)}
+                        style={({ pressed }) => [
+                          styles.hostCard,
+                          {
+                            backgroundColor: theme.colors.surfaceRaised,
+                            borderColor: theme.colors.border,
+                            opacity: pressed ? 0.92 : 1,
+                          },
+                        ]}
+                      >
+                        <ProfileAvatar imageUrl={hostUser?.profile_picture} label={hostLabel} size={48} />
+                        <View style={styles.hostTextBlock}>
+                          <Text style={[styles.hostTitle, { color: theme.colors.textPrimary }]}>{hostLabel}</Text>
+                          <Text style={[styles.hostSubtitle, { color: theme.colors.textSecondary }]}>
+                            {organizer.role || 'Event host'}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+              </View>
+            ) : (
+              <Text style={[styles.hostSubtitle, { color: theme.colors.textSecondary }]}>No organizers listed.</Text>
+            )}
+          </EventDetailSection>
+
+          {participants.length > 0 ? (
+            <EventDetailSection title="People going">
+              <View style={styles.attendeesRow}>
+                {participants.map((participant, index) => (
+                  <Pressable
+                    key={getParticipantKey(participant)}
+                    onPress={() => {
+                      if (!participant.user?.userId) {
+                        return;
+                      }
+
+                      navigation.navigate('UserProfile', {
+                        avatarUrl: participant.user.profile_picture,
+                        displayName: getDisplayName(participant.user),
+                        userId: participant.user.userId,
+                        username: participant.user.username,
+                      });
+                    }}
+                    style={[styles.attendeeWrap, { marginLeft: index === 0 ? 0 : -10 }]}
+                  >
+                    <ProfileAvatar
+                      imageUrl={participant.user?.profile_picture}
+                      label={getDisplayName(participant.user)}
+                      size={40}
+                    />
+                  </Pressable>
+                ))}
+                <Text style={[styles.attendeeSummary, { color: theme.colors.textSecondary }]}>
+                  {attendeeSummaryLabel}
+                </Text>
+              </View>
+            </EventDetailSection>
+          ) : null}
+
+          <EventRsvpSheet
+            currentStatus={rsvpStatus}
+            loading={rsvpLoading}
+            onCancelRsvp={handleCancelRsvp}
+            onClose={() => setRsvpSheetVisible(false)}
+            onSelectStatus={(status) => {
+              if (status === ParticipantStatus.Going) {
+                handleSelectGoing();
+                return;
+              }
+
+              handleSelectInterested();
+            }}
+            visible={rsvpSheetVisible}
+          />
+        </View>
       </ScrollView>
 
       <View
@@ -952,6 +980,7 @@ export function EventDetailsScreen() {
             {
               backgroundColor: theme.colors.surface,
               borderColor: theme.colors.border,
+              width: contentWidth,
             },
           ]}
         >
@@ -1036,9 +1065,10 @@ const styles = StyleSheet.create({
     shadowRadius: 28,
   },
   bottomBarWrap: {
-    left: 20,
+    alignItems: 'center',
+    left: 0,
     position: 'absolute',
-    right: 20,
+    right: 0,
   },
   attendeeSummary: {
     ...typography.bodyMedium,
@@ -1212,9 +1242,13 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   pageContent: {
+    alignSelf: 'center',
     gap: 16,
-    paddingHorizontal: 20,
     paddingTop: 20,
+    width: '100%',
+  },
+  pageScrollContent: {
+    flexGrow: 1,
   },
   statGrid: {
     flexDirection: 'row',

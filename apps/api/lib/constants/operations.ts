@@ -120,6 +120,11 @@ export const OPERATIONS = {
     GET_MEDIA_UPLOAD_URL: 'getMediaUploadUrl',
     GET_EVENT_MOMENT_UPLOAD_URL: 'getEventMomentUploadUrl',
   },
+  SUPPORT_REQUEST: {
+    CREATE_SUPPORT_REQUEST: 'createSupportRequest',
+    READ_SUPPORT_REQUESTS: 'readSupportRequests',
+    UPDATE_SUPPORT_REQUEST_STATUS: 'updateSupportRequestStatus',
+  },
   ADMIN: {
     READ_ADMIN_DASHBOARD_STATS: 'readAdminDashboardStats',
   },

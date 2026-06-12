@@ -108,7 +108,7 @@ export class EventMomentResolver {
     @Ctx() context: ServerContext,
   ): Promise<boolean> {
     const caller = getAuthenticatedUser(context);
-    return EventMomentService.delete(momentId, caller.userId);
+    return EventMomentService.delete(momentId, caller.userId, caller.userRole);
   }
 
   @Query(() => EventMomentPage, { description: 'Get all active moments for an event (event page ring view)' })

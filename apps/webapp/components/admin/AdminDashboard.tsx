@@ -16,6 +16,7 @@ import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
 import StorageRoundedIcon from '@mui/icons-material/StorageRounded';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import ContactSupportRoundedIcon from '@mui/icons-material/ContactSupportRounded';
 import { ROUTES } from '@/lib/constants';
 import AdminStatsPanel from '@/components/admin/AdminStatsPanel';
 import AdminDevicesSection from '@/components/admin/AdminDevicesSection';
@@ -25,6 +26,7 @@ import AdminCategoryGroupSection from '@/components/admin/AdminCategoryGroupSect
 import AdminUsersSection from '@/components/admin/AdminUsersSection';
 import AdminOrganizationsSection from '@/components/admin/AdminOrganizationsSection';
 import AdminVenuesSection from '@/components/admin/AdminVenuesSection';
+import AdminSupportRequestsSection from '@/components/admin/AdminSupportRequestsSection';
 import SessionStateManager from '@/components/admin/SessionStateManager';
 import { AdminDomainLinkList, type AdminDomainLink } from '@/components/admin/AdminDomainLinkList';
 
@@ -101,6 +103,13 @@ export default function AdminDashboard({ token, currentUserId }: AdminDashboardP
         description: 'Manage roles and account access.',
         icon: <PeopleAltRoundedIcon fontSize="small" />,
         content: <AdminUsersSection token={token} currentUserId={currentUserId} />,
+      },
+      {
+        id: 'support',
+        name: 'Support',
+        description: 'Review feedback, bug reports, and help requests.',
+        icon: <ContactSupportRoundedIcon fontSize="small" />,
+        content: <AdminSupportRequestsSection token={token} />,
       },
       {
         id: 'categories',

@@ -237,6 +237,33 @@ export const USER_DESCRIPTIONS = {
     'Policy for accepting new followers: Public (auto-accept all) or RequireApproval (manual approval required). Default: Public',
 };
 
+export const SUPPORT_REQUEST_DESCRIPTIONS = {
+  TYPE: 'A user-submitted request for help, feedback, bug reporting, or trust and safety escalation.',
+  CREATE_INPUT: 'Input used to submit a new support request from the app.',
+  READ_INPUT: 'Optional admin filters used to query support requests.',
+  UPDATE_STATUS_INPUT: 'Input used by admins to update the status of a support request.',
+  KIND_ENUM: 'The type of support request being submitted.',
+  STATUS_ENUM: 'The current triage state for a support request.',
+  ID: 'Unique identifier for this support request.',
+  REQUESTER_USER_ID: 'Identifier of the signed-in user that submitted the request.',
+  REQUESTER_EMAIL: 'Email address captured from the signed-in user at submission time.',
+  KIND: 'Category of request, such as help, bug report, idea, or trust and safety.',
+  STATUS: 'Current support request status.',
+  SUBJECT: 'Short summary of the problem or request, capped at 120 characters.',
+  MESSAGE: 'Detailed description supplied by the user, capped at 1000 characters.',
+  SCREENSHOT_URL:
+    'Optional uploaded screenshot that gives support more context. Screenshot uploads are capped at 15 MB.',
+  PAGE_PATH: 'Optional route or screen reference captured when the request was submitted.',
+  PLATFORM: 'Client platform captured at submission time, such as web or mobile.',
+  USER_AGENT: 'Raw user agent string captured from the request when available.',
+  APP_VERSION: 'Native app version captured from request headers when available.',
+  BUILD_VERSION: 'Native build version captured from request headers when available.',
+  SEARCH: 'Optional search term matched against requester email, subject, message, and page path.',
+  LIMIT: 'Maximum number of support requests to return for an admin query.',
+  CREATED_AT: 'Timestamp when the support request was created.',
+  UPDATED_AT: 'Timestamp when the support request was last updated.',
+};
+
 export const SOCIAL_DESCRIPTIONS = {
   FOLLOW: {
     TYPE: 'Represents a follow relationship between a user and a user, organization, or event (saved event).',
@@ -504,6 +531,12 @@ export const RESOLVER_DESCRIPTIONS = {
       'Get a pre-signed S3 URL for uploading an event moment media file. ' +
       'Enforces event existence, posting window, RSVP (Going/CheckedIn), and per-user rate limit ' +
       'before issuing the URL — preventing unauthorized MediaConvert job submissions.',
+  },
+  SUPPORT_REQUEST: {
+    createSupportRequest:
+      'Create a support request for product feedback, bug reports, help needs, or trust and safety concerns.',
+    readSupportRequests: 'Read support requests submitted by users. Admin only.',
+    updateSupportRequestStatus: 'Update the triage status for a support request. Admin only.',
   },
 };
 

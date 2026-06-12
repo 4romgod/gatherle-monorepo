@@ -2,8 +2,12 @@ import { useApolloClient } from '@apollo/client';
 import type { ComponentProps, ReactNode } from 'react';
 import { useCallback, useRef, useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { KeyboardAvoidingView, Platform, RefreshControl, StyleSheet } from 'react-native';
-import { MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET } from '@/lib/constants/layout';
+import { KeyboardAvoidingView, Platform, RefreshControl, StyleSheet, View, useWindowDimensions } from 'react-native';
+import {
+  MOBILE_ANDROID_KEYBOARD_VERTICAL_OFFSET,
+  getResponsiveContentContainerWidth,
+  getResponsiveContentHorizontalPadding,
+} from '@/lib/constants/layout';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { KeyboardAwareScrollView } from './KeyboardAwareScrollView';
 
@@ -30,9 +34,12 @@ export function PageContainer({
 }: PageContainerProps) {
   const apolloClient = useApolloClient();
   const { theme } = useAppTheme();
+  const { width } = useWindowDimensions();
   const [fallbackRefreshing, setFallbackRefreshing] = useState(false);
   const fallbackRefreshingRef = useRef(false);
   const resolvedRefreshing = onRefresh ? refreshing : fallbackRefreshing;
+  const contentContainerWidth = getResponsiveContentContainerWidth(width);
+  const contentHorizontalPadding = getResponsiveContentHorizontalPadding(width);
   const handleRefresh = useCallback(async () => {
     if (onRefresh) {
       await onRefresh();
@@ -64,7 +71,7 @@ export function PageContainer({
         automaticallyAdjustKeyboardInsets
         alwaysBounceVertical
         bounces
-        contentContainerStyle={[styles.pageContent, contentContainerStyle]}
+        contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         onContentSizeChange={onContentSizeChange}
@@ -87,7 +94,18 @@ export function PageContainer({
         showsVerticalScrollIndicator={false}
         style={{ backgroundColor: theme.colors.background }}
       >
-        {children}
+        <View
+          style={[
+            styles.pageContent,
+            contentContainerStyle,
+            {
+              maxWidth: contentContainerWidth,
+              paddingHorizontal: contentHorizontalPadding,
+            },
+          ]}
+        >
+          {children}
+        </View>
       </KeyboardAwareScrollView>
     </KeyboardAvoidingView>
   );
@@ -97,11 +115,15 @@ const styles = StyleSheet.create({
   keyboardShell: {
     flex: 1,
   },
+  scrollContent: {
+    flexGrow: 1,
+  },
   pageContent: {
+    alignSelf: 'center',
     flexGrow: 1,
     gap: 30,
     paddingBottom: 108,
-    paddingHorizontal: 20,
     paddingTop: 20,
+    width: '100%',
   },
 });

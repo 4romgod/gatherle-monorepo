@@ -23,6 +23,7 @@ import { useFollowedMoments } from '@/hooks/moments/useFollowedMoments';
 import { usePullToRefresh } from '@/hooks/core/usePullToRefresh';
 import { buildRecommendedOccurrences } from '@/lib/events/formatters';
 import { reportFrontendError } from '@/lib/errors/reportFrontendError';
+import { getResponsiveContentWidth } from '@/lib/constants/layout';
 import type { MobileSearchResult } from '@/hooks/search/useEventSearch';
 
 function navigateToEventSeriesResults(navigation: MainTabNavigation, event: MobileSearchResult) {
@@ -49,7 +50,7 @@ export function HomeScreen() {
     error: followedMomentsError,
   } = useFollowedMoments(authToken);
   const [searchVisible, setSearchVisible] = useState(false);
-  const cardWidth = Math.max(width - 40, 280);
+  const cardWidth = Math.max(getResponsiveContentWidth(width), 280);
 
   useEffect(() => {
     if (followedMomentsError) {
