@@ -22,3 +22,4 @@ export { default as EmailVerificationTokenDAO } from '@/mongodb/dao/emailVerific
 export { default as PasswordResetTokenDAO } from '@/mongodb/dao/passwordResetToken';
 export { default as AuthAttemptDAO } from '@/mongodb/dao/authAttempt';
 export { default as AuditLogDAO } from '@/mongodb/dao/auditLog';
+export { default as SupportRequestDAO } from '@/mongodb/dao/supportRequest';

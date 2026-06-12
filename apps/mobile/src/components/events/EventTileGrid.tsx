@@ -7,6 +7,7 @@ import {
   getProfileEventTileSize,
   PROFILE_EVENT_TILE_GRID_GAP,
 } from '@/lib/events/eventTileGrid';
+import { getResponsiveContentWidth } from '@/lib/constants/layout';
 
 type EventTileGridProps = {
   columns?: number;
@@ -17,7 +18,7 @@ type EventTileGridProps = {
 export function EventTileGrid({ columns, occurrences, onPressEvent }: EventTileGridProps) {
   const { width } = useWindowDimensions();
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
-  const resolvedWidth = containerWidth ?? width - 40;
+  const resolvedWidth = containerWidth ?? getResponsiveContentWidth(width);
   const resolvedColumns = columns ?? getProfileEventGridColumns(resolvedWidth);
   const tileSize = useMemo(
     () => getProfileEventTileSize(resolvedWidth, resolvedColumns),

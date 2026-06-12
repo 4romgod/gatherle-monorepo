@@ -16,6 +16,7 @@ type AccountSheetProps = {
   isAdmin?: boolean;
   onClose: () => void;
   onOpenAdmin?: () => void;
+  onOpenSupport: () => void;
   onOpenSettings: () => void;
   onOpenOrganizations: () => void;
   onLogout: () => void;
@@ -72,6 +73,7 @@ export function AccountSheet({
   onClose,
   onOpenAdmin,
   onOpenOrganizations,
+  onOpenSupport,
   onOpenSettings,
   onLogout,
   visible,
@@ -150,6 +152,12 @@ export function AccountSheet({
               label="Settings"
               onPress={() => runAction(onOpenSettings)}
               secondaryText="Update account details and preferences"
+            />
+            <AccountSheetAction
+              icon="help-circle"
+              label="Help & feedback"
+              onPress={() => runAction(onOpenSupport)}
+              secondaryText="Ask for help or report a problem"
             />
             {isAdmin && onOpenAdmin ? (
               <AccountSheetAction

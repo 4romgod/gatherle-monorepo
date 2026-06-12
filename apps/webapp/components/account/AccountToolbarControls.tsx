@@ -8,6 +8,7 @@ import {
   Apartment,
   ChevronRight,
   DarkMode,
+  HelpOutline,
   LightMode,
   Logout,
   MoreHoriz,
@@ -178,6 +179,13 @@ export default function AccountToolbarControls({ user }: { user: AccountToolbarU
       icon: <Settings fontSize="small" />,
       label: 'Settings',
       secondaryText: 'Update account details and preferences',
+    },
+    {
+      id: 'support',
+      href: ROUTES.ACCOUNT.SUPPORT,
+      icon: <HelpOutline fontSize="small" />,
+      label: 'Help & feedback',
+      secondaryText: 'Ask for help or report a problem',
     },
     ...(isAdmin
       ? [

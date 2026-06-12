@@ -81,6 +81,7 @@ export type RootStackParamList = {
         initialTab?: SettingsTabKey;
       }
     | undefined;
+  Support: undefined;
   MyEvents: undefined;
   CreateEvent: undefined;
   EditEvent: {
@@ -107,6 +108,7 @@ export type RootStackParamList = {
   AdminDevices: undefined;
   AdminEvents: undefined;
   AdminUsers: undefined;
+  AdminSupportRequests: undefined;
   AdminCategories: undefined;
   AdminCategoryGroups: undefined;
   AdminOrganizations: undefined;
@@ -292,6 +294,12 @@ export const detailScreenContent: Record<DetailRouteName, DetailScreenContent> =
     description: 'Theme, personal preferences, notification options, and future session settings will be grouped here.',
     category: 'account',
   },
+  Support: {
+    sectionLabel: 'Support',
+    title: 'Help & feedback',
+    description: 'Ask for help, report bugs, suggest ideas, and flag trust or safety concerns.',
+    category: 'account',
+  },
   MyEvents: {
     sectionLabel: 'Creator',
     title: 'My events',
@@ -369,6 +377,12 @@ export const detailScreenContent: Record<DetailRouteName, DetailScreenContent> =
     sectionLabel: 'Operations',
     title: 'Admin users',
     description: 'Search members, adjust access, repair verification state, and remove accounts on mobile.',
+    category: 'account',
+  },
+  AdminSupportRequests: {
+    sectionLabel: 'Support',
+    title: 'Support inbox',
+    description: 'Review user feedback, bug reports, help requests, and trust or safety escalations.',
     category: 'account',
   },
   AdminCategories: {

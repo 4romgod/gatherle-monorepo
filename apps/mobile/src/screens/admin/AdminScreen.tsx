@@ -24,6 +24,7 @@ type AdminDomainKey =
   | 'AdminOrganizations'
   | 'AdminVenues'
   | 'AdminUsers'
+  | 'AdminSupportRequests'
   | 'AdminCategories'
   | 'AdminCategoryGroups';
 
@@ -70,6 +71,13 @@ const ADMIN_DOMAIN_LINKS: AdminDomainLink[] = [
     label: 'Users',
     route: 'AdminUsers',
     title: 'Users',
+  },
+  {
+    description: 'Review feedback, bug reports, and trust or safety escalations.',
+    icon: 'life-buoy',
+    label: 'Support',
+    route: 'AdminSupportRequests',
+    title: 'Support',
   },
   {
     description: 'Maintain event category metadata.',

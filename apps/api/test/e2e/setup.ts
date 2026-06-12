@@ -7,7 +7,7 @@ import { getLoginUserMutation, getReadEventCategoriesQuery } from '@/test/utils'
 import { getSeededTestUsers, type SeededUserCredentials } from './utils/helpers';
 import { clearRuntimeContext, writeRuntimeContext } from './runtimeContext';
 import { getConfigValue } from '@/clients';
-import { JWT_SECRET, SECRET_KEYS } from '@/constants';
+import { JWT_SECRET, MONGO_DB_URL, SECRET_KEYS } from '@/constants';
 import { generateToken } from '@/utils/auth';
 import { cleanupOrphanedE2EUsers, resolveE2EUserNamespace } from './utils/userResolverHelpers';
 
@@ -123,6 +123,7 @@ const getReadSeededUserByUsernameQuery = (username: string) => ({
 });
 
 const isLocalGraphqlUrl = (graphqlUrl: string): boolean => new URL(graphqlUrl).hostname.includes('localhost');
+const resolveE2eMongoDbUrl = (): string | undefined => MONGO_DB_URL?.trim() || process.env.MONGO_DB_URL?.trim();
 
 const resolveE2eJwtSecret = async (): Promise<string | undefined> => {
   if (JWT_SECRET?.trim()) {
@@ -407,6 +408,7 @@ const primeRuntimeContext = async (graphqlUrl: string, jwtSecret?: string): Prom
     seededUsersByEmail,
     firstEventCategory,
     jwtSecret,
+    mongoDbUrl: resolveE2eMongoDbUrl(),
     e2eUserNamespace,
   });
 

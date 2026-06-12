@@ -23,6 +23,7 @@ import {
   MobileDeviceAccessResolver,
   FeedResolver,
   EventMomentResolver,
+  SupportRequestResolver,
 } from '@/graphql/resolvers';
 import { authChecker } from '@/utils/auth';
 
@@ -51,6 +52,7 @@ const createSchema = () => {
       MediaResolver,
       FeedResolver,
       EventMomentResolver,
+      SupportRequestResolver,
     ],
     validate: true,
     emitSchemaFile: false,

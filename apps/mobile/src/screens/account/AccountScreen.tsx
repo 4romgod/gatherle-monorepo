@@ -458,6 +458,7 @@ export function AccountScreen() {
         onOpenAdmin={isAdmin ? () => navigation.navigate('Admin') : undefined}
         onOpenOrganizations={() => navigation.navigate('MyOrganizations')}
         onOpenSettings={() => navigation.navigate('Settings')}
+        onOpenSupport={() => navigation.navigate('Support')}
         onLogout={signOut}
         visible={accountSheetVisible}
       />

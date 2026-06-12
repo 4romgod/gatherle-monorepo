@@ -5,10 +5,11 @@ import {
   getProfileEventTileSize,
   PROFILE_EVENT_TILE_GRID_GAP,
 } from '@/lib/events/eventTileGrid';
+import { getResponsiveContentWidth } from '@/lib/constants/layout';
 
 export function EventTileGridSkeleton({ columns, count = 6 }: { columns?: number; count?: number }) {
   const { width } = useWindowDimensions();
-  const availableWidth = width - 40;
+  const availableWidth = getResponsiveContentWidth(width);
   const resolvedColumns = columns ?? getProfileEventGridColumns(availableWidth);
   const tileSize = getProfileEventTileSize(availableWidth, resolvedColumns);
 

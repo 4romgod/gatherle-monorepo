@@ -4,6 +4,7 @@ import type {
   EventMoment,
   EventMomentPage,
   CreateEventMomentInput,
+  UserRole,
 } from '@gatherle/commons/server/types';
 import {
   EventMomentState,
@@ -533,7 +534,7 @@ class EventMomentService {
    * Delete an event moment.
    * Only the moment's author or someone who can manage the linked event may delete.
    */
-  static async delete(momentId: string, callerId: string): Promise<boolean> {
+  static async delete(momentId: string, callerId: string, callerRole?: UserRole | string | null): Promise<boolean> {
     const moment = await EventMomentDAO.readById(momentId);
     if (!moment) {
       throw CustomError('Moment not found', ErrorTypes.NOT_FOUND);
@@ -567,6 +568,7 @@ class EventMomentService {
     const canManageEvent = event
       ? await canUserManageEventSeries(event, {
           userId: callerId,
+          userRole: callerRole,
         })
       : false;
 

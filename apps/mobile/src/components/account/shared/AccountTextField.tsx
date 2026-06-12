@@ -21,6 +21,7 @@ type AccountTextFieldProps = {
   autoComplete?: ComponentProps<typeof TextInput>['autoComplete'];
   keyboardType?: 'default' | 'email-address' | 'phone-pad';
   label: string;
+  maxLength?: number;
   multiline?: boolean;
   onChangeText: (value: string) => void;
   onPressTrailingAction?: () => void;
@@ -37,6 +38,7 @@ export function AccountTextField({
   autoComplete = 'off',
   keyboardType = 'default',
   label,
+  maxLength,
   multiline = false,
   onChangeText,
   onPressTrailingAction,
@@ -68,6 +70,7 @@ export function AccountTextField({
           autoCapitalize={autoCapitalize}
           autoComplete={autoComplete}
           keyboardType={keyboardType}
+          maxLength={maxLength}
           multiline={multiline}
           onChangeText={onChangeText}
           onFocus={handleFocus}

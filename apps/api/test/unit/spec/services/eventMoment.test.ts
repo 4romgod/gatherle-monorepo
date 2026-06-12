@@ -648,6 +648,21 @@ describe('EventMomentService', () => {
       expect(OrganizationMembershipDAO.readMembershipByOrgIdAndUser).toHaveBeenCalledWith('org-1', 'org-admin-1');
     });
 
+    it('global admins can delete a moment without being listed as organizers', async () => {
+      const othersMoment = { ...mockMoment, authorId: 'other-user' };
+      (EventMomentDAO.readById as jest.Mock).mockResolvedValue(othersMoment);
+      (EventSeriesDAO.readEventById as jest.Mock).mockResolvedValue({
+        ...mockEvent,
+        orgId: 'org-1',
+        organizers: [{ user: 'organizer-1' }],
+      });
+
+      const result = await EventMomentService.delete('moment-1', 'platform-admin-1', 'Admin');
+
+      expect(result).toBe(true);
+      expect(OrganizationMembershipDAO.readMembershipByOrgIdAndUser).not.toHaveBeenCalled();
+    });
+
     it('throws UNAUTHORIZED when caller is neither author nor organizer', async () => {
       const othersMoment = { ...mockMoment, authorId: 'other-user' };
       (EventMomentDAO.readById as jest.Mock).mockResolvedValue(othersMoment);

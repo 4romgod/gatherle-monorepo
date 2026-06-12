@@ -20,6 +20,7 @@ import { AdminEventSessionsScreen } from '@/screens/admin/AdminEventSessionsScre
 import { AdminScreen } from '@/screens/admin/AdminScreen';
 import { AdminEventsScreen } from '@/screens/admin/AdminEventsScreen';
 import { AdminOrganizationsScreen } from '@/screens/admin/AdminOrganizationsScreen';
+import { AdminSupportRequestsScreen } from '@/screens/admin/AdminSupportRequestsScreen';
 import { AdminUsersScreen } from '@/screens/admin/AdminUsersScreen';
 import { AdminVenuesScreen } from '@/screens/admin/AdminVenuesScreen';
 import { EditProfileScreen } from '@/screens/account/EditProfileScreen';
@@ -32,6 +33,7 @@ import { MyOrganizationsScreen } from '@/screens/account/MyOrganizationsScreen';
 import { CreateOrganizationScreen } from '@/screens/account/CreateOrganizationScreen';
 import { EditOrganizationScreen } from '@/screens/account/EditOrganizationScreen';
 import { SettingsScreen } from '@/screens/account/SettingsScreen';
+import { SupportScreen } from '@/screens/account/SupportScreen';
 import { CreateVenueScreen } from '@/screens/venues/CreateVenueScreen';
 import { EditVenueScreen } from '@/screens/venues/EditVenueScreen';
 import { CategoriesScreen } from '@/screens/discovery/CategoriesScreen';
@@ -53,17 +55,17 @@ import { VenuesScreen } from '@/screens/venues/VenuesScreen';
 import { VenueDetailsScreen } from '@/screens/venues/VenueDetailsScreen';
 import { useAppTheme } from '@/app/theme/AppThemeProvider';
 import { fontFamily } from '@/app/theme/typography';
+import { isTabletWidth } from '@/lib/constants/layout';
 import { MainTabParamList, RootStackParamList } from './routes';
 
 const Tab = createMaterialTopTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
-const TABLET_BREAKPOINT = 768;
 
 function MainTabs() {
   const { theme } = useAppTheme();
   const { width } = useWindowDimensions();
   const { setMainTabsViewportHeight } = useAppShell();
-  const isTabletLayout = width >= TABLET_BREAKPOINT;
+  const isTabletLayout = isTabletWidth(width);
 
   return (
     <SafeAreaView edges={['top']} style={[styles.mainTabsShell, { backgroundColor: theme.colors.surface }]}>
@@ -236,6 +238,11 @@ export function RootNavigator() {
         options={{ presentation: 'card', title: 'Edit profile' }}
       />
       <Stack.Screen component={SettingsScreen} name="Settings" options={{ presentation: 'card', title: 'Settings' }} />
+      <Stack.Screen
+        component={SupportScreen}
+        name="Support"
+        options={{ presentation: 'card', title: 'Help & feedback' }}
+      />
       <Stack.Screen component={MyEventsScreen} name="MyEvents" options={{ presentation: 'card', title: 'My events' }} />
       <Stack.Screen
         component={CreateEventScreen}
@@ -306,6 +313,11 @@ export function RootNavigator() {
         })}
       />
       <Stack.Screen component={AdminUsersScreen} name="AdminUsers" options={{ presentation: 'card', title: 'Users' }} />
+      <Stack.Screen
+        component={AdminSupportRequestsScreen}
+        name="AdminSupportRequests"
+        options={{ presentation: 'card', title: 'Support inbox' }}
+      />
       <Stack.Screen
         component={AdminCategoriesScreen}
         name="AdminCategories"

@@ -7,6 +7,7 @@ export enum MediaEntityType {
   EventSeries = 'event',
   Venue = 'venue',
   EventMoment = 'event-moment',
+  SupportRequest = 'support-request',
 }
 
 export enum MediaType {
@@ -15,6 +16,7 @@ export enum MediaType {
   Featured = 'featured',
   Gallery = 'gallery',
   MomentMedia = 'moment-media',
+  Attachment = 'attachment',
 }
 
 registerEnumType(MediaEntityType, {

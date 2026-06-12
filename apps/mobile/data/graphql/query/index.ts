@@ -20,6 +20,7 @@ export * from './Notification/types';
 export * from './Organization/query';
 export * from './OrganizationMembership/query';
 export * from './Organization/types';
+export * from './SupportRequest/query';
 export * from './User/query';
 export * from './User/types';
 export * from './Venue/query';

@@ -69,7 +69,7 @@ describe('EventMomentResolver', () => {
     resolver = new EventMomentResolver();
     jest.clearAllMocks();
     __resetAnonymousMomentsFeedLimiterForTests();
-    (getAuthenticatedUser as jest.Mock).mockReturnValue({ userId: 'user-1' });
+    (getAuthenticatedUser as jest.Mock).mockReturnValue({ userId: 'user-1', userRole: 'User' });
   });
 
   describe('author field resolver', () => {
@@ -141,7 +141,7 @@ describe('EventMomentResolver', () => {
 
       const result = await resolver.deleteEventMoment('moment-1', mockContext);
 
-      expect(EventMomentService.delete).toHaveBeenCalledWith('moment-1', 'user-1');
+      expect(EventMomentService.delete).toHaveBeenCalledWith('moment-1', 'user-1', 'User');
       expect(result).toBe(true);
     });
 

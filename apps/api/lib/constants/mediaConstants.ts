@@ -29,4 +29,5 @@ export const MEDIA_ENTITY_FOLDER: Partial<Record<MediaEntityType, string>> = {
   [MediaEntityType.Organization]: 'organizations',
   [MediaEntityType.EventSeries]: 'events',
   [MediaEntityType.Venue]: 'venues',
+  [MediaEntityType.SupportRequest]: 'support-requests',
 };
