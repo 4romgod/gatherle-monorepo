@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { CfnOutput, Duration, StackProps, Stack, Tags } from 'aws-cdk-lib';
+import { ArnFormat, CfnOutput, Duration, StackProps, Stack, Tags } from 'aws-cdk-lib';
 import {
   Conditions,
   Effect,
@@ -47,6 +47,7 @@ export class GitHubAuthStack extends Stack {
     ];
     const backendSecretArns = [
       this.formatArn({
+        arnFormat: ArnFormat.COLON_RESOURCE_NAME,
         service: 'secretsmanager',
         resource: 'secret',
         resourceName: 'gatherle/backend/*',
@@ -119,7 +120,12 @@ export class GitHubAuthStack extends Stack {
           resources: accountRoleArns,
           conditions: {
             StringEquals: {
-              'iam:PassedToService': ['lambda.amazonaws.com', 'scheduler.amazonaws.com', 'apigateway.amazonaws.com'],
+              'iam:PassedToService': [
+                'lambda.amazonaws.com',
+                'scheduler.amazonaws.com',
+                'apigateway.amazonaws.com',
+                'cloudformation.amazonaws.com',
+              ],
             },
           },
         }),

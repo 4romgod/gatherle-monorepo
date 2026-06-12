@@ -7,3 +7,4 @@ export * from './organizationLoader';
 export * from './eventOccurrenceParticipantLoader';
 export * from './eventSaveCountLoader';
 export * from './eventSavedByMeLoader';
+export * from './mobileDeviceAccessPushSummaryLoader';

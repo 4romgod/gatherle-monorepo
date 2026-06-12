@@ -80,6 +80,33 @@ function formatTimestamp(value?: string | null): string {
   return new Date(value).toLocaleString();
 }
 
+function formatDeviceHardwareLabel(device: { deviceBrand?: string | null; deviceModel?: string | null }): string {
+  const parts = [device.deviceBrand, device.deviceModel].filter(Boolean);
+  if (parts.length > 0) {
+    return parts.join(' ');
+  }
+
+  return '-';
+}
+
+function formatOsLabel(device: { osVersion?: string | null; platform: string }): string {
+  const platformLabel = device.platform === 'Ios' ? 'iOS' : device.platform;
+
+  if (!device.osVersion) {
+    return platformLabel;
+  }
+
+  return `${platformLabel} ${device.osVersion}`;
+}
+
+function formatPushProviders(providers?: string[] | null): string {
+  if (!providers?.length) {
+    return '-';
+  }
+
+  return providers.join(', ');
+}
+
 function getStatusTone(status: MobileDeviceAccessStatus): React.ComponentProps<typeof AdminPill>['tone'] {
   if (status === MobileDeviceAccessStatus.Approved) {
     return 'success';
@@ -206,7 +233,7 @@ export function AdminDevicesScreen() {
         <SearchField
           onChangeText={setSearchQuery}
           onClear={() => setSearchQuery('')}
-          placeholder="Search installation ID, version, or user ID"
+          placeholder="Search install ID, version, model, app ID, or user ID"
           value={searchQuery}
         />
         <View style={styles.filterRow}>
@@ -273,8 +300,20 @@ export function AdminDevicesScreen() {
                 <>
                   <AdminPill label={device.status} tone={getStatusTone(device.status)} />
                   <AdminPill label={device.platform} />
+                  {device.deviceBrand || device.deviceModel ? (
+                    <AdminPill label={formatDeviceHardwareLabel(device)} />
+                  ) : null}
+                  {device.osVersion ? <AdminPill label={formatOsLabel(device)} /> : null}
                   {device.appVersion ? <AdminPill label={`v${device.appVersion}`} /> : null}
                   {device.buildVersion ? <AdminPill label={`build ${device.buildVersion}`} /> : null}
+                  {device.pushSummary.hasActiveSubscription ? (
+                    <AdminPill
+                      label={`Push active${device.pushSummary.activeSubscriptionCount > 1 ? ` · ${device.pushSummary.activeSubscriptionCount}` : ''}`}
+                      tone="default"
+                    />
+                  ) : (
+                    <AdminPill label="Push inactive" tone="default" />
+                  )}
                   {device.lastSeenUser ? (
                     <AdminPill label={`Last user · ${getLinkedUserLabel(device.lastSeenUser)}`} tone="default" />
                   ) : null}
@@ -285,10 +324,28 @@ export function AdminDevicesScreen() {
             >
               <View style={styles.metaBlock}>
                 <Text style={[styles.metaText, { color: theme.colors.textSecondary }]}>
+                  Device: {formatDeviceHardwareLabel(device)}
+                </Text>
+                <Text style={[styles.metaText, { color: theme.colors.textSecondary }]}>
+                  OS: {formatOsLabel(device)}
+                </Text>
+                <Text style={[styles.metaText, { color: theme.colors.textSecondary }]}>
+                  App ID: {device.applicationId ?? '-'}
+                </Text>
+                <Text style={[styles.metaText, { color: theme.colors.textSecondary }]}>
                   Last authenticated: {formatTimestamp(device.lastAuthenticatedAt)}
                 </Text>
                 <Text style={[styles.metaText, { color: theme.colors.textSecondary }]}>
                   Linked users: {formatLinkedUsers(device.seenUsers, device.seenUserIds)}
+                </Text>
+                <Text style={[styles.metaText, { color: theme.colors.textSecondary }]}>
+                  Push providers: {formatPushProviders(device.pushSummary.providers)}
+                </Text>
+                <Text style={[styles.metaText, { color: theme.colors.textSecondary }]}>
+                  Push registered: {formatTimestamp(device.pushSummary.lastRegisteredAt)}
+                </Text>
+                <Text style={[styles.metaText, { color: theme.colors.textSecondary }]}>
+                  Push delivered: {formatTimestamp(device.pushSummary.lastDeliveredAt)}
                 </Text>
                 <Text style={[styles.metaText, { color: theme.colors.textSecondary }]}>
                   Reviewed by: {device.reviewedByUserId ?? '-'}

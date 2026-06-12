@@ -2,12 +2,17 @@ import { GraphQLError } from 'graphql';
 import { randomUUID } from 'crypto';
 import type {
   MobileDeviceAccess as MobileDeviceAccessEntity,
+  MobileDeviceAccessPushSummary,
   ReadMobileDeviceAccessesInput,
   RegisterMobileDeviceAccessInput,
   UpdateMobileDeviceAccessStatusInput,
 } from '@gatherle/commons/server/types';
 import { MobileDeviceAccessStatus } from '@gatherle/commons/server/types';
-import { MobileDeviceAccess as MobileDeviceAccessModel } from '@/mongodb/models';
+import type { PushSubscriptionProvider } from '@gatherle/commons/server/types';
+import {
+  MobileDeviceAccess as MobileDeviceAccessModel,
+  PushSubscription as PushSubscriptionModel,
+} from '@/mongodb/models';
 import { emitMobileDeviceAccessMetrics, CustomError, ErrorTypes, KnownCommonError, logDaoError } from '@/utils';
 
 const AUTHENTICATED_USE_HEARTBEAT_WINDOW_MS = 15 * 60 * 1000;
@@ -21,6 +26,10 @@ class MobileDeviceAccessDAO {
     const now = new Date();
     const nextAppVersion = input.appVersion?.trim() || undefined;
     const nextBuildVersion = input.buildVersion?.trim() || undefined;
+    const nextApplicationId = input.applicationId?.trim() || undefined;
+    const nextDeviceBrand = input.deviceBrand?.trim() || undefined;
+    const nextDeviceModel = input.deviceModel?.trim() || undefined;
+    const nextOsVersion = input.osVersion?.trim() || undefined;
     const providedRegistrationSecret = input.registrationSecret?.trim() || undefined;
 
     try {
@@ -43,6 +52,10 @@ class MobileDeviceAccessDAO {
         existingDeviceAccess.platform = input.platform;
         existingDeviceAccess.appVersion = nextAppVersion;
         existingDeviceAccess.buildVersion = nextBuildVersion;
+        existingDeviceAccess.applicationId = nextApplicationId;
+        existingDeviceAccess.deviceBrand = nextDeviceBrand;
+        existingDeviceAccess.deviceModel = nextDeviceModel;
+        existingDeviceAccess.osVersion = nextOsVersion;
         existingDeviceAccess.lastSeenAt = now;
         if (existingDeviceAccess.status === MobileDeviceAccessStatus.Pending) {
           existingDeviceAccess.status = MobileDeviceAccessStatus.Approved;
@@ -69,6 +82,10 @@ class MobileDeviceAccessDAO {
         platform: input.platform,
         appVersion: nextAppVersion,
         buildVersion: nextBuildVersion,
+        applicationId: nextApplicationId,
+        deviceBrand: nextDeviceBrand,
+        deviceModel: nextDeviceModel,
+        osVersion: nextOsVersion,
         firstSeenAt: now,
         lastSeenAt: now,
         registrationSecret,
@@ -125,6 +142,10 @@ class MobileDeviceAccessDAO {
         { deviceInstallationId: { $regex: searchValue, $options: 'i' } },
         { appVersion: { $regex: searchValue, $options: 'i' } },
         { buildVersion: { $regex: searchValue, $options: 'i' } },
+        { applicationId: { $regex: searchValue, $options: 'i' } },
+        { deviceBrand: { $regex: searchValue, $options: 'i' } },
+        { deviceModel: { $regex: searchValue, $options: 'i' } },
+        { osVersion: { $regex: searchValue, $options: 'i' } },
         { lastSeenUserId: { $regex: searchValue, $options: 'i' } },
         { seenUserIds: { $regex: searchValue, $options: 'i' } },
       ];
@@ -217,6 +238,77 @@ class MobileDeviceAccessDAO {
         deviceInstallationId: input.deviceInstallationId,
         userId: input.userId,
       });
+      throw KnownCommonError(error);
+    }
+  }
+
+  static async readPushSummariesByDeviceInstallationIds(
+    deviceInstallationIds: string[],
+  ): Promise<Map<string, MobileDeviceAccessPushSummary>> {
+    const uniqueIds = Array.from(
+      new Set(deviceInstallationIds.map((deviceInstallationId) => deviceInstallationId.trim()).filter(Boolean)),
+    );
+
+    if (uniqueIds.length === 0) {
+      return new Map();
+    }
+
+    try {
+      const subscriptions = await PushSubscriptionModel.find({
+        deviceInstallationId: { $in: uniqueIds },
+        isActive: true,
+      })
+        .lean()
+        .exec();
+
+      const summaries = new Map<string, MobileDeviceAccessPushSummary>(
+        uniqueIds.map((deviceInstallationId) => [
+          deviceInstallationId,
+          {
+            hasActiveSubscription: false,
+            activeSubscriptionCount: 0,
+            providers: [],
+          },
+        ]),
+      );
+
+      for (const subscription of subscriptions) {
+        const deviceInstallationId = subscription.deviceInstallationId?.trim();
+        if (!deviceInstallationId) {
+          continue;
+        }
+
+        const currentSummary = summaries.get(deviceInstallationId) ?? {
+          hasActiveSubscription: false,
+          activeSubscriptionCount: 0,
+          providers: [],
+        };
+        const providerSet = new Set<PushSubscriptionProvider>(currentSummary.providers);
+        providerSet.add(subscription.provider);
+
+        const currentLastRegisteredAt = currentSummary.lastRegisteredAt?.getTime() ?? 0;
+        const nextLastRegisteredAt = subscription.lastRegisteredAt?.getTime?.() ?? 0;
+        const currentLastDeliveredAt = currentSummary.lastDeliveredAt?.getTime() ?? 0;
+        const nextLastDeliveredAt = subscription.lastDeliveredAt?.getTime?.() ?? 0;
+
+        summaries.set(deviceInstallationId, {
+          hasActiveSubscription: true,
+          activeSubscriptionCount: currentSummary.activeSubscriptionCount + 1,
+          providers: Array.from(providerSet.values()),
+          lastRegisteredAt:
+            nextLastRegisteredAt > currentLastRegisteredAt
+              ? subscription.lastRegisteredAt
+              : currentSummary.lastRegisteredAt,
+          lastDeliveredAt:
+            nextLastDeliveredAt > currentLastDeliveredAt
+              ? subscription.lastDeliveredAt
+              : currentSummary.lastDeliveredAt,
+        });
+      }
+
+      return summaries;
+    } catch (error) {
+      logDaoError('Error reading mobile device push summaries', { error, deviceInstallationIds: uniqueIds });
       throw KnownCommonError(error);
     }
   }

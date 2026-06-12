@@ -1,5 +1,7 @@
 import { App } from 'aws-cdk-lib';
+import { APPLICATION_STAGES } from '@gatherle/commons/server';
 import { DNS_STACK_CONFIG } from './constants';
+import { resolveServiceAccountByAccount } from './constants/accounts';
 import { GitHubAuthStack } from './stack';
 import { buildAccountScopedStackName } from './utils';
 
@@ -14,6 +16,11 @@ if (!deploymentRegion || !targetAccountId) {
   );
 }
 
+const runtimeServiceAccount =
+  targetAccountId === DNS_STACK_CONFIG.accountNumber
+    ? undefined
+    : resolveServiceAccountByAccount(targetAccountId, deploymentRegion);
+
 const deployRoles =
   targetAccountId === DNS_STACK_CONFIG.accountNumber
     ? [
@@ -26,24 +33,34 @@ const deployRoles =
           filters: [`environment:dns-${deploymentRegion}`],
         },
       ]
-    : [
-        {
-          roleId: 'GithubBetaRuntimeDeployRole',
-          roleNamePrefix: 'githubActionsBetaDeployRole',
-          description: 'GitHub Actions runtime deploy role for Gatherle Beta infrastructure',
-          outputKey: 'GithubActionBetaDeployRoleArn',
-          permissionProfile: 'runtime' as const,
-          filters: [`environment:Beta-${deploymentRegion}`],
-        },
-        {
-          roleId: 'GithubProdRuntimeDeployRole',
-          roleNamePrefix: 'githubActionsProdDeployRole',
-          description: 'GitHub Actions runtime deploy role for Gatherle Prod infrastructure',
-          outputKey: 'GithubActionProdDeployRoleArn',
-          permissionProfile: 'runtime' as const,
-          filters: [`environment:Prod-${deploymentRegion}`],
-        },
-      ];
+    : runtimeServiceAccount?.applicationStage === APPLICATION_STAGES.BETA
+      ? [
+          {
+            roleId: 'GithubBetaRuntimeDeployRole',
+            roleNamePrefix: 'githubActionsBetaDeployRole',
+            description: 'GitHub Actions runtime deploy role for Gatherle Beta infrastructure',
+            outputKey: 'GithubActionBetaDeployRoleArn',
+            permissionProfile: 'runtime' as const,
+            filters: [`environment:${APPLICATION_STAGES.BETA}-${deploymentRegion}`],
+          },
+        ]
+      : runtimeServiceAccount?.applicationStage === APPLICATION_STAGES.PROD
+        ? [
+            {
+              roleId: 'GithubProdRuntimeDeployRole',
+              roleNamePrefix: 'githubActionsProdDeployRole',
+              description: 'GitHub Actions runtime deploy role for Gatherle Prod infrastructure',
+              outputKey: 'GithubActionProdDeployRoleArn',
+              permissionProfile: 'runtime' as const,
+              filters: [`environment:${APPLICATION_STAGES.PROD}-${deploymentRegion}`],
+            },
+          ]
+        : (() => {
+            throw new Error(
+              `GitHub auth role configuration is not defined for runtime account "${targetAccountId}" in region "${deploymentRegion}". ` +
+                `Resolved stage: "${runtimeServiceAccount?.applicationStage ?? 'unknown'}".`,
+            );
+          })();
 
 new GitHubAuthStack(app, 'GitHubAuthStack', {
   env: {

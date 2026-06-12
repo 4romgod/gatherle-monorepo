@@ -1,7 +1,7 @@
 name: Deploy Trigger
 
 on:
-  pull_request:
+  push:
     branches: ["main"]
 
 permissions:
@@ -83,4 +83,31 @@ jobs:
       stage: Beta
       region: ${{ matrix.region }}
       web_domain_alias: beta.gatherle.com
+    secrets: inherit
+
+  deploy_prod:
+    needs: [detect_changes, deploy_dns, deploy_beta]
+    if: >-
+      ${{
+        always() &&
+        vars.ENABLE_PROD_DEPLOY == 'true' &&
+        needs.detect_changes.outputs.run_deploy == 'true' &&
+        (needs.deploy_dns.result == 'success' || needs.deploy_dns.result == 'skipped') &&
+        needs.deploy_beta.result == 'success'
+      }}
+    permissions:
+      contents: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        region: [af-south-1]
+    uses: ./.github/workflows/deploy.yaml
+    with:
+      build_mobile: ${{ needs.detect_changes.outputs.mobile == 'true' }}
+      deploy_api: ${{ needs.detect_changes.outputs.api == 'true' }}
+      deploy_webapp: ${{ needs.detect_changes.outputs.webapp == 'true' }}
+      stage: Prod
+      region: ${{ matrix.region }}
+      web_domain_alias: gatherle.com
     secrets: inherit

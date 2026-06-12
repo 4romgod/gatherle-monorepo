@@ -1,8 +1,13 @@
 import { GraphQLError } from 'graphql';
 import MobileDeviceAccessDAO from '@/mongodb/dao/mobileDeviceAccess';
 import MobileDeviceAccessModel from '@/mongodb/models/mobileDeviceAccess';
+import PushSubscriptionModel from '@/mongodb/models/pushSubscription';
 import { emitMobileDeviceAccessMetrics, logDaoError } from '@/utils';
-import { MobileDeviceAccessPlatform, MobileDeviceAccessStatus } from '@gatherle/commons/server/types';
+import {
+  MobileDeviceAccessPlatform,
+  MobileDeviceAccessStatus,
+  PushSubscriptionProvider,
+} from '@gatherle/commons/server/types';
 
 jest.mock('@/mongodb/models/mobileDeviceAccess', () => ({
   __esModule: true,
@@ -11,6 +16,13 @@ jest.mock('@/mongodb/models/mobileDeviceAccess', () => ({
     find: jest.fn(),
     findOne: jest.fn(),
     updateOne: jest.fn(),
+  },
+}));
+
+jest.mock('@/mongodb/models/pushSubscription', () => ({
+  __esModule: true,
+  default: {
+    find: jest.fn(),
   },
 }));
 
@@ -64,6 +76,9 @@ describe('MobileDeviceAccessDAO', () => {
     find: jest.Mock;
     findOne: jest.Mock;
     updateOne: jest.Mock;
+  };
+  const pushSubscriptionModelMock = PushSubscriptionModel as unknown as {
+    find: jest.Mock;
   };
 
   beforeEach(() => {
@@ -240,12 +255,16 @@ describe('MobileDeviceAccessDAO', () => {
           { deviceInstallationId: { $regex: 'user-1', $options: 'i' } },
           { appVersion: { $regex: 'user-1', $options: 'i' } },
           { buildVersion: { $regex: 'user-1', $options: 'i' } },
+          { applicationId: { $regex: 'user-1', $options: 'i' } },
+          { deviceBrand: { $regex: 'user-1', $options: 'i' } },
+          { deviceModel: { $regex: 'user-1', $options: 'i' } },
+          { osVersion: { $regex: 'user-1', $options: 'i' } },
           { lastSeenUserId: { $regex: 'user-1', $options: 'i' } },
           { seenUserIds: { $regex: 'user-1', $options: 'i' } },
         ],
         status: MobileDeviceAccessStatus.Blocked,
       });
-      expect(sort).toHaveBeenCalledWith({ createdAt: -1, lastSeenAt: -1 });
+      expect(sort).toHaveBeenCalledWith({ lastSeenAt: -1, createdAt: -1 });
       expect(result).toHaveLength(1);
     });
 
@@ -273,6 +292,10 @@ describe('MobileDeviceAccessDAO', () => {
             { deviceInstallationId: { $regex: 'boom', $options: 'i' } },
             { appVersion: { $regex: 'boom', $options: 'i' } },
             { buildVersion: { $regex: 'boom', $options: 'i' } },
+            { applicationId: { $regex: 'boom', $options: 'i' } },
+            { deviceBrand: { $regex: 'boom', $options: 'i' } },
+            { deviceModel: { $regex: 'boom', $options: 'i' } },
+            { osVersion: { $regex: 'boom', $options: 'i' } },
             { lastSeenUserId: { $regex: 'boom', $options: 'i' } },
             { seenUserIds: { $regex: 'boom', $options: 'i' } },
           ],
@@ -336,6 +359,93 @@ describe('MobileDeviceAccessDAO', () => {
           'admin-1',
         ),
       ).rejects.toBeInstanceOf(GraphQLError);
+    });
+  });
+
+  describe('readPushSummariesByDeviceInstallationIds', () => {
+    it('returns an empty map without querying when the installation ids collapse to an empty set', async () => {
+      await expect(MobileDeviceAccessDAO.readPushSummariesByDeviceInstallationIds([' ', '', '   '])).resolves.toEqual(
+        new Map(),
+      );
+      expect(pushSubscriptionModelMock.find).not.toHaveBeenCalled();
+    });
+
+    it('aggregates active subscription counts, providers, and latest delivery timestamps per installation', async () => {
+      const exec = jest.fn().mockResolvedValue([
+        {
+          deviceInstallationId: 'install-1',
+          lastDeliveredAt: new Date('2026-06-11T08:00:00.000Z'),
+          lastRegisteredAt: new Date('2026-06-11T09:00:00.000Z'),
+          provider: PushSubscriptionProvider.Expo,
+        },
+        {
+          deviceInstallationId: ' install-1 ',
+          lastDeliveredAt: new Date('2026-06-11T10:00:00.000Z'),
+          lastRegisteredAt: new Date('2026-06-11T11:00:00.000Z'),
+          provider: PushSubscriptionProvider.Fcm,
+        },
+        {
+          deviceInstallationId: 'install-2',
+          lastRegisteredAt: new Date('2026-06-12T07:00:00.000Z'),
+          provider: PushSubscriptionProvider.Expo,
+        },
+        {
+          deviceInstallationId: '   ',
+          lastDeliveredAt: new Date('2026-06-13T10:00:00.000Z'),
+          lastRegisteredAt: new Date('2026-06-13T10:00:00.000Z'),
+          provider: PushSubscriptionProvider.Expo,
+        },
+      ]);
+      const lean = jest.fn().mockReturnValue({ exec });
+      pushSubscriptionModelMock.find.mockReturnValue({ lean });
+
+      const result = await MobileDeviceAccessDAO.readPushSummariesByDeviceInstallationIds([
+        ' install-1 ',
+        'install-2',
+        'install-3',
+        'install-1',
+      ]);
+
+      expect(pushSubscriptionModelMock.find).toHaveBeenCalledWith({
+        deviceInstallationId: { $in: ['install-1', 'install-2', 'install-3'] },
+        isActive: true,
+      });
+      expect(lean).toHaveBeenCalledTimes(1);
+      expect(result.get('install-1')).toEqual({
+        activeSubscriptionCount: 2,
+        hasActiveSubscription: true,
+        lastDeliveredAt: new Date('2026-06-11T10:00:00.000Z'),
+        lastRegisteredAt: new Date('2026-06-11T11:00:00.000Z'),
+        providers: [PushSubscriptionProvider.Expo, PushSubscriptionProvider.Fcm],
+      });
+      expect(result.get('install-2')).toEqual({
+        activeSubscriptionCount: 1,
+        hasActiveSubscription: true,
+        lastDeliveredAt: undefined,
+        lastRegisteredAt: new Date('2026-06-12T07:00:00.000Z'),
+        providers: [PushSubscriptionProvider.Expo],
+      });
+      expect(result.get('install-3')).toEqual({
+        activeSubscriptionCount: 0,
+        hasActiveSubscription: false,
+        providers: [],
+      });
+    });
+
+    it('wraps unexpected push-summary query failures', async () => {
+      const error = new Error('push summary failed');
+      const uniqueIds = ['install-1', 'install-2'];
+      pushSubscriptionModelMock.find.mockReturnValue({
+        lean: jest.fn().mockReturnValue(createExecQuery(error, true)),
+      });
+
+      await expect(
+        MobileDeviceAccessDAO.readPushSummariesByDeviceInstallationIds([' install-1 ', 'install-2', 'install-1']),
+      ).rejects.toBeInstanceOf(GraphQLError);
+      expect(logDaoError).toHaveBeenCalledWith('Error reading mobile device push summaries', {
+        deviceInstallationIds: uniqueIds,
+        error,
+      });
     });
   });
 

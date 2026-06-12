@@ -1,3 +1,3 @@
 export * from './general';
 export * from './regex';
-export * from '../../constants';
+export * from '../../constants/supportRequest';

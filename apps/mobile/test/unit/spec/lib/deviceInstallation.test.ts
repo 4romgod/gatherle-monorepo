@@ -1,17 +1,44 @@
 type DeviceInstallationModule = typeof import('@/lib/deviceInstallation');
 
 function loadDeviceInstallationModule({
+  applicationId = 'com.gatherle.mobile',
+  brand = 'Apple',
   existingInstallationId = null,
+  existingRegistrationSecret = null,
+  interfaceIdiom = 'phone',
+  model = 'iPhone',
+  os = 'ios',
+  osVersion = '18.5',
   readError,
   writeError,
 }: {
+  applicationId?: string;
+  brand?: string;
   existingInstallationId?: string | null;
+  existingRegistrationSecret?: string | null;
+  interfaceIdiom?: string;
+  model?: string;
+  os?: 'android' | 'ios';
+  osVersion?: number | string;
   readError?: Error;
   writeError?: Error;
 } = {}) {
   const readStoredStringMock = readError
-    ? jest.fn().mockRejectedValueOnce(readError).mockResolvedValue(existingInstallationId)
-    : jest.fn().mockResolvedValue(existingInstallationId);
+    ? jest
+        .fn()
+        .mockRejectedValueOnce(readError)
+        .mockImplementation(async (key: string) =>
+          key === 'gatherle.mobile.app-installation-registration-secret'
+            ? existingRegistrationSecret
+            : existingInstallationId,
+        )
+    : jest
+        .fn()
+        .mockImplementation(async (key: string) =>
+          key === 'gatherle.mobile.app-installation-registration-secret'
+            ? existingRegistrationSecret
+            : existingInstallationId,
+        );
   const writeStoredStringMock = writeError
     ? jest.fn().mockRejectedValue(writeError)
     : jest.fn().mockResolvedValue(undefined);
@@ -19,6 +46,7 @@ function loadDeviceInstallationModule({
 
   jest.resetModules();
   jest.doMock('expo-application', () => ({
+    applicationId,
     nativeApplicationVersion: '1.0.0',
     nativeBuildVersion: '100',
   }));
@@ -27,7 +55,17 @@ function loadDeviceInstallationModule({
   }));
   jest.doMock('react-native', () => ({
     Platform: {
-      OS: 'ios',
+      OS: os,
+      Version: osVersion,
+      constants:
+        os === 'android'
+          ? {
+              Brand: brand,
+              Model: model,
+            }
+          : {
+              interfaceIdiom,
+            },
     },
   }));
   jest.doMock('@/lib/deviceStorage', () => ({
@@ -76,5 +114,52 @@ describe('deviceInstallation', () => {
       'generated-installation-id',
     );
     expect(randomUUIDMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('builds a mobile device access registration input with iOS metadata and registration secret', async () => {
+    const { deviceInstallationModule } = loadDeviceInstallationModule({
+      existingInstallationId: 'existing-installation-id',
+      existingRegistrationSecret: 'existing-registration-secret',
+    });
+
+    const result = await deviceInstallationModule.buildMobileDeviceAccessRegistrationInput();
+
+    expect(result).toEqual({
+      appVersion: '1.0.0',
+      applicationId: 'com.gatherle.mobile',
+      buildVersion: '100',
+      deviceBrand: 'Apple',
+      deviceInstallationId: 'existing-installation-id',
+      deviceModel: 'iPhone',
+      osVersion: '18.5',
+      platform: 'Ios',
+      registrationSecret: 'existing-registration-secret',
+    });
+  });
+
+  it('builds a mobile device access registration input with Android brand and model metadata', async () => {
+    const { deviceInstallationModule } = loadDeviceInstallationModule({
+      applicationId: 'com.gatherle.mobile.beta',
+      brand: 'Samsung',
+      existingInstallationId: 'android-installation-id',
+      existingRegistrationSecret: 'android-registration-secret',
+      model: 'SM-S928B',
+      os: 'android',
+      osVersion: 34,
+    });
+
+    const result = await deviceInstallationModule.buildMobileDeviceAccessRegistrationInput();
+
+    expect(result).toEqual({
+      appVersion: '1.0.0',
+      applicationId: 'com.gatherle.mobile.beta',
+      buildVersion: '100',
+      deviceBrand: 'Samsung',
+      deviceInstallationId: 'android-installation-id',
+      deviceModel: 'SM-S928B',
+      osVersion: '34',
+      platform: 'Android',
+      registrationSecret: 'android-registration-secret',
+    });
   });
 });

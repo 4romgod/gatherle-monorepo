@@ -72,6 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
     env:
+      ASSUME_ROLE_ARN: ${{ vars.ASSUME_ROLE_ARN }}
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
     outputs:
@@ -82,12 +83,10 @@ jobs:
       stack_suffix: ${{ steps.derive_suffix.outputs.stack_suffix }}
     steps:
       - name: Validate Deployment Configuration
-        env:
-          ASSUME_ROLE_ARN: ${{ secrets.ASSUME_ROLE_ARN }}
         run: |
           test -n "${{ inputs.stage }}" || (echo "Missing required input: stage" && exit 1)
           test -n "${{ inputs.region }}" || (echo "Missing required input: region" && exit 1)
-          test -n "$ASSUME_ROLE_ARN" || (echo "Missing ASSUME_ROLE_ARN secret for target environment" && exit 1)
+          test -n "$ASSUME_ROLE_ARN" || (echo "Missing ASSUME_ROLE_ARN variable for target environment" && exit 1)
 
       - name: Derive Deployment Suffix
         id: derive_suffix
@@ -100,7 +99,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+          role-to-assume: ${{ env.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Get API Gateway endpoint
@@ -146,6 +145,7 @@ jobs:
     # TODO: This works because GitHub environment names are case-insensitive, but we should consider normalizing the stage input to lowercase to avoid confusion.
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
     env:
+      ASSUME_ROLE_ARN: ${{ vars.ASSUME_ROLE_ARN }}
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
       ENABLE_CUSTOM_DOMAINS: ${{ vars.ENABLE_CUSTOM_DOMAINS || 'false' }}
@@ -153,8 +153,8 @@ jobs:
       EMAIL_FROM: ${{ vars.EMAIL_FROM || 'noreply@gatherle.com' }}
       WEBAPP_URL: ${{ vars.WEBAPP_URL }}
       GOOGLE_OAUTH_CLIENT_ID_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_WEB }}
-      GOOGLE_OAUTH_CLIENT_ID_ANDROID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_ANDROID }}
-      GOOGLE_OAUTH_CLIENT_ID_IOS: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_IOS }}
+      GOOGLE_OAUTH_CLIENT_ID_ANDROID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID_ANDROID }}
+      GOOGLE_OAUTH_CLIENT_ID_IOS: ${{ vars.GOOGLE_OAUTH_CLIENT_ID_IOS }}
     outputs:
       graphql_url: ${{ steps.get_graphql_endpoint.outputs.graphql_url }}
       websocket_url: ${{ steps.get_websocket_endpoint.outputs.websocket_url }}
@@ -174,12 +174,10 @@ jobs:
           cache: npm
 
       - name: Validate Deployment Configuration
-        env:
-          ASSUME_ROLE_ARN: ${{ secrets.ASSUME_ROLE_ARN }}
         run: |
           test -n "${{ inputs.stage }}" || (echo "Missing required input: stage" && exit 1)
           test -n "${{ inputs.region }}" || (echo "Missing required input: region" && exit 1)
-          test -n "$ASSUME_ROLE_ARN" || (echo "Missing ASSUME_ROLE_ARN secret for target environment" && exit 1)
+          test -n "$ASSUME_ROLE_ARN" || (echo "Missing ASSUME_ROLE_ARN variable for target environment" && exit 1)
 
       - name: Derive Deployment Suffix
         id: derive_suffix
@@ -201,7 +199,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+          role-to-assume: ${{ env.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Synthesize AWS CDK
@@ -299,7 +297,7 @@ jobs:
             return 1
           }
 
-          run_probe 200 '{"query":"{ __typename }"}' 'healthy query'
+          run_probe 200 '{"query":"query DeploymentReadinessCheck { readEventCategories(options: { pagination: { limit: 1 } }) { eventCategoryId } }"}' 'healthy query'
           run_probe 400 '{"query":"query {"}' 'parse failure'
           run_probe 401 '{"query":"query { readRecommendedFeed { feedItemId } }"}' 'unauthenticated protected query'
 
@@ -346,6 +344,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
     env:
+      ASSUME_ROLE_ARN: ${{ vars.ASSUME_ROLE_ARN }}
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
       E2E_API_SHARD: 1-of-3
@@ -376,7 +375,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+          role-to-assume: ${{ env.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Resolve API E2E MongoDB URL
@@ -393,6 +392,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
     env:
+      ASSUME_ROLE_ARN: ${{ vars.ASSUME_ROLE_ARN }}
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
       E2E_API_SHARD: 2-of-3
@@ -423,7 +423,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+          role-to-assume: ${{ env.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Resolve API E2E MongoDB URL
@@ -440,6 +440,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ format('{0}-{1}', inputs.stage, inputs.region) }}
     env:
+      ASSUME_ROLE_ARN: ${{ vars.ASSUME_ROLE_ARN }}
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
       E2E_API_SHARD: 3-of-3
@@ -470,7 +471,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+          role-to-assume: ${{ env.ASSUME_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Resolve API E2E MongoDB URL
@@ -505,6 +506,8 @@ jobs:
     env:
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
     outputs:
       deployment_url: ${{ steps.deploy_webapp.outputs.deployment_url }}
     steps:
@@ -527,17 +530,12 @@ jobs:
         run: npm install --global vercel@latest
 
       - name: Pull Vercel Environment Information
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy Preview to Vercel
         id: deploy_webapp
         env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           NEXT_PUBLIC_GRAPHQL_URL: ${{ needs.deploy-api.outputs.graphql_url || needs.resolve-deploy-context.outputs.graphql_url }}
           NEXT_PUBLIC_WEBSOCKET_URL: ${{ needs.deploy-api.outputs.websocket_url || needs.resolve-deploy-context.outputs.websocket_url }}
           MEDIA_UPLOAD_S3_URL: ${{ needs.deploy-api.outputs.s3_media_url || needs.resolve-deploy-context.outputs.s3_media_url }}
@@ -572,9 +570,6 @@ jobs:
 
       - name: Alias Webapp Custom Domain in Vercel
         if: ${{ inputs.web_domain_alias != '' }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           DEPLOYMENT_URL="${{ steps.deploy_webapp.outputs.deployment_url }}"
           if [ -z "$DEPLOYMENT_URL" ]; then
@@ -681,6 +676,7 @@ jobs:
       STAGE: ${{ inputs.stage }}
       AWS_REGION: ${{ inputs.region }}
       EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_WEB: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID_WEB }}
+      EXPO_PUBLIC_WEBAPP_URL: ${{ vars.WEBAPP_URL }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6

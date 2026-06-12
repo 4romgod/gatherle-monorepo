@@ -9,6 +9,10 @@ export const ReadMobileDeviceAccessesDocument = graphql(`
       status
       appVersion
       buildVersion
+      applicationId
+      deviceBrand
+      deviceModel
+      osVersion
       firstSeenAt
       lastSeenAt
       seenUserIds
@@ -30,6 +34,13 @@ export const ReadMobileDeviceAccessesDocument = graphql(`
       }
       reviewedAt
       reviewedByUserId
+      pushSummary {
+        hasActiveSubscription
+        activeSubscriptionCount
+        providers
+        lastRegisteredAt
+        lastDeliveredAt
+      }
       createdAt
       updatedAt
     }

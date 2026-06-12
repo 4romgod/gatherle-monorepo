@@ -8,6 +8,10 @@ export const RegisterMobileDeviceAccessInputSchema = z.object({
   platform: z.nativeEnum(MobileDeviceAccessPlatform),
   appVersion: optionalTrimmedString,
   buildVersion: optionalTrimmedString,
+  applicationId: optionalTrimmedString,
+  deviceBrand: optionalTrimmedString,
+  deviceModel: optionalTrimmedString,
+  osVersion: optionalTrimmedString,
   registrationSecret: z.string().uuid({ message: 'Registration secret must be a valid UUID.' }).optional(),
 });
 

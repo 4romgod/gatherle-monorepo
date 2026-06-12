@@ -26,7 +26,7 @@
     "native:sync": "node ./scripts/prepare-android-firebase-config.mjs && expo prebuild --no-install",
     "native:sync:clean": "node ./scripts/prepare-android-firebase-config.mjs && expo prebuild --clean --no-install",
     "typecheck": "tsc --project tsconfig.json --noEmit --pretty",
-    "android": "node ./scripts/prepare-android-firebase-config.mjs && expo prebuild --no-install && npm run android:prepare:signing && expo run:android --no-install --device",
+    "android": "node ./scripts/prepare-android-firebase-config.mjs && expo prebuild --no-install && npm run android:prepare:signing && node ./scripts/run-android-device.mjs",
     "ios": "expo run:ios"
   },
   "dependencies": {

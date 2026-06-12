@@ -297,11 +297,25 @@ Avoid these mistakes:
   (reusable target deploy). Ensure commands run from repository root so workspace scripts resolve correctly.
 - DNS deploy pipeline uses `.github/workflows/deploy-dns.yaml` (reusable DNS deploy) and is orchestrated by
   `.github/workflows/deploy-trigger.yaml`.
-- Full AWS account bootstrap/onboarding runbook: `docs/aws-account-setup.md`.
+- Full AWS account bootstrap/onboarding runbook: `docs/runbooks/aws-account-setup.md`.
+- GitHub Actions variable/secret bootstrap runbook: `docs/runbooks/github-actions-variables-and-secrets.md`.
 - Secrets/variables required in GitHub:
-  - GitHub Environment secret `ASSUME_ROLE_ARN`: Role the deploy job assumes.
+  - Do not rely on a GitHub Environment named `global` for shared config; GitHub Actions does not inherit
+    secrets/variables across environments. Shared values must live at repository scope.
+  - GitHub Environment variable `ASSUME_ROLE_ARN`: Role ARN the deploy job assumes.
+  - GitHub Environment variables `WEBAPP_URL`, `ALERT_EMAIL_RECIPIENTS`, and optional `EMAIL_FROM`: per-stage runtime
+    configuration consumed during CDK synth/deploy.
+  - GitHub Environment variable `ENABLE_CUSTOM_DOMAINS`: per-stage rollout flag for API/WebSocket custom domains.
+  - GitHub Environment secrets `NEXTAUTH_SECRET`, `JWT_SECRET`, `GATHERLE_TEST_ADMIN_PASSWORD`,
+    `GATHERLE_TEST_USER_PASSWORD`, and `GATHERLE_TEST_USER2_PASSWORD`: stage-specific secrets for web auth and API e2e
+    coverage.
   - Repository variable `ENABLE_PROD_DEPLOY`: optional gate for Prod promotion on main (set `true` to enable).
-  - Repository variable `ENABLE_CUSTOM_DOMAINS`: rollout flag for API/WebSocket custom domains.
+  - Repository variables `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `GOOGLE_OAUTH_CLIENT_ID_ANDROID`, and
+    `GOOGLE_OAUTH_CLIENT_ID_IOS`: shared non-sensitive CI configuration.
+  - Repository secrets `VERCEL_TOKEN`, `GOOGLE_OAUTH_CLIENT_ID_WEB`, `GOOGLE_OAUTH_CLIENT_SECRET_WEB`,
+    `APPLE_OAUTH_CLIENT_SECRET_WEB`, `ANDROID_RELEASE_KEYSTORE_BASE64`, `ANDROID_RELEASE_KEYSTORE_PASSWORD`,
+    `ANDROID_RELEASE_KEY_ALIAS`, `ANDROID_RELEASE_KEY_PASSWORD`, and `ANDROID_GOOGLE_SERVICES_JSON_BASE64`: shared
+    sensitive CI configuration.
   - Deploy regions are defined directly in `.github/workflows/deploy-trigger.yaml` via matrix entries.
   - CI resolves `SECRET_ARN` dynamically from Secrets Manager using `gatherle/backend/<stage-lower>-<region>`.
 - Workflow flow for `api-deploy`:
@@ -309,7 +323,7 @@ Avoid these mistakes:
   2. Runtime `Prod` deployment (when enabled) runs only after `Beta` succeeds.
   3. Checkout → Install deps → CDK tools.
   4. Build API/commons/CDK packages.
-  5. Configure AWS creds via the assumed role secret + `AWS_REGION`.
+  5. Configure AWS creds via the environment-scoped assumed role variable + `AWS_REGION`.
   6. Deploy runtime CDK stacks (for example
      `npm run cdk -w @gatherle/cdk -- deploy SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively`)
      with resolved `STAGE`/`AWS_REGION`, and deploy `SecretsManagementStack` only when secrets intentionally change.
@@ -318,7 +332,8 @@ Avoid these mistakes:
 - DNS bootstrap workflow:
   - Use `npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --exclusively` from DNS account
     credentials to create root Route53 hosted zone for `gatherle.com`.
-  - Optional DNS environment vars for delegated subdomain NS records: `DELEGATED_SUBDOMAIN`, `DELEGATED_NAME_SERVERS`.
+  - Optional DNS environment variable for delegated subdomain NS records: `DELEGATED_SUBDOMAINS` as a JSON array of
+    `{ subdomain, nameServers[] }` objects.
 - GitHub auth bootstrap workflow:
   - Use `npm run cdk:github-auth -w @gatherle/cdk -- deploy GitHubAuthStack --require-approval never --exclusively` with
     `AWS_REGION` and `TARGET_AWS_ACCOUNT_ID` to create the CI/CD OIDC role once per target account.

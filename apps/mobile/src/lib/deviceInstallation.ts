@@ -12,6 +12,11 @@ import { MobileDeviceAccessPlatform } from '@data/graphql/types/graphql';
 import { DEVICE_STORAGE_KEYS, readStoredString, writeStoredString } from '@/lib/deviceStorage';
 
 let deviceInstallationIdPromise: Promise<string> | null = null;
+type NativePlatformConstants = {
+  Brand?: string;
+  Model?: string;
+  interfaceIdiom?: string;
+};
 
 export async function getOrCreateDeviceInstallationId(): Promise<string> {
   if (deviceInstallationIdPromise) {
@@ -59,10 +64,83 @@ export function readNativeBuildMetadata(): { appVersion?: string; buildVersion?:
   };
 }
 
+function readNativeDeviceFamilyFromIos(): string | undefined {
+  const interfaceIdiom = (Platform.constants as NativePlatformConstants | undefined)?.interfaceIdiom?.trim();
+
+  switch (interfaceIdiom) {
+    case 'pad':
+      return 'iPad';
+    case 'tv':
+      return 'Apple TV';
+    case 'vision':
+      return 'Apple Vision';
+    case 'mac':
+      return 'Mac';
+    case 'phone':
+    default:
+      return 'iPhone';
+  }
+}
+
+function readNativeOsVersion(): string | undefined {
+  if (typeof Platform.Version === 'string') {
+    return Platform.Version.trim() || undefined;
+  }
+
+  if (typeof Platform.Version === 'number' && Number.isFinite(Platform.Version)) {
+    return String(Platform.Version);
+  }
+
+  return undefined;
+}
+
+export function readNativeDeviceMetadata(): {
+  applicationId?: string;
+  deviceBrand?: string;
+  deviceModel?: string;
+  osVersion?: string;
+} {
+  const applicationId = Application.applicationId?.trim() || undefined;
+  const osVersion = readNativeOsVersion();
+
+  if (Platform.OS === 'android') {
+    const constants = Platform.constants as NativePlatformConstants | undefined;
+    const deviceBrand = constants?.Brand?.trim() || undefined;
+    const deviceModel = constants?.Model?.trim() || undefined;
+
+    return {
+      ...(applicationId ? { applicationId } : {}),
+      ...(deviceBrand ? { deviceBrand } : {}),
+      ...(deviceModel ? { deviceModel } : {}),
+      ...(osVersion ? { osVersion } : {}),
+    };
+  }
+
+  if (Platform.OS === 'ios') {
+    const deviceModel = readNativeDeviceFamilyFromIos();
+
+    return {
+      ...(applicationId ? { applicationId } : {}),
+      deviceBrand: 'Apple',
+      ...(deviceModel ? { deviceModel } : {}),
+      ...(osVersion ? { osVersion } : {}),
+    };
+  }
+
+  return {
+    ...(applicationId ? { applicationId } : {}),
+    ...(osVersion ? { osVersion } : {}),
+  };
+}
+
 export async function buildMobileDeviceAccessRegistrationInput(): Promise<{
   appVersion?: string;
+  applicationId?: string;
   buildVersion?: string;
   deviceInstallationId: string;
+  deviceBrand?: string;
+  deviceModel?: string;
+  osVersion?: string;
   platform: MobileDeviceAccessPlatform;
   registrationSecret?: string;
 } | null> {
@@ -78,6 +156,7 @@ export async function buildMobileDeviceAccessRegistrationInput(): Promise<{
     deviceInstallationId: await getOrCreateDeviceInstallationId(),
     platform,
     ...readNativeBuildMetadata(),
+    ...readNativeDeviceMetadata(),
     ...(registrationSecret ? { registrationSecret } : {}),
   };
 }
