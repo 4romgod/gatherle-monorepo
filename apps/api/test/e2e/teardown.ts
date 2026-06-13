@@ -13,20 +13,18 @@ const teardown = async () => {
     (user) => user.userRole === UserRole.Admin,
   )?.token;
 
-  if (!adminToken) {
-    return;
-  }
-
-  try {
-    await cleanupOrphanedE2EUsers(
-      graphqlUrl,
-      adminToken,
-      'globalTeardown-orphaned-e2e-user-cleanup',
-      runtimeContext?.e2eUserNamespace,
-    );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[teardown] failed to sweep orphaned API e2e users: ${message}`);
+  if (adminToken) {
+    try {
+      await cleanupOrphanedE2EUsers(
+        graphqlUrl,
+        adminToken,
+        'globalTeardown-orphaned-e2e-user-cleanup',
+        runtimeContext?.e2eUserNamespace,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[teardown] failed to sweep orphaned API e2e users: ${message}`);
+    }
   }
 };
 

@@ -26,6 +26,7 @@ import { ERROR_MESSAGES } from '@/validation';
 
 const MOBILE_APP_VERSION = '1.0.0-e2e';
 const MOBILE_BUILD_VERSION = '100-e2e';
+const ORPHANED_E2E_MOBILE_DEVICE_ACCESS_MIN_AGE_MS = 30 * 60 * 1000;
 
 const getRegisterMobileDeviceAccessMutation = (deviceInstallationId: string) => ({
   query: `mutation RegisterMobileDeviceAccess($input: RegisterMobileDeviceAccessInput!) {
@@ -196,6 +197,64 @@ describe('Mobile Device Access Resolver', () => {
     });
   };
 
+  const cleanupOrphanedMobileDeviceAccessRecords = async (phase = 'orphaned-e2e-mobile-device-access-cleanup') => {
+    try {
+      await ensureMongoConnection();
+    } catch (error) {
+      if (requiresDirectMongoCleanup) {
+        throw error;
+      }
+
+      if (!hasLoggedMongoCleanupSkip) {
+        console.warn(
+          `[mobileDeviceAccess.e2e] skipping ${phase} cleanup because direct Mongo access is unavailable: ${describeError(error)}`,
+        );
+        hasLoggedMongoCleanupSkip = true;
+      }
+      return [];
+    }
+
+    const olderThan = new Date(Date.now() - ORPHANED_E2E_MOBILE_DEVICE_ACCESS_MIN_AGE_MS);
+    const orphanedInstallations = (await MobileDeviceAccess.find({
+      appVersion: MOBILE_APP_VERSION,
+      buildVersion: MOBILE_BUILD_VERSION,
+      updatedAt: { $lt: olderThan },
+    })
+      .select({ _id: 0, deviceInstallationId: 1 })
+      .lean()
+      .exec()) as Array<{ deviceInstallationId?: string }>;
+
+    const orphanedDeviceInstallationIds = orphanedInstallations
+      .map((installation) => installation.deviceInstallationId?.trim())
+      .filter((deviceInstallationId): deviceInstallationId is string => Boolean(deviceInstallationId));
+
+    if (orphanedDeviceInstallationIds.length === 0) {
+      return [];
+    }
+
+    console.warn(
+      `[${phase}] Cleaning up ${orphanedDeviceInstallationIds.length} orphaned API e2e mobile device access records`,
+    );
+
+    return cleanupTrackedItems({
+      items: orphanedDeviceInstallationIds,
+      itemId: (deviceInstallationId) => deviceInstallationId,
+      label: 'mobile device access',
+      phase,
+      deleteItem: async (deviceInstallationId) => {
+        const installationScopeKey =
+          MobileDeviceAccessRegistrationThrottleDAO.buildDeviceInstallationScopeKey(deviceInstallationId);
+
+        await Promise.all([
+          MobileDeviceAccess.deleteMany({ deviceInstallationId }).exec(),
+          MobileDeviceAccessRegistrationThrottle.deleteMany({ scopeKey: installationScopeKey }).exec(),
+        ]);
+
+        return { status: 200 };
+      },
+    });
+  };
+
   beforeAll(async () => {
     const seededUsers = getSeededTestUsers();
     adminUser = await loginSeededUser(url, seededUsers.admin.email, seededUsers.admin.password);
@@ -205,6 +264,11 @@ describe('Mobile Device Access Resolver', () => {
         'MONGO_DB_URL is required for mobileDeviceAccess.e2e.ts cleanup in CI. Export it before running remote API e2e shards.',
       );
     }
+
+    const orphanFailures = await cleanupOrphanedMobileDeviceAccessRecords(
+      'beforeAll-orphaned-e2e-mobile-device-access-cleanup',
+    );
+    assertNoCleanupFailures(orphanFailures);
   });
 
   afterEach(async () => {

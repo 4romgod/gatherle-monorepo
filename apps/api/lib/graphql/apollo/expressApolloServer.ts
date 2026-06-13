@@ -23,6 +23,7 @@ import {
   createMyEventOccurrenceParticipantLoader,
   createEventSaveCountLoader,
   createEventSavedByMeLoader,
+  createMobileDeviceAccessPushSummaryLoader,
 } from '@/graphql/loaders';
 import { createEventOccurrenceQueryRequestCache } from '@/services/eventOccurrence';
 import { logger } from '@/utils/logger';
@@ -107,6 +108,7 @@ export const startExpressApolloServer = async (
             myEventOccurrenceParticipant: createMyEventOccurrenceParticipantLoader(),
             eventSaveCount: createEventSaveCountLoader(),
             eventSavedByMe: createEventSavedByMeLoader(user?.userId),
+            mobileDeviceAccessPushSummary: createMobileDeviceAccessPushSummaryLoader(),
           },
         };
       },

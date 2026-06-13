@@ -13,6 +13,7 @@ All commands below assume repository root: `/home/bigfish/code/projects/gatherle
 
 - `Gatherle-dns` account ID: `072092344224`
 - `Gatherle-beta` account ID: `327319899143`
+- `Gatherle-prod` account ID: `969849535023`
 - Active region in config: `af-south-1`
 - Root domain: `gatherle.com`
 
@@ -23,19 +24,23 @@ Preferred: AWS SSO / IAM Identity Center.
 ```bash
 aws configure sso --profile gatherle-dns
 aws configure sso --profile gatherle-beta
+aws configure sso --profile gatherle-prod
 ```
 
 ```bash
 aws sso login --profile gatherle-dns
 aws sso login --profile gatherle-beta
+aws sso login --profile gatherle-prod
 aws sts get-caller-identity --profile gatherle-dns
 aws sts get-caller-identity --profile gatherle-beta
+aws sts get-caller-identity --profile gatherle-prod
 ```
 
 Expected:
 
 - `gatherle-dns` -> `072092344224`
 - `gatherle-beta` -> `327319899143`
+- `gatherle-prod` -> `969849535023`
 
 ## 2. Bootstrap `CDKToolkit` manually for every account+region
 
@@ -53,11 +58,18 @@ Beta account (`Gatherle-beta`):
 STAGE=Beta AWS_REGION=af-south-1 npm run cdk -w @gatherle/cdk -- bootstrap aws://327319899143/af-south-1 --profile gatherle-beta
 ```
 
+Prod account (`Gatherle-prod`):
+
+```bash
+STAGE=Prod AWS_REGION=af-south-1 npm run cdk -w @gatherle/cdk -- bootstrap aws://969849535023/af-south-1 --profile gatherle-prod
+```
+
 Verify:
 
 ```bash
 aws cloudformation describe-stacks --stack-name CDKToolkit --region af-south-1 --profile gatherle-dns
 aws cloudformation describe-stacks --stack-name CDKToolkit --region af-south-1 --profile gatherle-beta
+aws cloudformation describe-stacks --stack-name CDKToolkit --region af-south-1 --profile gatherle-prod
 ```
 
 ## 3. Deploy `GitHubAuthStack` manually in every CI target account
@@ -80,6 +92,22 @@ AWS_REGION=af-south-1 aws cloudformation describe-stacks \
   --profile gatherle-beta
 ```
 
+Prod account (`Gatherle-prod`):
+
+```bash
+AWS_REGION=af-south-1 TARGET_AWS_ACCOUNT_ID=969849535023 npm run cdk:github-auth -w @gatherle/cdk -- deploy GitHubAuthStack --require-approval never --exclusively --profile gatherle-prod
+```
+
+Read role ARN (Prod):
+
+```bash
+AWS_REGION=af-south-1 aws cloudformation describe-stacks \
+  --stack-name gatherle-github-auth-969849535023 \
+  --query "Stacks[0].Outputs[?OutputKey=='GithubActionProdDeployRoleArn'].OutputValue" \
+  --output text \
+  --profile gatherle-prod
+```
+
 DNS account (`Gatherle-dns`) for DNS CI/CD:
 
 ```bash
@@ -96,74 +124,32 @@ AWS_REGION=af-south-1 aws cloudformation describe-stacks \
   --profile gatherle-dns
 ```
 
-Set each ARN into the matching GitHub Environment secret `ASSUME_ROLE_ARN`. If Prod is enabled in the runtime account,
-use `GithubActionProdDeployRoleArn` for the `prod-<region>` environment.
+Set each ARN into the matching GitHub Environment variable `ASSUME_ROLE_ARN`. Stage-dedicated runtime accounts emit only
+their own runtime role output, so the beta account provides `GithubActionBetaDeployRoleArn` and the prod account
+provides `GithubActionProdDeployRoleArn`.
 
 ## 4. Configure GitHub environments and secrets
 
-Create one GitHub Environment per target name used by deploy workflow:
+Use [GitHub Actions Variables and Secrets Runbook](./github-actions-variables-and-secrets.md).
 
-- `dns-af-south-1`
-- `beta-af-south-1`
-- `prod-af-south-1` (when enabled)
+That runbook covers:
 
-```bash
-gh api --method PUT /repos/{owner}/{repo}/environments/dns-af-south-1
-gh api --method PUT /repos/{owner}/{repo}/environments/beta-af-south-1
-```
+- repository variables shared across stages
+- repository secrets shared across stages
+- runtime environment variables and secrets for `beta-af-south-1` and `prod-af-south-1`
+- DNS environment variables for `dns-af-south-1`
+- values that should stay out of GitHub because they belong in AWS Secrets Manager instead
 
-Set environment secrets:
+At minimum, carry the role ARNs from section 3 into the matching GitHub Environment variable `ASSUME_ROLE_ARN`.
 
-- `ASSUME_ROLE_ARN` (from the environment-matched `GitHubAuthStack` output: `GithubActionBetaDeployRoleArn`,
-  `GithubActionProdDeployRoleArn`, or `GithubActionDnsDeployRoleArn`)
-- `NEXTAUTH_SECRET` (webapp session signing secret; keep distinct from backend `JWT_SECRET` in Secrets Manager)
-- `VERCEL_TOKEN` (if web deploy enabled)
-- `VERCEL_ORG_ID` (if web deploy enabled)
-- `VERCEL_PROJECT_ID` (if web deploy enabled)
-
-```bash
-gh secret set ASSUME_ROLE_ARN --env dns-af-south-1
-gh secret set ASSUME_ROLE_ARN --env beta-af-south-1
-gh secret set NEXTAUTH_SECRET --env beta-af-south-1
-gh secret set VERCEL_TOKEN --env beta-af-south-1
-gh secret set VERCEL_ORG_ID --env beta-af-south-1
-gh secret set VERCEL_PROJECT_ID --env beta-af-south-1
-```
-
-Repository variables:
-
-- `ENABLE_PROD_DEPLOY`
-- `ENABLE_CUSTOM_DOMAINS` (`false` for first rollout, then `true` after NS delegation)
-
-```bash
-gh variable set ENABLE_PROD_DEPLOY --body "false"
-gh variable set ENABLE_CUSTOM_DOMAINS --body "false"
-```
-
-DNS environment variables (set in `dns-<region>` GitHub Environment):
-
-- `DELEGATED_SUBDOMAINS` — JSON array of `{ subdomain, nameServers[] }` objects. Supports multiple delegations (beta,
-  prod, gamma, etc.) in one var.
-
-```bash
-# Single stage (beta only)
-gh variable set DELEGATED_SUBDOMAINS \
-  --body '[{"subdomain":"beta.af-south-1","nameServers":["<ns1>","<ns2>","<ns3>","<ns4>"]}]' \
-  --env dns-af-south-1
-
-# Multiple stages (beta + prod)
-gh variable set DELEGATED_SUBDOMAINS \
-  --body '[{"subdomain":"beta.af-south-1","nameServers":["<ns1>","<ns2>","<ns3>","<ns4>"]},{"subdomain":"prod.af-south-1","nameServers":["<ns1>","<ns2>","<ns3>","<ns4>"]}]' \
-  --env dns-af-south-1
-```
-
-## DNS setup (root + stage delegation)
+## 5. DNS setup (root + stage delegation)
 
 This is the DNS model used by this repo:
 
 - Root zone `gatherle.com` is hosted in `Gatherle-dns` account.
-- Stage zone `beta.af-south-1.gatherle.com` is hosted in runtime account (`Gatherle-beta`) by `StageInfraStack`, which
-  also manages the wildcard ACM certificate for the stage-region subdomain. These rarely change.
+- Stage zones such as `beta.af-south-1.gatherle.com` and `prod.af-south-1.gatherle.com` are hosted in their runtime
+  accounts by `StageInfraStack`, which also manages the wildcard ACM certificate for each stage-region subdomain. These
+  rarely change.
 - `GraphQLStack` and `WebSocketApiStack` read the hosted zone ID and certificate ARN via
   `StringParameter.valueForStringParameter()`, which emits CloudFormation `{{resolve:ssm:...}}` dynamic references
   resolved at deploy time (no `Fn::ImportValue`, no synth-time SSM API calls). `addDependency(stageInfraStack)` ensures
@@ -198,14 +184,19 @@ dig +short NS gatherle.com
 
 ### B. Stage subdomain delegation (root zone -> stage zone)
 
-1. Deploy runtime stacks. CDK deploys `StageInfraStack` before the consumer stacks (enforced by `addDependency`), so the
-   SSM parameters exist when CloudFormation resolves them.
+1. Deploy runtime stacks for each stage you want to delegate. CDK deploys `StageInfraStack` before the consumer stacks
+   (enforced by `addDependency`), so the SSM parameters exist when CloudFormation resolves them.
 
 ```bash
 STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=false WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
 ```
 
-2. Copy `stageHostedZoneNameServers` (also surfaced by deploy workflow output `STAGE_HOSTED_ZONE_NAME_SERVERS`).
+```bash
+STAGE=Prod AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=false WEBAPP_URL=https://gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-prod
+```
+
+2. Copy `stageHostedZoneNameServers` (also surfaced by deploy workflow output `STAGE_HOSTED_ZONE_NAME_SERVERS`) for each
+   stage.
 
 ```bash
 aws cloudformation describe-stacks \
@@ -216,15 +207,25 @@ aws cloudformation describe-stacks \
   --profile gatherle-beta
 ```
 
-3. Set the GitHub Environment variable (used by CI/CD deploys):
+```bash
+aws cloudformation describe-stacks \
+  --stack-name gatherle-stage-infra-prod-af-south-1 \
+  --query "Stacks[0].Outputs[?OutputKey=='stageHostedZoneNameServers'].OutputValue" \
+  --output text \
+  --region af-south-1 \
+  --profile gatherle-prod
+```
+
+3. Set the GitHub Environment variable in `dns-af-south-1` (used by CI/CD deploys). Include every stage subdomain you
+   want the DNS workflow to manage.
 
 ```bash
 gh variable set DELEGATED_SUBDOMAINS \
-  --body '[{"subdomain":"beta.af-south-1","nameServers":["<ns from step 2>"]}]' \
+  --body '[{"subdomain":"beta.af-south-1","nameServers":["<beta ns1>","<beta ns2>","<beta ns3>","<beta ns4>"]},{"subdomain":"prod.af-south-1","nameServers":["<prod ns1>","<prod ns2>","<prod ns3>","<prod ns4>"]}]' \
   --env dns-af-south-1
 ```
 
-4. Deploy DNS stack. This creates root-zone NS record for `beta.af-south-1`.
+4. Deploy DNS stack. This creates root-zone NS records for the delegated stage subdomains.
 
    CI/CD: trigger `.github/workflows/deploy-trigger.yaml`.
 
@@ -232,22 +233,24 @@ gh variable set DELEGATED_SUBDOMAINS \
 
 ```bash
 AWS_REGION=af-south-1 \
-DELEGATED_SUBDOMAINS='[{"subdomain":"beta.af-south-1","nameServers":["<ns from step 3>"]}]' \
+DELEGATED_SUBDOMAINS='[{"subdomain":"beta.af-south-1","nameServers":["<beta ns1>","<beta ns2>","<beta ns3>","<beta ns4>"]},{"subdomain":"prod.af-south-1","nameServers":["<prod ns1>","<prod ns2>","<prod ns3>","<prod ns4>"]}]' \
 npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --exclusively --profile gatherle-dns
 ```
 
-5. Verify:
+5. Verify the delegated subdomains you enabled:
 
 ```bash
 dig +short NS beta.af-south-1.gatherle.com
+dig +short NS prod.af-south-1.gatherle.com
 ```
 
 ### C. Enable API/WS custom domains
 
-1. Set `ENABLE_CUSTOM_DOMAINS=true` in `beta-af-south-1` environment variables.
+1. Set `ENABLE_CUSTOM_DOMAINS=true` in each runtime environment that should use custom API/WebSocket domains.
 
 ```bash
 gh variable set ENABLE_CUSTOM_DOMAINS --body "true" --env beta-af-south-1
+gh variable set ENABLE_CUSTOM_DOMAINS --body "true" --env prod-af-south-1
 ```
 
 2. Deploy runtime stacks. `StageInfraStack` creates the wildcard ACM certificate first (enforced by `addDependency`);
@@ -257,11 +260,17 @@ gh variable set ENABLE_CUSTOM_DOMAINS --body "true" --env beta-af-south-1
 STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=true WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
 ```
 
+```bash
+STAGE=Prod AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=true WEBAPP_URL=https://gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-prod
+```
+
 3. Verify:
 
 ```bash
 dig +short api.beta.af-south-1.gatherle.com
 dig +short ws.beta.af-south-1.gatherle.com
+dig +short api.prod.af-south-1.gatherle.com
+dig +short ws.prod.af-south-1.gatherle.com
 ```
 
 ### D. Connect webapp domain in Vercel (manual, once per hostname)
@@ -273,48 +282,63 @@ Recommended hostnames:
 
 - `beta.gatherle.com` (primary beta web hostname)
 - `www.beta.gatherle.com` (optional alias that redirects to `beta.gatherle.com`)
+- `gatherle.com` (primary prod web hostname)
+- `www.gatherle.com` (optional alias that redirects to `gatherle.com`)
 
 1. In Vercel project settings (or CLI), add the domain:
 
 ```bash
 vercel domains add beta.gatherle.com --scope <vercel-team-slug> --token <VERCEL_TOKEN>
 vercel domains add www.beta.gatherle.com --scope <vercel-team-slug> --token <VERCEL_TOKEN>
+vercel domains add gatherle.com --scope <vercel-team-slug> --token <VERCEL_TOKEN>
+vercel domains add www.gatherle.com --scope <vercel-team-slug> --token <VERCEL_TOKEN>
 ```
 
 2. In Route53 hosted zone `gatherle.com` (DNS account), create records using the exact targets Vercel shows:
 
 - `beta.gatherle.com` -> `CNAME` -> `<vercel target for beta>`
 - `www.beta.gatherle.com` -> `CNAME` -> `beta.gatherle.com` (or Vercel-provided target)
+- `gatherle.com` -> `CNAME` or ALIAS/ANAME target Vercel specifies for prod
+- `www.gatherle.com` -> `CNAME` -> `gatherle.com` (or Vercel-provided target)
 
 3. Point a deployment to the hostname (optional if Vercel already auto-assigned):
 
 ```bash
 vercel alias set <deployment-url> beta.gatherle.com --scope <vercel-team-slug> --token <VERCEL_TOKEN>
+vercel alias set <deployment-url> gatherle.com --scope <vercel-team-slug> --token <VERCEL_TOKEN>
 ```
 
-Note: on `main` deployments to `Beta`, `.github/workflows/deploy.yaml` now performs this alias step automatically. This
-is controlled by the caller workflow via `web_domain_alias` input, so reusable deploy logic stays stage-agnostic.
+Note: deployments to both `Beta` and `Prod` can perform this alias step automatically via
+`.github/workflows/deploy.yaml`. This is controlled by the caller workflow via `web_domain_alias` input, so reusable
+deploy logic stays stage-agnostic.
 
 4. In Vercel, set canonical redirect:
 
 - Redirect `www.beta.gatherle.com` -> `beta.gatherle.com`.
+- Redirect `www.gatherle.com` -> `gatherle.com`.
 
 5. Verify DNS propagation and Vercel status:
 
 ```bash
 dig +short beta.gatherle.com CNAME
 dig +short www.beta.gatherle.com CNAME
+dig +short gatherle.com
+dig +short www.gatherle.com CNAME
 ```
 
 - In Vercel Domains page, both hostnames should show valid configuration.
 - If not, click `Refresh` after DNS propagation.
 
-## 5. Manual backend secret bootstrap / rotation
+## 6. Manual backend secret bootstrap / rotation
 
 Use this when bootstrapping a new stage+region secret or intentionally rotating backend secret values.
 
 ```bash
 STAGE=Beta AWS_REGION=af-south-1 MONGO_DB_URL='<mongo-url-with-db-name>' JWT_SECRET='<jwt-secret>' FIREBASE_FCM_SERVICE_ACCOUNT_JSON="$(jq -c . /secure/path/firebase-admin.json)" npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively --profile gatherle-beta
+```
+
+```bash
+STAGE=Prod AWS_REGION=af-south-1 MONGO_DB_URL='<mongo-url-with-db-name>' JWT_SECRET='<jwt-secret>' FIREBASE_FCM_SERVICE_ACCOUNT_JSON="$(jq -c . /secure/path/firebase-admin.json)" npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively --profile gatherle-prod
 ```
 
 Verify:
@@ -327,6 +351,14 @@ aws secretsmanager describe-secret \
   --profile gatherle-beta
 ```
 
+```bash
+aws secretsmanager describe-secret \
+  --secret-id gatherle/backend/prod-af-south-1 \
+  --query "ARN" \
+  --output text \
+  --profile gatherle-prod
+```
+
 Important:
 
 - Runtime deploy workflow intentionally excludes `SecretsManagementStack`.
@@ -335,12 +367,13 @@ Important:
 
 This step must be completed before runtime service stack deployment.
 
-## 6. SES production access and identity verification
+## 7. SES production access and identity verification
 
 ### A. Request SES production access (exit sandbox)
 
 New AWS accounts start in SES sandbox mode — outbound email is restricted to verified addresses only. Request production
-access **once per account+region** before sending transactional email.
+access **once per account+region** before sending transactional email. Repeat this for both Beta and Prod runtime
+accounts.
 
 1. In the AWS console, navigate to **SES → Account dashboard** in the target region.
 2. Click **Request production access**.
@@ -362,6 +395,16 @@ aws sesv2 put-account-details \
   --profile gatherle-beta
 ```
 
+```bash
+aws sesv2 put-account-details \
+  --mail-type TRANSACTIONAL \
+  --website-url https://gatherle.com \
+  --use-case-description "Transactional email: email verification and password reset for gatherle.com users." \
+  --production-access-enabled \
+  --region af-south-1 \
+  --profile gatherle-prod
+```
+
 ### B. Retrieve DNS verification records from SesStack output
 
 After the first `SesStack` deploy, retrieve the 5 DNS records that SES requires:
@@ -375,15 +418,24 @@ aws cloudformation describe-stacks \
   --profile gatherle-beta
 ```
 
-The outputs to look for:
+```bash
+aws cloudformation describe-stacks \
+  --stack-name gatherle-ses-prod-af-south-1 \
+  --query "Stacks[0].Outputs" \
+  --output table \
+  --region af-south-1 \
+  --profile gatherle-prod
+```
 
-| Output key                             | DNS record type    | DNS name                           | Value                                    |
-| -------------------------------------- | ------------------ | ---------------------------------- | ---------------------------------------- |
-| `SesDkimRecord1-beta-af-south-1`       | `CNAME`            | `<token1>._domainkey.gatherle.com` | `<token1>.dkim.amazonses.com`            |
-| `SesDkimRecord2-beta-af-south-1`       | `CNAME`            | `<token2>._domainkey.gatherle.com` | `<token2>.dkim.amazonses.com`            |
-| `SesDkimRecord3-beta-af-south-1`       | `CNAME`            | `<token3>._domainkey.gatherle.com` | `<token3>.dkim.amazonses.com`            |
-| `SesMailFromMxRecord-beta-af-south-1`  | `MX` (priority 10) | `mail.gatherle.com`                | `feedback-smtp.af-south-1.amazonses.com` |
-| `SesMailFromSpfRecord-beta-af-south-1` | `TXT`              | `mail.gatherle.com`                | `"v=spf1 include:amazonses.com ~all"`    |
+The outputs to look for follow the same pattern per stage:
+
+| Output key                                    | DNS record type    | DNS name                           | Value                                    |
+| --------------------------------------------- | ------------------ | ---------------------------------- | ---------------------------------------- |
+| `SesDkimRecord1-<stage-lower>-<region>`       | `CNAME`            | `<token1>._domainkey.gatherle.com` | `<token1>.dkim.amazonses.com`            |
+| `SesDkimRecord2-<stage-lower>-<region>`       | `CNAME`            | `<token2>._domainkey.gatherle.com` | `<token2>.dkim.amazonses.com`            |
+| `SesDkimRecord3-<stage-lower>-<region>`       | `CNAME`            | `<token3>._domainkey.gatherle.com` | `<token3>.dkim.amazonses.com`            |
+| `SesMailFromMxRecord-<stage-lower>-<region>`  | `MX` (priority 10) | `mail.gatherle.com`                | `feedback-smtp.af-south-1.amazonses.com` |
+| `SesMailFromSpfRecord-<stage-lower>-<region>` | `TXT`              | `mail.gatherle.com`                | `"v=spf1 include:amazonses.com ~all"`    |
 
 ### C. Add DNS records to the root hosted zone (DNS account)
 
@@ -419,6 +471,13 @@ aws sesv2 get-email-identity \
   --profile gatherle-beta
 ```
 
+```bash
+aws sesv2 get-email-identity \
+  --email-identity gatherle.com \
+  --region af-south-1 \
+  --profile gatherle-prod
+```
+
 Expected:
 
 - `VerificationStatus`: `SUCCESS`
@@ -429,11 +488,13 @@ Expected:
 
 ```bash
 gh variable set WEBAPP_URL --body "https://beta.gatherle.com" --env beta-af-south-1
+gh variable set WEBAPP_URL --body "https://gatherle.com" --env prod-af-south-1
 # EMAIL_FROM defaults to noreply@gatherle.com — only needed if overriding
 # gh variable set EMAIL_FROM --body "noreply@gatherle.com" --env beta-af-south-1
+# gh variable set EMAIL_FROM --body "noreply@gatherle.com" --env prod-af-south-1
 ```
 
-## 7. Deploy stacks (CI/CD preferred)
+## 8. Deploy stacks (CI/CD preferred)
 
 Preferred:
 
@@ -444,15 +505,19 @@ Preferred:
 
 Recommended first rollout order for custom domains:
 
-1. Keep `ENABLE_CUSTOM_DOMAINS=false` and deploy runtime stacks. CDK deploys `StageInfraStack` before the consumer
-   stacks (enforced by `addDependency`), so the SSM parameters are present when CloudFormation resolves them.
+1. Keep `ENABLE_CUSTOM_DOMAINS=false` and deploy runtime stacks for each stage. CDK deploys `StageInfraStack` before the
+   consumer stacks (enforced by `addDependency`), so the SSM parameters are present when CloudFormation resolves them.
 
 ```bash
 STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=false WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
 ```
 
+```bash
+STAGE=Prod AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=false WEBAPP_URL=https://gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-prod
+```
+
 2. Read `StageInfraStack` output `stageHostedZoneNameServers` (also surfaced in deploy workflow output
-   `STAGE_HOSTED_ZONE_NAME_SERVERS`).
+   `STAGE_HOSTED_ZONE_NAME_SERVERS`) for each stage.
 
 ```bash
 aws cloudformation describe-stacks \
@@ -463,15 +528,24 @@ aws cloudformation describe-stacks \
   --profile gatherle-beta
 ```
 
-4. Set the GitHub Environment variable (used by CI/CD deploys):
+```bash
+aws cloudformation describe-stacks \
+  --stack-name gatherle-stage-infra-prod-af-south-1 \
+  --query "Stacks[0].Outputs[?OutputKey=='stageHostedZoneNameServers'].OutputValue" \
+  --output text \
+  --region af-south-1 \
+  --profile gatherle-prod
+```
+
+3. Set the GitHub Environment variable in `dns-af-south-1` (used by CI/CD deploys):
 
 ```bash
 gh variable set DELEGATED_SUBDOMAINS \
-  --body '[{"subdomain":"beta.af-south-1","nameServers":["<ns from step 3>"]}]' \
+  --body '[{"subdomain":"beta.af-south-1","nameServers":["<beta ns1>","<beta ns2>","<beta ns3>","<beta ns4>"]},{"subdomain":"prod.af-south-1","nameServers":["<prod ns1>","<prod ns2>","<prod ns3>","<prod ns4>"]}]' \
   --env dns-af-south-1
 ```
 
-5. Deploy `DnsStack` so root zone gets NS delegation for `beta.af-south-1`.
+4. Deploy `DnsStack` so root zone gets NS delegation for the configured stage subdomains.
 
    CI/CD: trigger `.github/workflows/deploy-trigger.yaml`.
 
@@ -479,16 +553,21 @@ gh variable set DELEGATED_SUBDOMAINS \
 
 ```bash
 AWS_REGION=af-south-1 \
-DELEGATED_SUBDOMAINS='[{"subdomain":"beta.af-south-1","nameServers":["<ns from step 4>"]}]' \
+DELEGATED_SUBDOMAINS='[{"subdomain":"beta.af-south-1","nameServers":["<beta ns1>","<beta ns2>","<beta ns3>","<beta ns4>"]},{"subdomain":"prod.af-south-1","nameServers":["<prod ns1>","<prod ns2>","<prod ns3>","<prod ns4>"]}]' \
 npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --exclusively --profile gatherle-dns
 ```
 
-6. Set `ENABLE_CUSTOM_DOMAINS=true` and redeploy runtime stacks. `StageInfraStack` creates the certificate first
-   (enforced by `addDependency`), so the consumer stacks resolve `/stageCertificateArn` correctly.
+5. Set `ENABLE_CUSTOM_DOMAINS=true` and redeploy runtime stacks for each stage. `StageInfraStack` creates the
+   certificate first (enforced by `addDependency`), so the consumer stacks resolve `/stageCertificateArn` correctly.
 
 ```bash
 gh variable set ENABLE_CUSTOM_DOMAINS --body "true" --env beta-af-south-1
 STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=true WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
+```
+
+```bash
+gh variable set ENABLE_CUSTOM_DOMAINS --body "true" --env prod-af-south-1
+STAGE=Prod AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=true WEBAPP_URL=https://gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-prod
 ```
 
 Optional manual deploy commands:
@@ -499,11 +578,17 @@ Runtime stacks (Beta):
 STAGE=Beta AWS_REGION=af-south-1 WEBAPP_URL=https://beta.gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-beta
 ```
 
+Runtime stacks (Prod):
+
+```bash
+STAGE=Prod AWS_REGION=af-south-1 WEBAPP_URL=https://gatherle.com npm run cdk -w @gatherle/cdk -- deploy SesStack StageInfraStack S3BucketStack GraphQLStack WebSocketApiStack MonitoringDashboardStack --require-approval never --exclusively --profile gatherle-prod
+```
+
 DNS stack (with delegation — env var is read at synth time and must be passed inline):
 
 ```bash
 AWS_REGION=af-south-1 \
-DELEGATED_SUBDOMAINS='[{"subdomain":"beta.af-south-1","nameServers":["<ns1>","<ns2>","<ns3>","<ns4>"]}]' \
+DELEGATED_SUBDOMAINS='[{"subdomain":"beta.af-south-1","nameServers":["<beta ns1>","<beta ns2>","<beta ns3>","<beta ns4>"]},{"subdomain":"prod.af-south-1","nameServers":["<prod ns1>","<prod ns2>","<prod ns3>","<prod ns4>"]}]' \
 npm run cdk:dns -w @gatherle/cdk -- deploy DnsStack --require-approval never --exclusively --profile gatherle-dns
 ```
 
@@ -523,7 +608,7 @@ AWS_REGION=af-south-1 aws cloudformation describe-stacks \
   --profile gatherle-dns
 ```
 
-## 8. Onboard a new account or region
+## 9. Onboard a new account or region
 
 1. Add mapping in `infrastructure/cdk/lib/constants/accounts.ts` under `STAGE_REGION_ACCOUNT_CONFIGS`.
 
@@ -544,8 +629,8 @@ Read the role ARN:
 ```bash
 AWS_REGION=<region> aws cloudformation describe-stacks \
   --stack-name gatherle-github-auth-<account-id> \
-  --query "Stacks[0].Outputs[?OutputKey=='GithubActionBetaDeployRoleArn'].OutputValue" \
-  --output text \
+  --query "Stacks[0].Outputs[].{Key:OutputKey,Value:OutputValue}" \
+  --output table \
   --profile <profile>
 ```
 
@@ -555,45 +640,26 @@ Use the output that matches the environment you are wiring:
 - runtime prod -> `GithubActionProdDeployRoleArn`
 - DNS -> `GithubActionDnsDeployRoleArn`
 
-4. Create GitHub Environment `<stage-lower>-<region>` and set secrets.
+4. Configure GitHub repository-level and environment-level variables/secrets using
+   [GitHub Actions Variables and Secrets Runbook](./github-actions-variables-and-secrets.md).
 
-```bash
-gh api --method PUT /repos/{owner}/{repo}/environments/<stage-lower>-<region>
-gh secret set ASSUME_ROLE_ARN --env <stage-lower>-<region>
-gh secret set NEXTAUTH_SECRET --env <stage-lower>-<region>
-```
+5. Add region to `.github/workflows/deploy-trigger.yaml` matrix.
 
-5. If DNS CI deploy is enabled, also create `dns-<region>` environment with DNS account `ASSUME_ROLE_ARN`.
-
-```bash
-gh api --method PUT /repos/{owner}/{repo}/environments/dns-<region>
-gh secret set ASSUME_ROLE_ARN --env dns-<region>
-```
-
-6. Add region to `.github/workflows/deploy-trigger.yaml` matrix.
-
-7. Ensure backend secret exists: `gatherle/backend/<stage-lower>-<region>`.
+6. Ensure backend secret exists: `gatherle/backend/<stage-lower>-<region>`.
 
 ```bash
 STAGE=<Stage> AWS_REGION=<region> MONGO_DB_URL='<mongo-url-with-db-name>' JWT_SECRET='<jwt-secret>' FIREBASE_FCM_SERVICE_ACCOUNT_JSON="$(jq -c . /secure/path/firebase-admin.json)" npm run cdk:secrets -w @gatherle/cdk -- deploy SecretsManagementStack --require-approval never --exclusively --profile <profile>
 ```
 
-8. **Request SES production access** for the new account+region (see section 6A above). New AWS accounts/regions default
+7. **Request SES production access** for the new account+region (see section 7A above). New AWS accounts/regions default
    to sandbox mode.
 
-9. After first `SesStack` deploy, add the 5 DNS verification records to the `gatherle.com` hosted zone (see section
-   6B–6D above).
+8. After first `SesStack` deploy, add the 5 DNS verification records to the `gatherle.com` hosted zone (see section
+   7B–7D above).
 
-10. Set `WEBAPP_URL`, `ALERT_EMAIL_RECIPIENTS`, and optionally `EMAIL_FROM` in the new GitHub Environment:
+9. After the first `MonitoringDashboardStack` deploy, confirm the SNS email subscription messages from each inbox.
 
-```bash
-gh variable set WEBAPP_URL --body "https://<stage>.gatherle.com" --env <stage-lower>-<region>
-gh variable set ALERT_EMAIL_RECIPIENTS --body "alerts@gatherle.com,founder@gatherle.com" --env <stage-lower>-<region>
-```
-
-11. After the first `MonitoringDashboardStack` deploy, confirm the SNS email subscription messages from each inbox.
-
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 Error: `Need to perform AWS calls for account X, but the current credentials are for Y`
 
@@ -621,9 +687,9 @@ Fix (one-time migration only):
 1. Deploy consumer stacks with `ENABLE_CUSTOM_DOMAINS=false` first to remove their `DomainName` and `ARecord` resources:
 
 ```bash
-STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=false WEBAPP_URL=https://beta.gatherle.com \
+STAGE=<Stage> AWS_REGION=<region> ENABLE_CUSTOM_DOMAINS=false WEBAPP_URL=<webapp-url> \
 npm run cdk -w @gatherle/cdk -- deploy GraphQLStack WebSocketApiStack \
---require-approval never --exclusively --profile gatherle-beta
+--require-approval never --exclusively --profile <profile>
 ```
 
 2. Manually delete the now-unreferenced orphaned certificate from ACM:
@@ -631,15 +697,15 @@ npm run cdk -w @gatherle/cdk -- deploy GraphQLStack WebSocketApiStack \
 ```bash
 aws acm delete-certificate \
   --certificate-arn <orphaned-cert-arn> \
-  --region af-south-1 \
-  --profile gatherle-beta
+  --region <region> \
+  --profile <profile>
 ```
 
 3. Re-enable custom domains. `StageInfraStack` creates the new certificate and consumer stacks recreate their custom
    domain resources:
 
 ```bash
-STAGE=Beta AWS_REGION=af-south-1 ENABLE_CUSTOM_DOMAINS=true WEBAPP_URL=https://beta.gatherle.com \
+STAGE=<Stage> AWS_REGION=<region> ENABLE_CUSTOM_DOMAINS=true WEBAPP_URL=<webapp-url> \
 npm run cdk -w @gatherle/cdk -- deploy StageInfraStack GraphQLStack WebSocketApiStack \
---require-approval never --exclusively --profile gatherle-beta
+--require-approval never --exclusively --profile <profile>
 ```

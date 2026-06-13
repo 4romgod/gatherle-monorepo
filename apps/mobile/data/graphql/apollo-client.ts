@@ -2,6 +2,7 @@ import { ApolloClient, HttpLink, InMemoryCache, from } from '@apollo/client';
 import { onError } from '@apollo/client/link/error';
 import { setContext } from '@apollo/client/link/context';
 import { APP_ACCESS_BLOCKED_ERROR_CODE } from '@gatherle/commons/client/constants';
+import { classifyFrontendFailure } from '@/lib/errors/frontendFailure';
 import { reportFrontendError } from '@/lib/errors/reportFrontendError';
 import { notifyAppAccessBlocked } from '@/lib/appAccessBlock';
 import { getMobileGraphqlHeaders } from '@/lib/deviceInstallation';
@@ -47,11 +48,21 @@ const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
     notifyAppAccessBlocked(blockedAccessError.message);
   }
 
-  reportFrontendError('Apollo operation failed', undefined, {
+  const failureKind = classifyFrontendFailure({
     graphQLErrors: resolvedErrors,
     networkError,
-    operationName: operation.operationName,
   });
+
+  reportFrontendError(
+    'Apollo operation failed',
+    undefined,
+    {
+      graphQLErrors: resolvedErrors,
+      networkError,
+      operationName: operation.operationName,
+    },
+    { level: failureKind === 'session-expired' ? 'info' : 'error' },
+  );
 });
 
 const mobileHeadersLink = setContext(async (_, previousContext) => {

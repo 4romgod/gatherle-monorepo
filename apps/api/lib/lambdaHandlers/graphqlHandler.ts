@@ -18,6 +18,7 @@ import {
   createMyEventOccurrenceParticipantLoader,
   createEventSaveCountLoader,
   createEventSavedByMeLoader,
+  createMobileDeviceAccessPushSummaryLoader,
 } from '@/graphql/loaders';
 import { createEventOccurrenceQueryRequestCache } from '@/services/eventOccurrence';
 import { verifyToken } from '@/utils/auth';
@@ -101,6 +102,7 @@ async function initializeResources() {
               myEventOccurrenceParticipant: createMyEventOccurrenceParticipantLoader(),
               eventSaveCount: createEventSaveCountLoader(),
               eventSavedByMe: createEventSavedByMeLoader(user?.userId),
+              mobileDeviceAccessPushSummary: createMobileDeviceAccessPushSummaryLoader(),
             },
           };
         },

@@ -14,7 +14,9 @@ import { cleanupOrphanedE2EUsers, resolveE2EUserNamespace } from './utils/userRe
 // Load the API .env so GRAPHQL_URL is available in the globalSetup process
 config({ path: resolve(__dirname, '../../.env') });
 
-const WARMUP_QUERY = JSON.stringify({ query: '{ __typename }' });
+const WARMUP_QUERY = JSON.stringify({
+  query: 'query RuntimeWarmup { readEventCategories(options: { pagination: { limit: 1 } }) { eventCategoryId } }',
+});
 
 const assertUrlResponds = async (
   input: URL | string,
@@ -273,7 +275,10 @@ const assertServerReady = async (graphqlUrl: string): Promise<void> => {
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: '{ __typename }' }),
+            body: JSON.stringify({
+              query:
+                'query ReadinessProbe { readEventCategories(options: { pagination: { limit: 1 } }) { eventCategoryId } }',
+            }),
           },
           'GraphQL readiness check',
           15_000,

@@ -38,6 +38,7 @@ import type {
   EventSeries,
   EventOccurrence,
   EventOccurrenceParticipant,
+  MobileDeviceAccessPushSummary,
 } from '@gatherle/commons/server/types';
 import { MobileDeviceAccessStatus as MobileDeviceAccessStatusEnum, UserRole } from '@gatherle/commons/server/types';
 import type { AuthClaims } from '@/utils/auth';
@@ -76,6 +77,7 @@ export interface ServerContext {
     myEventOccurrenceParticipant: DataLoader<string, EventOccurrenceParticipant | null>;
     eventSaveCount: DataLoader<string, number>;
     eventSavedByMe: DataLoader<string, boolean>;
+    mobileDeviceAccessPushSummary: DataLoader<string, MobileDeviceAccessPushSummary>;
   };
 }
 

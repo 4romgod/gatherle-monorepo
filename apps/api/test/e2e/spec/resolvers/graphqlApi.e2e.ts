@@ -148,9 +148,23 @@ describe('GraphQL API hardening', () => {
   });
 
   it('returns a generic client-safe message for operation resolution failures', async () => {
-    const response = await request(url).post('').send({
-      query: 'query One { __typename } query Two { __typename }',
-    });
+    const response = await request(url)
+      .post('')
+      .send({
+        query: `
+        query One {
+          readEventCategories {
+            eventCategoryId
+          }
+        }
+
+        query Two {
+          readEventCategories {
+            eventCategoryId
+          }
+        }
+      `,
+      });
 
     expect(response.status).toBe(400);
     expect(response.body.errors[0].extensions.code).toBe('OPERATION_RESOLUTION_FAILURE');

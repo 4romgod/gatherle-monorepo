@@ -7,6 +7,7 @@ import {
 } from '@gatherle/commons/server/validation';
 import {
   MobileDeviceAccess,
+  MobileDeviceAccessPushSummary,
   MobileDeviceAccessRegistrationResult,
   ReadMobileDeviceAccessesInput,
   RegisterMobileDeviceAccessInput,
@@ -127,5 +128,16 @@ export class MobileDeviceAccessResolver {
 
     const users = await Promise.all(seenUserIds.map((userId) => context.loaders.user.load(userId)));
     return users.filter((user): user is User => Boolean(user));
+  }
+
+  @Authorized([UserRole.Admin])
+  @FieldResolver(() => MobileDeviceAccessPushSummary, {
+    description: 'Current push delivery summary for this installation.',
+  })
+  async pushSummary(
+    @Root() mobileDeviceAccess: MobileDeviceAccess,
+    @Ctx() context: ServerContext,
+  ): Promise<MobileDeviceAccessPushSummary> {
+    return context.loaders.mobileDeviceAccessPushSummary.load(mobileDeviceAccess.deviceInstallationId);
   }
 }

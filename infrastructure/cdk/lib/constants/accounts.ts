@@ -20,6 +20,11 @@ const STAGE_REGION_ACCOUNT_CONFIGS: Partial<Record<Stage, Partial<Record<Region,
       accountNumber: '327319899143',
     },
   },
+  [APPLICATION_STAGES.PROD]: {
+    [AWS_REGIONS.CPT]: {
+      accountNumber: '969849535023',
+    },
+  },
 };
 
 const resolveStage = (input: string): Stage => {
@@ -74,4 +79,26 @@ export const resolveServiceAccount = (stageInput: string, regionInput: string): 
     awsRegion,
     applicationStage,
   };
+};
+
+export const resolveServiceAccountByAccount = (accountNumberInput: string, regionInput: string): ServiceAccount => {
+  const awsRegion = resolveRegion(regionInput);
+
+  for (const [stage, regions] of Object.entries(STAGE_REGION_ACCOUNT_CONFIGS)) {
+    const accountForRegion = regions?.[awsRegion];
+
+    if (accountForRegion?.accountNumber === accountNumberInput) {
+      return {
+        targetId: `${stage.toLowerCase()}-${awsRegion.toLowerCase()}`,
+        accountNumber: accountForRegion.accountNumber,
+        awsRegion,
+        applicationStage: stage,
+      };
+    }
+  }
+
+  throw new Error(
+    `No deployment stage is configured for account "${accountNumberInput}" in region "${awsRegion}". ` +
+      'Add the missing mapping to STAGE_REGION_ACCOUNT_CONFIGS in infrastructure/cdk/lib/constants/accounts.ts.',
+  );
 };

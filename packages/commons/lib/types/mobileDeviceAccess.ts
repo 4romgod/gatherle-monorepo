@@ -1,7 +1,8 @@
 import 'reflect-metadata';
-import { Field, ID, InputType, ObjectType, registerEnumType } from 'type-graphql';
+import { Field, ID, InputType, Int, ObjectType, registerEnumType } from 'type-graphql';
 import { index, modelOptions, prop, Severity } from '@typegoose/typegoose';
 import { User } from './user';
+import { PushSubscriptionProvider } from './pushSubscription';
 
 export enum MobileDeviceAccessPlatform {
   Android = 'Android',
@@ -23,6 +24,36 @@ registerEnumType(MobileDeviceAccessStatus, {
   name: 'MobileDeviceAccessStatus',
   description: 'Whether a mobile device installation can use the native app.',
 });
+
+@ObjectType('MobileDeviceAccessPushSummary', {
+  description: 'Push delivery summary derived from active subscriptions associated with a mobile installation.',
+})
+export class MobileDeviceAccessPushSummary {
+  @Field(() => Boolean, {
+    description: 'Whether this installation currently has at least one active push subscription.',
+  })
+  hasActiveSubscription: boolean;
+
+  @Field(() => Int, { description: 'Number of active push subscriptions currently attached to this installation.' })
+  activeSubscriptionCount: number;
+
+  @Field(() => [PushSubscriptionProvider], {
+    description: 'Distinct push providers currently active for this installation.',
+  })
+  providers: PushSubscriptionProvider[];
+
+  @Field(() => Date, {
+    nullable: true,
+    description: 'When a push subscription for this installation was last registered or refreshed.',
+  })
+  lastRegisteredAt?: Date;
+
+  @Field(() => Date, {
+    nullable: true,
+    description: 'When a push to this installation last completed successfully.',
+  })
+  lastDeliveredAt?: Date;
+}
 
 @ObjectType('MobileDeviceAccess', {
   description: 'Access record used to track and control whether a specific native app installation can use Gatherle.',
@@ -61,6 +92,22 @@ export class MobileDeviceAccess {
   @prop({ type: () => String })
   @Field(() => String, { nullable: true, description: 'Platform-native build version reported by the client.' })
   buildVersion?: string;
+
+  @prop({ type: () => String })
+  @Field(() => String, { nullable: true, description: 'Application identifier or bundle ID reported by the client.' })
+  applicationId?: string;
+
+  @prop({ type: () => String })
+  @Field(() => String, { nullable: true, description: 'Device brand reported by the client.' })
+  deviceBrand?: string;
+
+  @prop({ type: () => String })
+  @Field(() => String, { nullable: true, description: 'Device model or device family reported by the client.' })
+  deviceModel?: string;
+
+  @prop({ type: () => String })
+  @Field(() => String, { nullable: true, description: 'Operating system version reported by the client.' })
+  osVersion?: string;
 
   @prop({ type: () => String })
   registrationSecret?: string;
@@ -117,6 +164,11 @@ export class MobileDeviceAccess {
   })
   seenUsers?: User[];
 
+  @Field(() => MobileDeviceAccessPushSummary, {
+    description: 'Current push delivery summary for this installation.',
+  })
+  pushSummary: MobileDeviceAccessPushSummary;
+
   @Field(() => Date, { description: 'When this access record was created.' })
   createdAt: Date;
 
@@ -139,6 +191,18 @@ export class RegisterMobileDeviceAccessInput {
 
   @Field(() => String, { nullable: true, description: 'Platform-native build version reported by the client.' })
   buildVersion?: string;
+
+  @Field(() => String, { nullable: true, description: 'Application identifier or bundle ID reported by the client.' })
+  applicationId?: string;
+
+  @Field(() => String, { nullable: true, description: 'Device brand reported by the client.' })
+  deviceBrand?: string;
+
+  @Field(() => String, { nullable: true, description: 'Device model or device family reported by the client.' })
+  deviceModel?: string;
+
+  @Field(() => String, { nullable: true, description: 'Operating system version reported by the client.' })
+  osVersion?: string;
 
   @Field(() => String, {
     nullable: true,
@@ -185,7 +249,7 @@ export class ReadMobileDeviceAccessesInput {
 
   @Field(() => String, {
     nullable: true,
-    description: 'Optional text search against device installation IDs and version metadata.',
+    description: 'Optional text search against installation IDs, version metadata, device metadata, and seen user IDs.',
   })
   search?: string;
 }
